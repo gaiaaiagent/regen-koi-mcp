@@ -121,7 +121,8 @@ class KOIServer {
         filters
       });
 
-      const results = response.data.results || [];
+      const data = response.data as any;
+      const results = data.results || [];
       const formattedResults = this.formatSearchResults(results, query);
 
       return {
@@ -189,7 +190,7 @@ class KOIServer {
         params: { detailed }
       });
 
-      const stats = response.data;
+      const stats = response.data as any;
       let formatted = `# KOI Knowledge Base Statistics\n\n`;
       formatted += `- **Total Documents**: ${stats.total_memories || 0}\n`;
       formatted += `- **Total Entities**: ${stats.total_entities || 0}\n`;
@@ -224,7 +225,8 @@ class KOIServer {
         params: { active_only, include_stats }
       });
 
-      const classes = response.data.credit_classes || [];
+      const data = response.data as any;
+      const classes = data.credit_classes || [];
       let formatted = `# Regen Registry Credit Classes\n\n`;
 
       for (const cls of classes) {
@@ -259,7 +261,8 @@ class KOIServer {
         params: { hours, activity_type }
       });
 
-      const activities = response.data.activities || [];
+      const data = response.data as any;
+      const activities = data.activities || [];
       let formatted = `# Recent Regen Network Activity (Last ${hours} hours)\n\n`;
 
       for (const activity of activities) {
