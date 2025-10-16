@@ -32,3 +32,10 @@ coverage/
 # Temporary files
 tmp/
 temp/
+
+# Data files
+data/
+*.db
+
+# Service files
+*.service

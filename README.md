@@ -1,65 +1,90 @@
-# Regen KOI MCP Server
+# 🌱 Regen KOI MCP Server
 
-Access Regen Network's Knowledge Organization Infrastructure (KOI) through the Model Context Protocol (MCP) for AI agents like Claude.
+Access Regen Network's Knowledge Organization Infrastructure (KOI) through Model Context Protocol (MCP) tools in Claude Desktop, VSCode, and other MCP-compatible clients.
 
-## Features
-
-- 🔍 **Semantic Search**: Query 15,000+ documents about ecological credits, methodologies, and governance
-- 🌐 **Knowledge Graph**: Access structured data via SPARQL queries
-- 📊 **Real-time Data**: Get latest credit issuances, proposals, and market activity
-- 🤖 **AI-Optimized**: Designed for LLM agents with rich context and metadata
-
-## Quick Start
-
-### Installation
+## 🚀 Quick Start
 
 ```bash
 # Clone the repository
-git clone https://github.com/gaiaaiagent/regen-koi-mcp.git
+git clone https://github.com/gaiaaiagent/regen-koi-mcp
 cd regen-koi-mcp
 
 # Install dependencies
 npm install
 
-# Build the server
-npm run build
+# Run automated setup (configures Claude Desktop & VSCode automatically)
+npm run setup
 ```
 
-### Configuration
+That's it! The setup script will automatically configure the MCP server for your installed clients. Just restart Claude Desktop or reload VSCode to see the tools.
 
-1. Copy the example environment file:
-```bash
-cp .env.example .env
+## 🎯 What This Does
+
+This MCP server gives AI assistants access to Regen Network's comprehensive knowledge base with 15,000+ documents about:
+- Carbon credits and ecological assets
+- Regenerative agriculture practices
+- Blockchain and Web3 sustainability
+- Climate action and environmental data
+- Regen Registry credit classes
+
+## 📦 Available Tools
+
+| Tool | Description | Example Query |
+|------|-------------|---------------|
+| `search_knowledge` | Search the KOI knowledge base | "carbon sequestration methods" |
+| `get_entity` | Get specific entity information | "regen1234..." |
+| `query_graph` | Execute SPARQL queries | Complex graph queries |
+| `get_stats` | Get knowledge base statistics | Database metrics |
+| `list_credit_classes` | List Regen Registry credit classes | Active carbon credits |
+| `get_recent_activity` | Get recent network activity | Last 24 hours |
+
+## 💻 Supported Clients
+
+### Claude Desktop ✅
+
+The setup script automatically configures Claude Desktop. After running `npm run setup`, just restart Claude Desktop and you'll see the tools available.
+
+### VSCode Extensions
+
+#### Cline (Claude Dev) ✅
+Install from: [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=saoudrizwan.claude-dev)
+
+#### Continue ✅
+Install from: [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=Continue.continue)
+
+The setup script configures both extensions automatically.
+
+### Other Clients
+
+Any MCP-compatible client can use this server. Configure with:
+
+```json
+{
+  "command": "node",
+  "args": ["/path/to/regen-koi-mcp/dist/index.js"],
+  "env": {
+    "KOI_API_ENDPOINT": "http://localhost:8301/api/koi"
+  }
+}
 ```
 
-2. (Optional) Add your API key for enhanced access:
-```bash
-# Edit .env and add your API key
-KOI_API_KEY=your-api-key-here
-```
+## 🔧 Manual Setup
 
-> **Note**: The server works without an API key using anonymous access with rate limits.
+### Claude Desktop
 
-### Usage with Claude Desktop
+1. Find your config file:
+   - **Mac**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+   - **Linux**: `~/.config/Claude/claude_desktop_config.json`
 
-### Option 1: Remote MCP Server (Easiest)
-
-In Claude Desktop, click "Add custom connector" and enter:
-- **Name**: Regen KOI
-- **Remote MCP server URL**: `https://koi-mcp.regen.network/sse` (or your server URL)
-
-That's it! No installation required.
-
-### Option 2: Local Installation
-
-Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/claude_desktop_config.json` on Mac):
+2. Add the server configuration:
 
 ```json
 {
   "mcpServers": {
     "regen-koi": {
       "command": "node",
-      "args": ["/path/to/regen-koi-mcp/dist/index.js"],
+      "args": ["/absolute/path/to/regen-koi-mcp/dist/index.js"],
       "env": {
         "KOI_API_ENDPOINT": "http://localhost:8301/api/koi"
       }
@@ -68,222 +93,98 @@ Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/
 }
 ```
 
-### Option 3: NPX (No installation)
+3. Restart Claude Desktop
+
+### NPX Usage (No Installation)
+
+You can also run directly from npm:
 
 ```json
 {
   "mcpServers": {
     "regen-koi": {
       "command": "npx",
-      "args": ["regen-koi-mcp"]
+      "args": ["-y", "regen-koi-mcp"],
+      "env": {
+        "KOI_API_ENDPOINT": "http://localhost:8301/api/koi"
+      }
     }
   }
 }
 ```
 
-## Available Tools
+## 🌍 Environment Configuration
 
-### 🔎 `search_knowledge`
-Search the KOI knowledge base using hybrid RAG (semantic + keyword search).
+Create a `.env` file in the project root:
 
-**Example queries:**
-- "What are carbon credits?"
-- "Biodiversity methodology requirements"
-- "Recent governance proposals"
+```env
+# Required: KOI API endpoint
+KOI_API_ENDPOINT=http://localhost:8301/api/koi
 
-### 📋 `get_entity`
-Retrieve detailed information about specific entities by RID or name.
-
-**Examples:**
-- Credit classes: `"orn:credit_class:C03"`
-- Projects: `"Amazon Rainforest Conservation"`
-- Methodologies: `"VM0042"`
-
-### 🗄️ `query_graph`
-Execute SPARQL queries for complex relationship queries.
-
-**Example:**
-```sparql
-SELECT ?project ?class ?methodology
-WHERE {
-  ?project rdf:type koi:Project ;
-           koi:creditClass ?class ;
-           koi:methodology ?methodology .
-}
-LIMIT 10
+# Optional: API key if your KOI server requires authentication
+# KOI_API_KEY=your_api_key_here
 ```
 
-### 📊 `get_stats`
-Get statistics about the knowledge base including document counts and sources.
-
-### 🌿 `list_credit_classes`
-List all credit classes in the Regen Registry with their properties.
-
-### 🔄 `get_recent_activity`
-Get recent ecosystem activity including new credits, projects, and proposals.
-
-## Advanced Configuration
-
-### Self-Hosted Deployment
-
-If you're running your own KOI infrastructure:
-
-```bash
-# .env configuration for self-hosted
-KOI_API_ENDPOINT=http://your-server:8301/api/koi
-KOI_SEARCH_ENDPOINT=http://your-server:8301/api/koi/query
-KOI_STATS_ENDPOINT=http://your-server:8301/api/koi/stats
-```
-
-### API Rate Limits
-
-- **Anonymous**: 100 requests/hour
-- **Authenticated**: 1000 requests/hour
-- **Enterprise**: Unlimited (contact us)
-
-## Running a Remote Server
-
-To host your own remote MCP server:
-
-```bash
-# Install dependencies
-npm install
-
-# Build the project
-npm run build
-
-# Start the remote server
-npm run start:remote
-
-# Or in development mode
-npm run dev:remote
-```
-
-The server will start on port 3333 by default. Configure via environment variables:
-
-```bash
-PORT=3333                    # Server port
-HOST=0.0.0.0                # Bind address
-REQUIRE_AUTH=true           # Enable authentication
-KOI_API_KEY=your-key        # API key for auth
-```
-
-### Deployment Options
-
-**Docker:**
-```dockerfile
-FROM node:20-alpine
-WORKDIR /app
-COPY . .
-RUN npm ci --only=production
-RUN npm run build
-EXPOSE 3333
-CMD ["npm", "run", "start:remote"]
-```
-
-**Systemd Service:**
-```ini
-[Unit]
-Description=Regen KOI MCP Server
-After=network.target
-
-[Service]
-Type=simple
-User=www-data
-WorkingDirectory=/opt/regen-koi-mcp
-ExecStart=/usr/bin/node dist/server.js
-Restart=on-failure
-Environment="PORT=3333"
-Environment="REQUIRE_AUTH=true"
-
-[Install]
-WantedBy=multi-user.target
-```
-
-**Nginx Reverse Proxy (for HTTPS/SSE):**
-```nginx
-server {
-    listen 443 ssl http2;
-    server_name koi-mcp.regen.network;
-
-    ssl_certificate /etc/ssl/certs/cert.pem;
-    ssl_certificate_key /etc/ssl/private/key.pem;
-
-    location /sse {
-        proxy_pass http://localhost:3333/sse;
-        proxy_http_version 1.1;
-        proxy_set_header Connection '';
-        proxy_set_header Cache-Control 'no-cache';
-        proxy_set_header X-Accel-Buffering 'no';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_buffering off;
-        proxy_read_timeout 86400;
-    }
-
-    location / {
-        proxy_pass http://localhost:3333;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
-```
-
-## Development
+## 🏗️ Development
 
 ```bash
 # Run in development mode
 npm run dev
 
-# Run remote server in dev mode
-npm run dev:remote
+# Build TypeScript
+npm run build
 
-# Clean build artifacts
+# Clean build files
 npm run clean
-
-# Type checking
-npm run type-check
 ```
 
-## Architecture
+## 📋 Prerequisites
 
-This MCP server acts as a bridge between AI agents and Regen Network's KOI system:
+- Node.js 18 or higher
+- KOI API server running (default: http://localhost:8301)
+- Claude Desktop or compatible MCP client
 
-```
-Claude/AI Agent <-> MCP Protocol <-> KOI MCP Server <-> KOI Infrastructure
-                                                          ├── Knowledge Graph (Jena)
-                                                          ├── Vector Database (pgvector)
-                                                          ├── Document Store (PostgreSQL)
-                                                          └── Blockchain Data (Regen Ledger)
-```
+## 🛠️ Troubleshooting
 
-## Data Sources
+### "KOI API not accessible"
+Make sure your KOI server is running at the configured endpoint. Check your `.env` file for the correct `KOI_API_ENDPOINT`.
 
-The KOI system indexes and processes data from:
+### "Tools not showing in Claude"
+1. Restart Claude Desktop after configuration
+2. Check the config file syntax is valid JSON
+3. Ensure the path to `index.js` is absolute
 
-- 📚 **Documentation**: docs.regen.network, guides, whitepapers
-- 🏛️ **Governance**: Forum discussions, proposals, voting records
-- 🔬 **Methodologies**: Credit class specifications, validation procedures
-- 🌍 **Projects**: Conservation initiatives, impact reports
-- ⛓️ **Blockchain**: Real-time ledger data via Regen Network nodes
-- 💬 **Community**: Discord, Twitter, blog posts
+### "Command not found"
+Make sure Node.js is installed and in your PATH. The setup script uses `node` command.
 
-## Support
+## 📚 Example Usage
 
-- **Documentation**: [docs.regen.network](https://docs.regen.network)
-- **Issues**: [GitHub Issues](https://github.com/gaiaaiagent/regen-koi-mcp/issues)
-- **Discord**: [Regen Network Discord](https://discord.gg/regen-network)
-- **API Keys**: Contact team@regen.network
+Once configured, you can ask Claude:
 
-## License
+- "Search the KOI knowledge base for information about carbon credits"
+- "Get statistics about the knowledge base"
+- "List active Regen Registry credit classes"
+- "Find recent activity on the Regen Network"
 
-MIT License - see [LICENSE](LICENSE) file for details.
+## 🤝 Contributing
 
-## Acknowledgments
+Contributions welcome! Please feel free to submit issues and pull requests.
 
-Built by [Regen Network](https://regen.network) to enable AI agents to accurately understand and communicate about ecological assets and regenerative finance.
+## 📄 License
 
-Special thanks to:
-- Anthropic for the MCP specification
-- The Regen Network community for continuous feedback
-- Contributors to the KOI knowledge base
+MIT License - see LICENSE file for details
+
+## 🔗 Links
+
+- [GitHub Repository](https://github.com/gaiaaiagent/regen-koi-mcp)
+- [Regen Network](https://www.regen.network)
+- [Model Context Protocol](https://modelcontextprotocol.io)
+- [Claude Desktop](https://claude.ai/download)
+
+## 🌟 Credits
+
+Built by the Regen Network community to make ecological knowledge accessible to AI assistants everywhere.
+
+---
+
+*For self-hosting the KOI knowledge processing pipeline, see our [KOI Processor](https://github.com/gaiaaiagent/koi-processor) repository.*
