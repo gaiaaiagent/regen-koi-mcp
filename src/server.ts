@@ -1,28 +1,35 @@
 #!/usr/bin/env node
 /**
- * Regen KOI MCP Server
- * Provides access to Regen Network's Knowledge Organization Infrastructure
- * via the Model Context Protocol for AI agents like Claude
+ * Regen KOI MCP Remote Server
+ * HTTP/SSE server that can be accessed remotely via URL
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import axios from 'axios';
+import express from 'express';
+import cors from 'cors';
 import dotenv from 'dotenv';
-import { TOOLS } from './tools.js';
+import axios from 'axios';
 
 // Load environment variables
 dotenv.config();
 
 // Configuration
+const PORT = process.env.PORT || 3333;
+const HOST = process.env.HOST || '0.0.0.0';
 const KOI_API_ENDPOINT = process.env.KOI_API_ENDPOINT || 'http://localhost:8301/api/koi';
 const KOI_API_KEY = process.env.KOI_API_KEY || '';
 const SERVER_NAME = process.env.MCP_SERVER_NAME || 'regen-koi';
 const SERVER_VERSION = process.env.MCP_SERVER_VERSION || '1.0.0';
+
+// OAuth configuration (optional)
+const OAUTH_CLIENT_ID = process.env.OAUTH_CLIENT_ID || '';
+const OAUTH_CLIENT_SECRET = process.env.OAUTH_CLIENT_SECRET || '';
+const REQUIRE_AUTH = process.env.REQUIRE_AUTH === 'true';
 
 // API client configuration
 const apiClient = axios.create({
@@ -34,13 +41,16 @@ const apiClient = axios.create({
   }
 });
 
-// Tool definitions are imported from tools.ts
+// Tool definitions (same as index.ts)
+import { TOOLS } from './tools.js';
 
-class KOIServer {
-  private server: Server;
+class KOIRemoteServer {
+  private app: express.Application;
+  private mcpServer: Server;
 
   constructor() {
-    this.server = new Server(
+    this.app = express();
+    this.mcpServer = new Server(
       {
         name: SERVER_NAME,
         version: SERVER_VERSION,
@@ -51,66 +61,148 @@ class KOIServer {
         },
       }
     );
-
-    this.setupHandlers();
-    this.logStartup();
+    this.setupMCPHandlers();
+    this.setupMiddleware();
+    this.setupRoutes();
   }
 
-  private logStartup() {
-    console.error(`[${SERVER_NAME}] Starting Regen KOI MCP Server v${SERVER_VERSION}`);
-    console.error(`[${SERVER_NAME}] KOI API Endpoint: ${KOI_API_ENDPOINT}`);
-    console.error(`[${SERVER_NAME}] API Key: ${KOI_API_KEY ? 'Configured' : 'Not configured (using anonymous access)'}`);
+  private setupMiddleware() {
+    // CORS configuration for Claude Desktop
+    this.app.use(cors({
+      origin: '*', // Allow all origins for MCP clients
+      methods: ['GET', 'POST', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-MCP-Version'],
+      credentials: true
+    }));
+
+    this.app.use(express.json());
+
+    // Basic authentication middleware (optional)
+    if (REQUIRE_AUTH) {
+      this.app.use((req, res, next) => {
+        const authHeader = req.headers.authorization;
+
+        if (!authHeader) {
+          return res.status(401).json({ error: 'Authentication required' });
+        }
+
+        // Simple bearer token auth
+        const token = authHeader.replace('Bearer ', '');
+        if (token !== KOI_API_KEY) {
+          return res.status(403).json({ error: 'Invalid authentication token' });
+        }
+
+        next();
+      });
+    }
   }
 
-  private setupHandlers() {
-    // Handle tool list requests
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
+  private setupMCPHandlers() {
+    // Setup tool handlers
+    this.mcpServer.setRequestHandler(ListToolsRequestSchema, async () => ({
       tools: TOOLS,
     }));
 
-    // Handle tool execution
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name, arguments: args } = request.params;
-
-      try {
-        console.error(`[${SERVER_NAME}] Executing tool: ${name}`);
-
-        switch (name) {
-          case 'search_knowledge':
-            return await this.searchKnowledge(args);
-
-          case 'get_entity':
-            return await this.getEntity(args);
-
-          case 'query_graph':
-            return await this.queryGraph(args);
-
-          case 'get_stats':
-            return await this.getStats(args);
-
-          case 'list_credit_classes':
-            return await this.listCreditClasses(args);
-
-          case 'get_recent_activity':
-            return await this.getRecentActivity(args);
-
-          default:
-            throw new Error(`Unknown tool: ${name}`);
-        }
-      } catch (error) {
-        console.error(`[${SERVER_NAME}] Error executing tool ${name}:`, error);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`,
-            },
-          ],
-        };
-      }
+    this.mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
+      return await this.handleToolCall(request.params);
     });
   }
 
+  private setupRoutes() {
+    // Health check endpoint
+    this.app.get('/health', (req, res) => {
+      res.json({
+        status: 'healthy',
+        server: SERVER_NAME,
+        version: SERVER_VERSION,
+        mcp: true
+      });
+    });
+
+    // MCP metadata endpoint
+    this.app.get('/mcp', (req, res) => {
+      res.json({
+        name: SERVER_NAME,
+        version: SERVER_VERSION,
+        protocol: 'mcp',
+        transport: 'sse',
+        endpoint: `http://${req.get('host')}/sse`,
+        capabilities: {
+          tools: true,
+          resources: false,
+          prompts: false
+        },
+        authentication: REQUIRE_AUTH ? {
+          type: 'bearer',
+          required: true
+        } : null
+      });
+    });
+
+    // SSE endpoint for MCP
+    this.app.get('/sse', async (req, res) => {
+      console.log(`[${SERVER_NAME}] New SSE connection from ${req.ip}`);
+
+      const transport = new SSEServerTransport('/sse', res as any);
+      await this.mcpServer.connect(transport);
+
+      console.log(`[${SERVER_NAME}] SSE client connected`);
+    });
+
+    // OAuth endpoints (if configured)
+    if (OAUTH_CLIENT_ID) {
+      this.app.get('/oauth/authorize', (req, res) => {
+        // Simplified OAuth flow
+        const { redirect_uri, state } = req.query;
+        // In production, implement proper OAuth flow
+        res.redirect(`${redirect_uri}?code=temp_code&state=${state}`);
+      });
+
+      this.app.post('/oauth/token', (req, res) => {
+        // Simplified token exchange
+        res.json({
+          access_token: 'temp_access_token',
+          token_type: 'Bearer',
+          expires_in: 3600
+        });
+      });
+    }
+  }
+
+  private async handleToolCall(params: any) {
+    const { name, arguments: args } = params;
+
+    try {
+      console.log(`[${SERVER_NAME}] Executing tool: ${name}`);
+
+      switch (name) {
+        case 'search_knowledge':
+          return await this.searchKnowledge(args);
+        case 'get_entity':
+          return await this.getEntity(args);
+        case 'query_graph':
+          return await this.queryGraph(args);
+        case 'get_stats':
+          return await this.getStats(args);
+        case 'list_credit_classes':
+          return await this.listCreditClasses(args);
+        case 'get_recent_activity':
+          return await this.getRecentActivity(args);
+        default:
+          throw new Error(`Unknown tool: ${name}`);
+      }
+    } catch (error) {
+      console.error(`[${SERVER_NAME}] Error executing tool ${name}:`, error);
+      return {
+        content: [{
+          type: 'text',
+          text: `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`,
+        }],
+      };
+    }
+  }
+
+  // Tool implementations (same as index.ts)
   private async searchKnowledge(args: any) {
     const { query, limit = 5, filters = {} } = args;
 
@@ -125,12 +217,10 @@ class KOIServer {
       const formattedResults = this.formatSearchResults(results, query);
 
       return {
-        content: [
-          {
-            type: 'text',
-            text: formattedResults,
-          },
-        ],
+        content: [{
+          type: 'text',
+          text: formattedResults,
+        }],
       };
     } catch (error) {
       throw new Error(`Failed to search knowledge: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -141,18 +231,15 @@ class KOIServer {
     const { identifier, include_related = true } = args;
 
     try {
-      // Try to get entity by RID or name
       const response = await apiClient.get(`/entity/${encodeURIComponent(identifier)}`, {
         params: { include_related }
       });
 
       return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(response.data, null, 2),
-          },
-        ],
+        content: [{
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2),
+        }],
       };
     } catch (error) {
       throw new Error(`Failed to get entity: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -169,12 +256,10 @@ class KOIServer {
       });
 
       return {
-        content: [
-          {
-            type: 'text',
-            text: typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2),
-          },
-        ],
+        content: [{
+          type: 'text',
+          text: typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2),
+        }],
       };
     } catch (error) {
       throw new Error(`Failed to execute SPARQL query: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -204,12 +289,10 @@ class KOIServer {
       }
 
       return {
-        content: [
-          {
-            type: 'text',
-            text: formatted,
-          },
-        ],
+        content: [{
+          type: 'text',
+          text: formatted,
+        }],
       };
     } catch (error) {
       throw new Error(`Failed to get stats: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -239,12 +322,10 @@ class KOIServer {
       }
 
       return {
-        content: [
-          {
-            type: 'text',
-            text: formatted,
-          },
-        ],
+        content: [{
+          type: 'text',
+          text: formatted,
+        }],
       };
     } catch (error) {
       throw new Error(`Failed to list credit classes: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -272,12 +353,10 @@ class KOIServer {
       }
 
       return {
-        content: [
-          {
-            type: 'text',
-            text: formatted,
-          },
-        ],
+        content: [{
+          type: 'text',
+          text: formatted,
+        }],
       };
     } catch (error) {
       throw new Error(`Failed to get recent activity: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -320,17 +399,21 @@ class KOIServer {
     return formatted;
   }
 
-  async run() {
-    const transport = new StdioServerTransport();
-    await this.server.connect(transport);
-    console.error(`[${SERVER_NAME}] Server running on stdio transport`);
+  async start() {
+    this.app.listen(PORT as number, HOST, () => {
+      console.log(`[${SERVER_NAME}] Remote MCP server running at http://${HOST}:${PORT}`);
+      console.log(`[${SERVER_NAME}] SSE endpoint: http://${HOST}:${PORT}/sse`);
+      console.log(`[${SERVER_NAME}] Health check: http://${HOST}:${PORT}/health`);
+      console.log(`[${SERVER_NAME}] MCP info: http://${HOST}:${PORT}/mcp`);
+      console.log(`[${SERVER_NAME}] Authentication: ${REQUIRE_AUTH ? 'Enabled' : 'Disabled'}`);
+    });
   }
 }
 
 // Main execution
 async function main() {
-  const server = new KOIServer();
-  await server.run();
+  const server = new KOIRemoteServer();
+  await server.start();
 }
 
 main().catch((error) => {

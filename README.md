@@ -42,6 +42,16 @@ KOI_API_KEY=your-api-key-here
 
 ### Usage with Claude Desktop
 
+### Option 1: Remote MCP Server (Easiest)
+
+In Claude Desktop, click "Add custom connector" and enter:
+- **Name**: Regen KOI
+- **Remote MCP server URL**: `https://koi-mcp.regen.network/sse` (or your server URL)
+
+That's it! No installation required.
+
+### Option 2: Local Installation
+
 Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/claude_desktop_config.json` on Mac):
 
 ```json
@@ -58,7 +68,7 @@ Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/
 }
 ```
 
-Or using npx (no installation required):
+### Option 3: NPX (No installation)
 
 ```json
 {
@@ -131,11 +141,102 @@ KOI_STATS_ENDPOINT=http://your-server:8301/api/koi/stats
 - **Authenticated**: 1000 requests/hour
 - **Enterprise**: Unlimited (contact us)
 
+## Running a Remote Server
+
+To host your own remote MCP server:
+
+```bash
+# Install dependencies
+npm install
+
+# Build the project
+npm run build
+
+# Start the remote server
+npm run start:remote
+
+# Or in development mode
+npm run dev:remote
+```
+
+The server will start on port 3333 by default. Configure via environment variables:
+
+```bash
+PORT=3333                    # Server port
+HOST=0.0.0.0                # Bind address
+REQUIRE_AUTH=true           # Enable authentication
+KOI_API_KEY=your-key        # API key for auth
+```
+
+### Deployment Options
+
+**Docker:**
+```dockerfile
+FROM node:20-alpine
+WORKDIR /app
+COPY . .
+RUN npm ci --only=production
+RUN npm run build
+EXPOSE 3333
+CMD ["npm", "run", "start:remote"]
+```
+
+**Systemd Service:**
+```ini
+[Unit]
+Description=Regen KOI MCP Server
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/regen-koi-mcp
+ExecStart=/usr/bin/node dist/server.js
+Restart=on-failure
+Environment="PORT=3333"
+Environment="REQUIRE_AUTH=true"
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**Nginx Reverse Proxy (for HTTPS/SSE):**
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name koi-mcp.regen.network;
+
+    ssl_certificate /etc/ssl/certs/cert.pem;
+    ssl_certificate_key /etc/ssl/private/key.pem;
+
+    location /sse {
+        proxy_pass http://localhost:3333/sse;
+        proxy_http_version 1.1;
+        proxy_set_header Connection '';
+        proxy_set_header Cache-Control 'no-cache';
+        proxy_set_header X-Accel-Buffering 'no';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_buffering off;
+        proxy_read_timeout 86400;
+    }
+
+    location / {
+        proxy_pass http://localhost:3333;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
 ## Development
 
 ```bash
 # Run in development mode
 npm run dev
+
+# Run remote server in dev mode
+npm run dev:remote
 
 # Clean build artifacts
 npm run clean
