@@ -27,6 +27,8 @@ This MCP server gives AI assistants access to Regen Network's comprehensive know
 - Climate action and environmental data
 - Regen Registry credit classes
 
+**Note:** This MCP server connects to our hosted KOI API at `http://202.61.196.119:8301`, so you don't need to run any infrastructure locally.
+
 ## 📦 Available Tools
 
 | Tool | Description | Example Query |
@@ -141,13 +143,13 @@ npm run clean
 ## 📋 Prerequisites
 
 - Node.js 18 or higher
-- KOI API server running (default: http://localhost:8301)
 - Claude Desktop or compatible MCP client
+- Internet connection (connects to hosted KOI API)
 
 ## 🛠️ Troubleshooting
 
 ### "KOI API not accessible"
-Make sure your KOI server is running at the configured endpoint. Check your `.env` file for the correct `KOI_API_ENDPOINT`.
+The setup connects to our hosted KOI API at `http://202.61.196.119:8301`. If you see connection errors, check your internet connection or firewall settings.
 
 ### "Tools not showing in Claude"
 1. Restart Claude Desktop after configuration

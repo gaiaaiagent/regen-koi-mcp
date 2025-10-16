@@ -99,7 +99,7 @@ function setupClaude() {
     command: 'node',
     args: [path.join(projectRoot, 'dist', 'index.js')],
     env: {
-      KOI_API_ENDPOINT: process.env.KOI_API_ENDPOINT || 'http://localhost:8301/api/koi'
+      KOI_API_ENDPOINT: process.env.KOI_API_ENDPOINT || 'http://202.61.196.119:8301/api/koi'
     }
   };
 
@@ -137,7 +137,7 @@ function setupVSCode() {
     command: 'node',
     args: [path.join(projectRoot, 'dist', 'index.js')],
     env: {
-      KOI_API_ENDPOINT: process.env.KOI_API_ENDPOINT || 'http://localhost:8301/api/koi'
+      KOI_API_ENDPOINT: process.env.KOI_API_ENDPOINT || 'http://202.61.196.119:8301/api/koi'
     }
   };
 
@@ -149,7 +149,7 @@ function setupVSCode() {
     command: 'node',
     args: [path.join(projectRoot, 'dist', 'index.js')],
     env: {
-      KOI_API_ENDPOINT: process.env.KOI_API_ENDPOINT || 'http://localhost:8301/api/koi'
+      KOI_API_ENDPOINT: process.env.KOI_API_ENDPOINT || 'http://202.61.196.119:8301/api/koi'
     }
   };
 
@@ -174,16 +174,17 @@ function buildProject() {
 // Function to check if KOI API is running
 function checkKOIAPI() {
   console.log('🔍 Checking KOI API connection...');
-  const endpoint = process.env.KOI_API_ENDPOINT || 'http://localhost:8301/api/koi';
+  const endpoint = process.env.KOI_API_ENDPOINT || 'http://202.61.196.119:8301/api/koi';
 
   try {
     // Try to fetch stats endpoint
-    execSync(`curl -s ${endpoint}/stats > /dev/null 2>&1`, { timeout: 3000 });
+    execSync(`curl -s ${endpoint}/stats > /dev/null 2>&1`, { timeout: 5000 });
     console.log(`✅ KOI API is accessible at: ${endpoint}\n`);
     return true;
   } catch (e) {
     console.log(`⚠️  KOI API not accessible at: ${endpoint}`);
-    console.log('   Make sure your KOI server is running\n');
+    console.log('   This is normal if you\'re setting up locally.\n');
+    console.log('   The remote server will be used when you run the MCP tools.\n');
     return false;
   }
 }
@@ -198,7 +199,8 @@ async function main() {
   if (!fs.existsSync(envPath)) {
     console.log('📋 Creating .env file...');
     const envContent = `# Regen KOI MCP Configuration
-KOI_API_ENDPOINT=http://localhost:8301/api/koi
+# Connect to the remote Regen KOI server
+KOI_API_ENDPOINT=http://202.61.196.119:8301/api/koi
 # Optional: Add your KOI API key if required
 # KOI_API_KEY=your_api_key_here
 `;
@@ -246,7 +248,7 @@ KOI_API_ENDPOINT=http://localhost:8301/api/koi
           command: 'node',
           args: [path.join(projectRoot, 'dist', 'index.js')],
           env: {
-            KOI_API_ENDPOINT: process.env.KOI_API_ENDPOINT || 'http://localhost:8301/api/koi'
+            KOI_API_ENDPOINT: process.env.KOI_API_ENDPOINT || 'http://202.61.196.119:8301/api/koi'
           }
         }
       }
