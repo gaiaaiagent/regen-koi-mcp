@@ -7,7 +7,7 @@ import { Tool } from '@modelcontextprotocol/sdk/types.js';
 export const TOOLS: Tool[] = [
   {
     name: 'search_knowledge',
-    description: 'Search the Regen Network KOI knowledge graph using hybrid RAG (semantic + keyword search). Returns relevant documents about ecological credits, methodologies, projects, and governance.',
+    description: 'General text search in the Regen Network knowledge base. Use this for searching documents by keywords or phrases. For graph queries about specific entities or relationships, use query_graph instead.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -65,13 +65,13 @@ export const TOOLS: Tool[] = [
   },
   {
     name: 'query_graph',
-    description: 'Execute SPARQL queries against the KOI knowledge graph for complex relationship queries',
+    description: 'Query the knowledge graph for specific entities and their relationships. Use this when asked to "query graph" for something. This performs structured graph traversal to find entities and their connections.',
     inputSchema: {
       type: 'object',
       properties: {
         query: {
           type: 'string',
-          description: 'SPARQL query to execute'
+          description: 'Entity name or SPARQL-like query (e.g., "Greg Landua", "SELECT ?s WHERE { ?s rdf:type :Person }")'
         },
         format: {
           type: 'string',

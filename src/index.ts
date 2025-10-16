@@ -14,6 +14,8 @@ import {
 import axios from 'axios';
 import dotenv from 'dotenv';
 import { TOOLS } from './tools.js';
+// Use enhanced SPARQL client with focused retrieval
+import { SPARQLClient } from './sparql-client-enhanced.js';
 
 // Load environment variables
 dotenv.config();
@@ -38,8 +40,10 @@ const apiClient = axios.create({
 
 class KOIServer {
   private server: Server;
+  private sparqlClient: SPARQLClient;
 
   constructor() {
+    this.sparqlClient = new SPARQLClient();
     this.server = new Server(
       {
         name: SERVER_NAME,
@@ -165,23 +169,145 @@ class KOIServer {
     const { query, format = 'json' } = args;
 
     try {
-      // Convert SPARQL-like query to natural language for the query endpoint
-      const response = await apiClient.post('/query', {
-        question: query,
-        top_k: 20
-      });
+      // Check if this looks like a SPARQL query
+      const isSparql = query.trim().toLowerCase().startsWith('select') ||
+                      query.trim().toLowerCase().startsWith('construct') ||
+                      query.trim().toLowerCase().startsWith('ask') ||
+                      query.trim().toLowerCase().startsWith('describe') ||
+                      query.trim().toLowerCase().startsWith('prefix');
+
+      let sparqlQuery: string;
+      let isDirectSparql = false;
+
+      if (isSparql) {
+        // Direct SPARQL query
+        sparqlQuery = query;
+        isDirectSparql = true;
+      } else {
+        // Natural language query - convert to SPARQL
+        console.error(`[${SERVER_NAME}] Converting natural language to SPARQL: "${query}"`);
+        sparqlQuery = await this.sparqlClient.naturalLanguageToSparql(query);
+      }
+
+      console.error(`[${SERVER_NAME}] Executing SPARQL query against Apache Jena`);
+
+      // Execute the SPARQL query against Apache Jena
+      const sparqlResults = await this.sparqlClient.executeQuery(sparqlQuery);
+
+      // Format the results
+      const formattedResults = this.sparqlClient.formatResults(sparqlResults, query);
+
+      // Also try to get some relevant documents from the vector search for context
+      let vectorResults = '';
+      if (!isDirectSparql) {
+        try {
+          const response = await apiClient.post('/query', {
+            question: query,
+            top_k: 5
+          });
+
+          if (response.data?.results?.length > 0) {
+            vectorResults = '\n\n## Related Documents (Vector Search)\n';
+            response.data.results.forEach((result: any, index: number) => {
+              vectorResults += `\n${index + 1}. **${result.title || 'Document'}** (Score: ${result.score?.toFixed(3)})\n`;
+              if (result.content) {
+                const preview = result.content.substring(0, 200);
+                vectorResults += `   ${preview}...\n`;
+              }
+              if (result.rid) {
+                vectorResults += `   RID: ${result.rid}\n`;
+              }
+            });
+          }
+        } catch (error) {
+          console.error(`[${SERVER_NAME}] Vector search failed, continuing with SPARQL results only`);
+        }
+      }
 
       return {
         content: [
           {
             type: 'text',
-            text: typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2),
+            text: formattedResults + vectorResults + (isDirectSparql ? `\n\n**SPARQL Query:**\n\`\`\`sparql\n${sparqlQuery}\n\`\`\`` : ''),
           },
         ],
       };
     } catch (error) {
-      throw new Error(`Failed to execute SPARQL query: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error(`[${SERVER_NAME}] Graph query error:`, error);
+
+      // Fallback to vector search if SPARQL fails
+      console.error(`[${SERVER_NAME}] Falling back to vector search`);
+      try {
+        const response = await apiClient.post('/query', {
+          question: `entity graph information about "${query}" including relationships, roles, connections, and associated entities`,
+          top_k: 30
+        });
+
+        const data = response.data as any;
+        if (data.results) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: this.formatGraphResults(data.results, query, format) + '\n\n*Note: SPARQL query failed, showing vector search results instead*',
+              },
+            ],
+          };
+        }
+      } catch (fallbackError) {
+        // Both failed
+      }
+
+      throw new Error(`Failed to execute graph query: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  private formatGraphResults(results: any[], entityName: string, format: string): string {
+    if (!results || results.length === 0) {
+      return `No graph data found for entity: "${entityName}"`;
+    }
+
+    let formatted = `# Graph Query Results: "${entityName}"\n\n`;
+
+    // Group results by confidence/relevance
+    const highConfidence = results.filter(r => r.score > 0.4);
+    const medConfidence = results.filter(r => r.score > 0.3 && r.score <= 0.4);
+
+    if (highConfidence.length > 0) {
+      formatted += `## Primary Entity Information\n\n`;
+      for (const result of highConfidence) {
+        if (result.content && result.content.toLowerCase().includes(entityName.toLowerCase())) {
+          formatted += `### ${result.title || 'Entity Data'}\n`;
+          formatted += `**Source**: ${result.source || 'Knowledge Graph'}\n`;
+          formatted += `**Confidence**: ${(result.score * 100).toFixed(1)}%\n\n`;
+          formatted += `${result.content}\n\n`;
+
+          if (result.metadata) {
+            formatted += `**Metadata**:\n\`\`\`json\n${JSON.stringify(result.metadata, null, 2)}\n\`\`\`\n\n`;
+          }
+          formatted += `---\n\n`;
+        }
+      }
+    }
+
+    if (medConfidence.length > 0) {
+      formatted += `## Related Entities & Connections\n\n`;
+      for (const result of medConfidence.slice(0, 5)) {
+        formatted += `- **${result.title || 'Related'}** (${(result.score * 100).toFixed(1)}%): ${result.content.substring(0, 200)}...\n`;
+      }
+    }
+
+    // Add graph structure summary if in graph format
+    if (format === 'graph') {
+      formatted += `\n## Graph Structure\n\n`;
+      formatted += `\`\`\`\n`;
+      formatted += `Entity: ${entityName}\n`;
+      formatted += `├── Direct References: ${highConfidence.length}\n`;
+      formatted += `└── Related Entities: ${medConfidence.length}\n`;
+      formatted += `\`\`\`\n`;
+    }
+
+    return formatted;
   }
 
   private async getStats(args: any) {
