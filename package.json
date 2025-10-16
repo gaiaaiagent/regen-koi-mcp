@@ -1,0 +1,34 @@
+{
+  "name": "regen-koi-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for accessing Regen Network's KOI (Knowledge Organization Infrastructure) system",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "regen-network",
+    "koi",
+    "knowledge-graph",
+    "ai",
+    "claude"
+  ],
+  "author": "Regen Network",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.6.0",
+    "axios": "^1.7.7",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.11",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3"
+  }
+}
