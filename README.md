@@ -46,6 +46,10 @@ This MCP server gives AI assistants access to Regen Network's comprehensive know
 
 The setup script automatically configures Claude Desktop. After running `npm run setup`, just restart Claude Desktop and you'll see the tools available.
 
+### Claude Code CLI ✅
+
+The setup script automatically configures Claude Code CLI. After running `npm run setup`, just restart Claude Code and you'll see the tools available.
+
 ### VSCode Extensions
 
 #### Cline (Claude Dev) ✅
@@ -88,7 +92,7 @@ Any MCP-compatible client can use this server. Configure with:
       "command": "node",
       "args": ["/absolute/path/to/regen-koi-mcp/dist/index.js"],
       "env": {
-        "KOI_API_ENDPOINT": "http://localhost:8301/api/koi"
+        "KOI_API_ENDPOINT": "http://202.61.196.119:8301/api/koi"
       }
     }
   }
@@ -96,6 +100,16 @@ Any MCP-compatible client can use this server. Configure with:
 ```
 
 3. Restart Claude Desktop
+
+### Claude Code CLI
+
+Run the following command to configure the MCP server:
+
+```bash
+claude mcp add-json regen-koi '{"command":"node","args":["/absolute/path/to/regen-koi-mcp/dist/index.js"],"env":{"KOI_API_ENDPOINT":"http://202.61.196.119:8301/api/koi"}}'
+```
+
+Replace `/absolute/path/to/regen-koi-mcp` with the actual path to your installation.
 
 ### NPX Usage (No Installation)
 

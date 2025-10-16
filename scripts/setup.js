@@ -43,6 +43,14 @@ function detectClients() {
     clients.push('claude');
   }
 
+  // Check for Claude Code CLI
+  try {
+    execSync('claude --version', { stdio: 'ignore' });
+    clients.push('claude-code');
+  } catch (e) {
+    // Claude Code CLI not found
+  }
+
   // Check for VSCode (for Cline/Continue extensions)
   const vscodeConfigPath = VSCode_CONFIG_PATHS[platform];
   if (vscodeConfigPath && fs.existsSync(path.dirname(vscodeConfigPath))) {
@@ -107,6 +115,30 @@ function setupClaude() {
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
   console.log(`✅ Claude Desktop configured at: ${configPath}`);
   console.log('   Please restart Claude Desktop to see the changes\n');
+}
+
+// Function to setup Claude Code CLI
+function setupClaudeCode() {
+  console.log('🔧 Setting up Claude Code CLI...');
+
+  try {
+    const serverConfig = JSON.stringify({
+      command: 'node',
+      args: [path.join(projectRoot, 'dist', 'index.js')],
+      env: {
+        KOI_API_ENDPOINT: process.env.KOI_API_ENDPOINT || 'http://202.61.196.119:8301/api/koi'
+      }
+    });
+
+    execSync(`claude mcp add-json regen-koi '${serverConfig}'`, {
+      stdio: 'inherit',
+      shell: true
+    });
+    console.log('✅ Claude Code CLI configured successfully');
+    console.log('   Please restart Claude Code to see the changes\n');
+  } catch (e) {
+    console.error('❌ Failed to configure Claude Code CLI:', e.message);
+  }
 }
 
 // Function to setup VSCode extensions (Cline/Continue)
@@ -235,6 +267,10 @@ KOI_API_ENDPOINT=http://202.61.196.119:8301/api/koi
     setupClaude();
   }
 
+  if (clients.includes('claude-code')) {
+    setupClaudeCode();
+  }
+
   if (clients.includes('vscode')) {
     setupVSCode();
   }
@@ -253,6 +289,14 @@ KOI_API_ENDPOINT=http://202.61.196.119:8301/api/koi
         }
       }
     }, null, 2));
+    console.log('\nFor Claude Code CLI, run:\n');
+    console.log(`claude mcp add-json regen-koi '${JSON.stringify({
+      command: 'node',
+      args: [path.join(projectRoot, 'dist', 'index.js')],
+      env: {
+        KOI_API_ENDPOINT: process.env.KOI_API_ENDPOINT || 'http://202.61.196.119:8301/api/koi'
+      }
+    })}'`);
   }
 
   console.log('\n✨ Setup complete!');
