@@ -6,7 +6,7 @@ Access Regen Network's Knowledge Organization Infrastructure (KOI) through Model
 
 ```bash
 # Clone the repository
-git clone https://github.com/gaiaaiagent/regen-koi-mcp
+git clone https://github.com/regen-network/regen-koi-mcp
 cd regen-koi-mcp
 
 # Install dependencies
@@ -251,7 +251,7 @@ MIT License - see LICENSE file for details
 
 ## 🔗 Links
 
-- [GitHub Repository](https://github.com/gaiaaiagent/regen-koi-mcp)
+- [GitHub Repository](https://github.com/regen-network/regen-koi-mcp)
 - [Regen Network](https://www.regen.network)
 - [Model Context Protocol](https://modelcontextprotocol.io)
 - [Claude Desktop](https://claude.ai/download)
