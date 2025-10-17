@@ -40,6 +40,10 @@ This MCP server gives AI assistants access to Regen Network's comprehensive know
 | `list_credit_classes` | List Regen Registry credit classes | Active carbon credits |
 | `get_recent_activity` | Get recent network activity | Last 24 hours |
 
+### Graph‑Aware Tools (Enhanced)
+- `predicate_community_summary` — View predicate communities (size, members)
+- `canonical_summary` — View canonical categories and top predicates per category
+
 ## 💻 Supported Clients
 
 ### Claude Desktop ✅
@@ -139,6 +143,14 @@ KOI_API_ENDPOINT=http://localhost:8301/api/koi
 
 # Optional: API key if your KOI server requires authentication
 # KOI_API_KEY=your_api_key_here
+
+# Graph + NL→SPARQL configuration
+JENA_ENDPOINT=http://localhost:3030/koi/sparql
+CONSOLIDATION_PATH=/opt/projects/koi-processor/src/core/final_consolidation_all_t0.25.json
+PATTERNS_PATH=/opt/projects/koi-processor/src/core/predicate_patterns.json
+COMMUNITY_PATH=/opt/projects/koi-processor/src/core/predicate_communities.json
+EMBEDDING_SERVICE_URL=http://localhost:8095
+# OPENAI_API_KEY=your_key  # Optional; template queries used when absent
 ```
 
 ## 🏗️ Development
@@ -153,6 +165,26 @@ npm run build
 # Clean build files
 npm run clean
 ```
+
+## 🔎 How Hybrid Graph Search Works
+
+- Adaptive dual‑branch execution:
+  - Focused: top‑K predicates via embeddings + usage + community expansion
+  - Broad: entity/topic regex over all predicates
+  - Canonical‑aware filtering (keywords → `regx:canonicalPredicate`) applied by default
+  - Smart fallback: if canonical returns 0 results, retry broad without canonical to recover recall
+- Results fused with Reciprocal Rank Fusion (RRF) for precision + recall
+
+## 📊 Evaluation
+
+Run the built‑in harness and inspect results:
+
+```bash
+node scripts/eval-nl2sparql.js
+```
+
+- Persists JSON to `results/eval_*.json` with focused/broad sizes, union/overlap, latency, noise rate.
+- Current baseline: 100% queries answered, 0% noise, ~1.5 s average latency.
 
 ## 📋 Prerequisites
 

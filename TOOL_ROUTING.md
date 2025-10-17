@@ -9,6 +9,7 @@
 - "query the graph"
 
 **Purpose:** Structured graph traversal to find entities and their relationships
+**Engine:** Adaptive NL→SPARQL with canonical‑aware filtering and smart fallback
 **Example:** "query graph for Greg Landua"
 
 ### search_knowledge
@@ -33,7 +34,12 @@
 ## Updated Behavior
 
 The `query_graph` tool now:
-- Recognizes both SPARQL queries and entity name queries
-- Enhances entity queries to include relationships and connections
-- Formats results as a graph structure showing primary and related entities
-- Returns more comprehensive results (30 items) for entity searches
+- Runs focused (predicate‑filtered) + broad branches in parallel
+- Applies canonical category filters by default for topic queries (eco_credit, finance, governance, water, etc.)
+- Falls back automatically when canonical returns zero results (recovers recall)
+- Fuses results with Reciprocal Rank Fusion (RRF)
+- Recognizes both SPARQL and entity queries; formats as triples for clarity
+
+### Complementary Graph Tools
+- `predicate_community_summary` – Explore predicate communities (size, examples)
+- `canonical_summary` – See canonical categories and top predicates per category

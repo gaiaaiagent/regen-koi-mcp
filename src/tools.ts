@@ -45,6 +45,37 @@ export const TOOLS: Tool[] = [
     }
   },
   {
+    name: 'canonical_summary',
+    description: 'Summarize canonical predicate categories and top predicates per category.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        category: { type: 'string', description: 'Canonical category to inspect (e.g., eco_credit, finance, governance, water, creation, funding, leadership, collaboration, location)' },
+        limit: { type: 'number', default: 10, minimum: 1, maximum: 100 }
+      }
+    }
+  },
+  {
+    name: 'predicate_community_summary',
+    description: 'Summarize predicate communities (size, top members). Optionally filter by community id or search term.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        community_id: { type: 'number', description: 'Community id to inspect' },
+        limit: { type: 'number', default: 10, minimum: 1, maximum: 100 },
+        search: { type: 'string', description: 'Filter communities by member substring' }
+      }
+    }
+  },
+  {
+    name: 'get_system_health',
+    description: 'Report system health: Jena, KOI API, embedding service, and consolidation/patterns status',
+    inputSchema: {
+      type: 'object',
+      properties: {}
+    }
+  },
+  {
     name: 'get_entity',
     description: 'Retrieve detailed information about a specific entity by its RID (Resource Identifier) or name. Use this for credit classes, projects, methodologies, or other specific resources.',
     inputSchema: {
