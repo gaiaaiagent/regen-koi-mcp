@@ -33,7 +33,7 @@ This MCP server gives AI assistants access to Regen Network's comprehensive know
 
 | Tool | Description | Key Inputs |
 |------|-------------|-----------|
-| `search_knowledge` | Hybrid search (vectors + graph with RRF) | `query` (string), `limit` (1–20, default 5), `published_from` (YYYY‑MM‑DD), `published_to` (YYYY‑MM‑DD) |
+| `search_knowledge` | Hybrid search (vectors + graph with RRF) | `query` (string), `limit` (1–20, default 5), `published_from` (YYYY‑MM‑DD), `published_to` (YYYY‑MM‑DD), `include_undated` (bool, default false) |
 | `get_stats` | Knowledge base statistics | `detailed` (boolean) |
 
 ## 💻 Supported Clients
@@ -166,7 +166,41 @@ npm run clean
   - Canonical‑aware filtering (keywords → `regx:canonicalPredicate`) by default
   - Smart fallback: if canonical returns 0 results, retry broad without canonical to recover recall
 - Results fused with Reciprocal Rank Fusion (RRF) for precision + recall
-- Date filter support: when `published_from`/`published_to` are provided, the vector branch is filtered server‑side; the graph branch remains unfiltered by date unless graph data includes publication dates
+- Date filter support: when `published_from`/`published_to` are provided, the vector and keyword branches are filtered server‑side. If `include_undated` is true, undated docs are also included. The graph branch adds a date filter only when RDF statements include `regx:publishedAt` (optional enrichment).
+- Natural‑language recency detection: phrases like “past week”, “last month”, “last 30 days”, “yesterday”, “today” automatically set a date range when no explicit `published_from`/`published_to` are provided.
+
+### Examples
+
+Direct KOI API examples (useful for testing filters):
+
+```bash
+# Natural-language recency ("past week") — MCP parses this automatically,
+# but you can also hit the KOI API directly for verification
+curl -s http://localhost:8301/api/koi/query \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "question": "what discussions about token design happened in the past week?",
+    "limit": 10
+  }' | jq '.results[0:3]'
+
+# Explicit date range with include_undated=true
+curl -s http://localhost:8301/api/koi/query \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "question": "token design",
+    "limit": 10,
+    "filters": {
+      "date_range": { "start": "2025-10-09", "end": "2025-10-16" },
+      "include_undated": true
+    }
+  }' | jq '.results[0:3]'
+```
+
+Within MCP, the `search_knowledge` tool accepts:
+
+- `published_from` / `published_to` (YYYY-MM-DD)
+- `include_undated` (boolean)
+If you omit dates but include phrases like “past week”, the MCP infers the date range automatically.
 
 ## 📊 Evaluation
 

@@ -104,6 +104,56 @@ class KOIServer {
     });
   }
 
+  private parseRecencyFromQuery(query: string): { start?: string, end?: string } | null {
+    const q = (query || '').toLowerCase();
+    const now = new Date();
+
+    const fmt = (d: Date) => {
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
+    const minusDays = (days: number) => {
+      const d = new Date(now);
+      d.setDate(d.getDate() - days);
+      return d;
+    };
+
+    // Common recency phrases
+    if (q.includes('past week') || q.includes('last week') || q.includes('last 7 days') || q.includes('past 7 days')) {
+      return { start: fmt(minusDays(7)), end: fmt(now) };
+    }
+    if (q.includes('past month') || q.includes('last month') || q.includes('last 30 days') || q.includes('past 30 days')) {
+      return { start: fmt(minusDays(30)), end: fmt(now) };
+    }
+    if (q.includes('past year') || q.includes('last year') || q.includes('last 365 days') || q.includes('past 365 days')) {
+      return { start: fmt(minusDays(365)), end: fmt(now) };
+    }
+    // last N days
+    const m = q.match(/last\s+(\d{1,3})\s+days?/);
+    if (m) {
+      const n = Math.min(365, Math.max(1, parseInt(m[1], 10)));
+      return { start: fmt(minusDays(n)), end: fmt(now) };
+    }
+    // since YYYY-MM-DD (or YYYY/MM/DD)
+    const m2 = q.match(/since\s+(\d{4}[-\/]\d{2}[-\/]\d{2})/);
+    if (m2) {
+      const dstr = m2[1].replace(/\//g, '-');
+      return { start: dstr };
+    }
+    if (q.includes('today')) {
+      const d = new Date(now);
+      return { start: fmt(d), end: fmt(d) };
+    }
+    if (q.includes('yesterday')) {
+      const d = minusDays(1);
+      return { start: fmt(d), end: fmt(d) };
+    }
+    return null;
+  }
+
   private async getSystemHealth() {
     const health: any = {
       jena: { ok: false },
@@ -226,13 +276,28 @@ class KOIServer {
   }
 
   private async searchKnowledge(args: any) {
-    const { query, limit = 5, published_from, published_to, useHybrid = true } = args || {};
+    const { query, limit = 5, published_from, published_to, include_undated = false, useHybrid = true } = args || {};
     const vectorFilters: any = {};
+
+    // Respect explicit date filter
     if (published_from || published_to) {
       vectorFilters.date_range = {
         ...(published_from ? { start: published_from } : {}),
         ...(published_to ? { end: published_to } : {})
       };
+    } else {
+      // Try to infer recency from the natural language query
+      const recency = this.parseRecencyFromQuery(query || '');
+      if (recency) {
+        vectorFilters.date_range = {
+          ...(recency.start ? { start: recency.start } : {}),
+          ...(recency.end ? { end: recency.end } : {})
+        };
+      }
+    }
+
+    if (include_undated) {
+      vectorFilters.include_undated = true;
     }
 
     // Use true hybrid search if enabled
@@ -621,6 +686,20 @@ class KOIServer {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
     console.error(`[${SERVER_NAME}] Server running on stdio transport`);
+    // Fire-and-forget warm-up to avoid first-query cold start
+    this.warmUp().catch(() => {});
+  }
+
+  private async warmUp() {
+    try {
+      // Jena warm-up
+      await this.sparqlClient.executeQuery('SELECT (COUNT(*) AS ?c) WHERE { ?s ?p ?o } LIMIT 1');
+    } catch {}
+    try {
+      // KOI API warm-up (vector path)
+      await apiClient.post('/query', { question: 'warmup', limit: 1 });
+    } catch {}
+    console.error(`[${SERVER_NAME}] Warm-up probes completed`);
   }
 }
 

@@ -42,10 +42,10 @@ export class HybridSearchClient {
   /**
    * Execute SPARQL query
    */
-  async querySPARQL(query: string): Promise<SPARQLResult[]> {
+  async querySPARQL(query: string, filters?: any): Promise<SPARQLResult[]> {
     try {
       // Build SPARQL query based on natural language
-      const sparql = await this.buildSPARQLQuery(query);
+      const sparql = await this.buildSPARQLQuery(query, { dateRange: filters?.date_range, includeUndated: !!filters?.include_undated });
 
       const response = await axios.post(
         JENA_ENDPOINT,
@@ -119,7 +119,7 @@ export class HybridSearchClient {
 
     // Execute both queries in parallel
     const [sparqlResults, vectorResults] = await Promise.all([
-      this.querySPARQL(query),
+      this.querySPARQL(query, filters),
       this.queryVector(query, vectorLimit, filters)
     ]);
 
@@ -273,7 +273,7 @@ export class HybridSearchClient {
   /**
    * Build SPARQL query from natural language
    */
-  private async buildSPARQLQuery(nlQuery: string): Promise<string> {
+  private async buildSPARQLQuery(nlQuery: string, options?: { dateRange?: { start?: string; end?: string }, includeUndated?: boolean }): Promise<string> {
     // Use the refined graph structure
     const queryLower = nlQuery.toLowerCase();
 
@@ -296,19 +296,31 @@ export class HybridSearchClient {
       .filter(w => w.length > 3)
       .map(w => w.toLowerCase());
 
+    const dateFilter = options?.dateRange;
+    const includeUndated = !!options?.includeUndated;
+    const dateClause = dateFilter ? `
+        OPTIONAL { ?stmt regx:publishedAt ?publishedAt . }
+        FILTER(BOUND(?publishedAt) ${includeUndated ? '|| !BOUND(?publishedAt)' : ''}
+          ${dateFilter.start ? `&& ?publishedAt >= \"${dateFilter.start}T00:00:00Z\"^^xsd:dateTime` : ''}
+          ${dateFilter.end ? `&& ?publishedAt <= \"${dateFilter.end}T23:59:59Z\"^^xsd:dateTime` : ''}
+        )
+    ` : '';
+
     return `
       PREFIX regx: <https://regen.network/ontology/experimental#>
+      PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
       SELECT ?subject ?predicate ?object
       WHERE {
         ?stmt a regx:Statement .
         ?stmt regx:subject ?subject .
         ?stmt regx:predicate ?predicate .
         ?stmt regx:object ?object .
+        ${dateClause}
         FILTER(
           ${keywords.map(kw => `
-            regex(str(?subject), "${kw}", "i") ||
-            regex(str(?predicate), "${kw}", "i") ||
-            regex(str(?object), "${kw}", "i")
+            regex(str(?subject), \"${kw}\", \"i\") ||
+            regex(str(?predicate), \"${kw}\", \"i\") ||
+            regex(str(?object), \"${kw}\", \"i\")
           `).join(' || ')}
         )
       }
@@ -352,6 +364,10 @@ export class HybridSearchClient {
         output += `${i + 1}. ${r.content.substring(0, 150)}...\n`;
         if (r.vectorMatch?.rid) {
           output += `   RID: ${r.vectorMatch.rid}\n`;
+        }
+        const pub = r.vectorMatch?.metadata?.published_at;
+        if (pub) {
+          output += `   Published: ${pub}\n`;
         }
       });
     }

@@ -31,6 +31,11 @@ export const TOOLS: Tool[] = [
           type: 'string',
           format: 'date',
           description: 'Filter: include only content published on/before this date (YYYY-MM-DD)'
+        },
+        include_undated: {
+          type: 'boolean',
+          description: 'When using a date filter, also include documents with no known publication date',
+          default: false
         }
       },
       required: ['query']
