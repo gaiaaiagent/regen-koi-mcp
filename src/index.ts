@@ -336,9 +336,10 @@ class KOIServer {
             question: query,
             top_k: 5
           });
-          if (response.data?.results?.length > 0) {
+          const data: any = response.data as any;
+          if (data?.results?.length > 0) {
             vectorResults = '\n\n## Related Documents (Vector Search)\n';
-            response.data.results.forEach((result: any, index: number) => {
+            data.results.forEach((result: any, index: number) => {
               vectorResults += `\n${index + 1}. **${result.title || 'Document'}** (Score: ${result.score?.toFixed(3)})\n`;
             });
           }
@@ -370,9 +371,10 @@ class KOIServer {
             top_k: 5
           });
 
-          if (response.data?.results?.length > 0) {
+          const data: any = response.data as any;
+          if (data?.results?.length > 0) {
             vectorResults = '\n\n## Related Documents (Vector Search)\n';
-            response.data.results.forEach((result: any, index: number) => {
+            data.results.forEach((result: any, index: number) => {
               vectorResults += `\n${index + 1}. **${result.title || 'Document'}** (Score: ${result.score?.toFixed(3)})\n`;
               if (result.content) {
                 const preview = result.content.substring(0, 200);

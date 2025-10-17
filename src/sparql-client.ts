@@ -143,7 +143,8 @@ SPARQL Query:`;
         }
       );
 
-      let sparql = response.data.choices[0].message.content.trim();
+      const data: any = response.data as any;
+      let sparql = data.choices[0].message.content.trim();
 
       // Clean up the SPARQL query
       if (sparql.startsWith('```sparql')) {

@@ -62,7 +62,8 @@ export class HybridSearchClient {
         }
       );
 
-      const bindings = response.data?.results?.bindings || [];
+      const data: any = response.data as any;
+      const bindings = data?.results?.bindings || [];
       return bindings.map((b: any) => ({
         subject: b.subject?.value || '',
         predicate: b.predicate?.value || '',
@@ -84,7 +85,8 @@ export class HybridSearchClient {
       if (filters && Object.keys(filters).length > 0) body.filters = filters;
       const response = await axios.post(`${VECTOR_API_URL}/query`, body);
 
-      const results = response.data?.results || [];
+      const data: any = response.data as any;
+      const results = data?.results || [];
       return results.map((r: any) => ({
         content: r.content || r.text || '',
         metadata: r.metadata || {},

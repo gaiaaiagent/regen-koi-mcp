@@ -215,7 +215,7 @@ export class EnhancedSPARQLClient {
   private async findRelevantPredicatesByEmbedding(query: string, topK = 50): Promise<{predicate: string; score: number; count: number;}[]> {
     try {
       const resp = await axios.post(`${EMBEDDING_SERVICE_URL}/similar`, { query, top_k: topK }, { timeout: 2000 });
-      const items: any[] = resp.data || [];
+      const items: any[] = (resp.data as any[]) || [];
       // Map to common shape
       return items.map(it => ({
         predicate: it.predicate || it.consolidated || '',
