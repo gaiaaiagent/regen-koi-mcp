@@ -7,13 +7,13 @@ import { Tool } from '@modelcontextprotocol/sdk/types.js';
 export const TOOLS: Tool[] = [
   {
     name: 'search_knowledge',
-    description: 'General text search in the Regen Network knowledge base. Use this for searching documents by keywords or phrases. For graph queries about specific entities or relationships, use query_graph instead.',
+    description: 'Hybrid search across KOI (vectors + graph). Accepts optional published date range filter.',
     inputSchema: {
       type: 'object',
       properties: {
         query: {
           type: 'string',
-          description: 'The search query (e.g., "carbon credits", "biodiversity methodology", "Regen Registry")'
+          description: 'The search query (e.g., "carbon credits", "Regen Registry governance")'
         },
         limit: {
           type: 'number',
@@ -22,93 +22,15 @@ export const TOOLS: Tool[] = [
           maximum: 20,
           default: 5
         },
-        filters: {
-          type: 'object',
-          description: 'Optional filters to narrow search results',
-          properties: {
-            source_type: {
-              type: 'string',
-              enum: ['documentation', 'governance', 'methodology', 'project', 'credit_class', 'all'],
-              description: 'Filter by content type'
-            },
-            date_range: {
-              type: 'object',
-              properties: {
-                start: { type: 'string', format: 'date' },
-                end: { type: 'string', format: 'date' }
-              }
-            }
-          }
-        }
-      },
-      required: ['query']
-    }
-  },
-  {
-    name: 'canonical_summary',
-    description: 'Summarize canonical predicate categories and top predicates per category.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        category: { type: 'string', description: 'Canonical category to inspect (e.g., eco_credit, finance, governance, water, creation, funding, leadership, collaboration, location)' },
-        limit: { type: 'number', default: 10, minimum: 1, maximum: 100 }
-      }
-    }
-  },
-  {
-    name: 'predicate_community_summary',
-    description: 'Summarize predicate communities (size, top members). Optionally filter by community id or search term.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        community_id: { type: 'number', description: 'Community id to inspect' },
-        limit: { type: 'number', default: 10, minimum: 1, maximum: 100 },
-        search: { type: 'string', description: 'Filter communities by member substring' }
-      }
-    }
-  },
-  {
-    name: 'get_system_health',
-    description: 'Report system health: Jena, KOI API, embedding service, and consolidation/patterns status',
-    inputSchema: {
-      type: 'object',
-      properties: {}
-    }
-  },
-  {
-    name: 'get_entity',
-    description: 'Retrieve detailed information about a specific entity by its RID (Resource Identifier) or name. Use this for credit classes, projects, methodologies, or other specific resources.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        identifier: {
+        published_from: {
           type: 'string',
-          description: 'The RID (e.g., "orn:credit_class:C03") or name (e.g., "Voluntary Carbon Units")'
+          format: 'date',
+          description: 'Filter: include only content published on/after this date (YYYY-MM-DD)'
         },
-        include_related: {
-          type: 'boolean',
-          description: 'Include related entities and relationships',
-          default: true
-        }
-      },
-      required: ['identifier']
-    }
-  },
-  {
-    name: 'query_graph',
-    description: 'Query the knowledge graph for specific entities and their relationships. Use this when asked to "query graph" for something. This performs structured graph traversal to find entities and their connections.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        query: {
+        published_to: {
           type: 'string',
-          description: 'Entity name or SPARQL-like query (e.g., "Greg Landua", "SELECT ?s WHERE { ?s rdf:type :Person }")'
-        },
-        format: {
-          type: 'string',
-          enum: ['json', 'table', 'graph'],
-          default: 'json',
-          description: 'Output format for results'
+          format: 'date',
+          description: 'Filter: include only content published on/before this date (YYYY-MM-DD)'
         }
       },
       required: ['query']
@@ -124,46 +46,6 @@ export const TOOLS: Tool[] = [
           type: 'boolean',
           description: 'Include detailed breakdown by source and type',
           default: false
-        }
-      }
-    }
-  },
-  {
-    name: 'list_credit_classes',
-    description: 'List all available credit classes in the Regen Registry with their key properties',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        active_only: {
-          type: 'boolean',
-          description: 'Only show active credit classes',
-          default: true
-        },
-        include_stats: {
-          type: 'boolean',
-          description: 'Include issuance statistics',
-          default: false
-        }
-      }
-    }
-  },
-  {
-    name: 'get_recent_activity',
-    description: 'Get recent activity in the Regen Network ecosystem including new credits, projects, and governance proposals',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        hours: {
-          type: 'number',
-          description: 'Number of hours to look back (default: 24, max: 168)',
-          minimum: 1,
-          maximum: 168,
-          default: 24
-        },
-        activity_type: {
-          type: 'string',
-          enum: ['all', 'credits', 'governance', 'projects', 'methodologies'],
-          default: 'all'
         }
       }
     }

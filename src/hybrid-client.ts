@@ -78,13 +78,11 @@ export class HybridSearchClient {
   /**
    * Execute vector similarity search
    */
-  async queryVector(query: string, limit: number = 10): Promise<VectorResult[]> {
+  async queryVector(query: string, limit: number = 10, filters?: any): Promise<VectorResult[]> {
     try {
-      const response = await axios.post(`${VECTOR_API_URL}/query`, {
-        question: query,
-        limit,
-        include_metadata: true
-      });
+      const body: any = { question: query, limit, include_metadata: true };
+      if (filters && Object.keys(filters).length > 0) body.filters = filters;
+      const response = await axios.post(`${VECTOR_API_URL}/query`, body);
 
       const results = response.data?.results || [];
       return results.map((r: any) => ({
@@ -106,11 +104,13 @@ export class HybridSearchClient {
     sparqlLimit?: number;
     vectorLimit?: number;
     fusionStrategy?: 'rrf' | 'weighted' | 'interleave';
+    filters?: any;
   } = {}): Promise<HybridResult[]> {
     const {
       sparqlLimit = 20,
       vectorLimit = 10,
-      fusionStrategy = 'rrf'
+      fusionStrategy = 'rrf',
+      filters
     } = options;
 
     console.log(`🔍 Hybrid search for: "${query}"`);
@@ -118,7 +118,7 @@ export class HybridSearchClient {
     // Execute both queries in parallel
     const [sparqlResults, vectorResults] = await Promise.all([
       this.querySPARQL(query),
-      this.queryVector(query, vectorLimit)
+      this.queryVector(query, vectorLimit, filters)
     ]);
 
     console.log(`  SPARQL: ${sparqlResults.length} results`);

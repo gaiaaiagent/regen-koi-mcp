@@ -85,30 +85,8 @@ class KOIServer {
         switch (name) {
           case 'search_knowledge':
             return await this.searchKnowledge(args);
-
-          case 'get_entity':
-            return await this.getEntity(args);
-
-          case 'query_graph':
-            return await this.queryGraph(args);
-
           case 'get_stats':
             return await this.getStats(args);
-
-          case 'list_credit_classes':
-            return await this.listCreditClasses(args);
-
-          case 'get_recent_activity':
-            return await this.getRecentActivity(args);
-
-          case 'get_system_health':
-            return await this.getSystemHealth();
-
-          case 'predicate_community_summary':
-            return await this.getPredicateCommunitySummary(args);
-          case 'canonical_summary':
-            return await this.getCanonicalSummary(args);
-
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
@@ -248,7 +226,14 @@ class KOIServer {
   }
 
   private async searchKnowledge(args: any) {
-    const { query, limit = 5, filters = {}, useHybrid = true } = args;
+    const { query, limit = 5, published_from, published_to, useHybrid = true } = args || {};
+    const vectorFilters: any = {};
+    if (published_from || published_to) {
+      vectorFilters.date_range = {
+        ...(published_from ? { start: published_from } : {}),
+        ...(published_to ? { end: published_to } : {})
+      };
+    }
 
     // Use true hybrid search if enabled
     if (useHybrid) {
@@ -256,7 +241,8 @@ class KOIServer {
         const results = await this.hybridClient.hybridSearch(query, {
           sparqlLimit: limit * 2,
           vectorLimit: limit,
-          fusionStrategy: 'rrf'
+          fusionStrategy: 'rrf',
+          filters: vectorFilters
         });
 
         const formattedResults = this.hybridClient.formatResults(results);
@@ -276,11 +262,9 @@ class KOIServer {
 
     // Fallback to original vector search
     try {
-      const response = await apiClient.post('/query', {
-        question: query,
-        limit,
-        filters
-      });
+      const body: any = { question: query, limit };
+      if (Object.keys(vectorFilters).length > 0) body.filters = vectorFilters;
+      const response = await apiClient.post('/query', body);
 
       const data = response.data as any;
       const results = data.results || [];
