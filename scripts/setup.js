@@ -130,12 +130,29 @@ function setupClaudeCode() {
       }
     });
 
-    execSync(`claude mcp add-json regen-koi '${serverConfig}'`, {
-      stdio: 'inherit',
-      shell: true
-    });
-    console.log('✅ Claude Code CLI configured successfully');
-    console.log('   Please restart Claude Code to see the changes\n');
+    try {
+      // Attempt to add, will fail if already exists
+      execSync(`claude mcp add-json regen-koi '${serverConfig}'`, {
+        stdio: 'inherit',
+        shell: true
+      });
+      console.log('✅ Claude Code CLI configured successfully');
+      console.log('   Please restart Claude Code to see the changes\n');
+    } catch (addErr) {
+      // If already exists or other non-fatal error, try remove then add
+      try {
+        console.log('ℹ️  Updating existing Claude Code MCP config for regen-koi...');
+        execSync(`claude mcp remove regen-koi`, { stdio: 'ignore', shell: true });
+      } catch (_) {
+        // ignore remove failure (may not exist)
+      }
+      execSync(`claude mcp add-json regen-koi '${serverConfig}'`, {
+        stdio: 'inherit',
+        shell: true
+      });
+      console.log('✅ Claude Code CLI configuration updated');
+      console.log('   Please restart Claude Code to see the changes\n');
+    }
   } catch (e) {
     console.error('❌ Failed to configure Claude Code CLI:', e.message);
   }
