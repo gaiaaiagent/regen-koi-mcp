@@ -31,18 +31,10 @@ This MCP server gives AI assistants access to Regen Network's comprehensive know
 
 ## 📦 Available Tools
 
-| Tool | Description | Example Query |
-|------|-------------|---------------|
-| `search_knowledge` | Search the KOI knowledge base | "carbon sequestration methods" |
-| `get_entity` | Get specific entity information | "regen1234..." |
-| `query_graph` | Execute SPARQL queries | Complex graph queries |
-| `get_stats` | Get knowledge base statistics | Database metrics |
-| `list_credit_classes` | List Regen Registry credit classes | Active carbon credits |
-| `get_recent_activity` | Get recent network activity | Last 24 hours |
-
-### Graph‑Aware Tools (Enhanced)
-- `predicate_community_summary` — View predicate communities (size, members)
-- `canonical_summary` — View canonical categories and top predicates per category
+| Tool | Description | Key Inputs |
+|------|-------------|-----------|
+| `search_knowledge` | Hybrid search (vectors + graph with RRF) | `query` (string), `limit` (1–20, default 5), `published_from` (YYYY‑MM‑DD), `published_to` (YYYY‑MM‑DD) |
+| `get_stats` | Knowledge base statistics | `detailed` (boolean) |
 
 ## 💻 Supported Clients
 
@@ -144,7 +136,7 @@ KOI_API_ENDPOINT=http://localhost:8301/api/koi
 # Optional: API key if your KOI server requires authentication
 # KOI_API_KEY=your_api_key_here
 
-# Graph + NL→SPARQL configuration
+# Graph + NL→SPARQL configuration (used internally by hybrid search)
 JENA_ENDPOINT=http://localhost:3030/koi/sparql
 CONSOLIDATION_PATH=/opt/projects/koi-processor/src/core/final_consolidation_all_t0.25.json
 PATTERNS_PATH=/opt/projects/koi-processor/src/core/predicate_patterns.json
@@ -168,12 +160,13 @@ npm run clean
 
 ## 🔎 How Hybrid Graph Search Works
 
-- Adaptive dual‑branch execution:
+- Adaptive dual‑branch execution (internally via MCP):
   - Focused: top‑K predicates via embeddings + usage + community expansion
   - Broad: entity/topic regex over all predicates
-  - Canonical‑aware filtering (keywords → `regx:canonicalPredicate`) applied by default
+  - Canonical‑aware filtering (keywords → `regx:canonicalPredicate`) by default
   - Smart fallback: if canonical returns 0 results, retry broad without canonical to recover recall
 - Results fused with Reciprocal Rank Fusion (RRF) for precision + recall
+- Date filter support: when `published_from`/`published_to` are provided, the vector branch is filtered server‑side; the graph branch remains unfiltered by date unless graph data includes publication dates
 
 ## 📊 Evaluation
 
