@@ -57,10 +57,10 @@ function detectClients() {
     // Check for specific extensions
     try {
       if (platform === 'darwin' || platform === 'linux') {
-        execSync('code --list-extensions | grep -E "saoudrizwan.claude-dev|continue.continue" > /dev/null 2>&1');
+        execSync('code --list-extensions | grep -E "saoudrizwan.claude-dev|continue.continue" > /dev/null 2>&1', { stdio: 'ignore' });
         clients.push('vscode');
       } else if (platform === 'win32') {
-        execSync('code --list-extensions | findstr /R "saoudrizwan.claude-dev continue.continue" > nul 2>&1');
+        execSync('code --list-extensions | findstr /R "saoudrizwan.claude-dev continue.continue" > nul 2>&1', { stdio: 'ignore' });
         clients.push('vscode');
       }
     } catch (e) {
@@ -306,12 +306,16 @@ KOI_API_ENDPOINT=http://202.61.196.119:8301/api/koi
   }
 
   console.log('\n📚 Available MCP Tools:');
-  console.log('   - search_knowledge: Search the KOI knowledge base');
-  console.log('   - get_entity: Get specific entity information');
-  console.log('   - query_graph: Execute SPARQL queries');
-  console.log('   - get_stats: Get knowledge base statistics');
-  console.log('   - list_credit_classes: List Regen credit classes');
-  console.log('   - get_recent_activity: Get recent network activity');
+  try {
+    const mod = await import(path.join(projectRoot, 'dist', 'tools.js'));
+    const tools = (mod.TOOLS || []).map((t) => ({ name: t.name, description: t.description }));
+    if (tools.length === 0) throw new Error('No tools exported');
+    tools.forEach(t => console.log(`   - ${t.name}: ${t.description}`));
+  } catch (e) {
+    // Fallback if dist/tools.js not found
+    console.log('   - search_knowledge: Hybrid search across KOI (vectors + graph)');
+    console.log('   - get_stats: Knowledge base statistics');
+  }
   console.log('\nEnjoy using Regen KOI MCP! 🌱');
 }
 
