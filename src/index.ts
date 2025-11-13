@@ -835,26 +835,48 @@ class KOIServer {
         }
       }
 
-      // If no markdown content (either Python disabled or failed), use KOI API
+      // If no markdown content (either Python disabled or failed), use KOI API weekly-digest endpoint
       if (!markdownContent) {
-        console.error(`[${SERVER_NAME}] Generating digest from KOI API`);
-        const searchResults = await this.searchKnowledge({
-          query: 'Regen Network activity updates discussions governance',
-          limit: 100,
-          published_from: startDate,
-          published_to: endDate
-        });
+        console.error(`[${SERVER_NAME}] Generating digest from KOI API /weekly-digest endpoint`);
+        try {
+          const response = await apiClient.get('/weekly-digest', {
+            params: {
+              start_date: startDate,
+              end_date: endDate,
+              format: 'markdown'
+            }
+          });
 
-        // Extract text from search results
-        const resultsText = searchResults.content[0].text;
+          const data = response.data as any;
+          if (data.content) {
+            markdownContent = data.content;
+            usedPythonScript = true; // The API endpoint uses the Python script
+            console.error(`[${SERVER_NAME}] Successfully generated digest via API endpoint`);
+          } else {
+            throw new Error('No content in API response');
+          }
+        } catch (apiError) {
+          console.error(`[${SERVER_NAME}] API weekly-digest endpoint failed, using search fallback:`, apiError);
 
-        // Generate markdown digest
-        markdownContent = `# Regen Network Weekly Digest\n\n`;
-        markdownContent += `**Period:** ${startDate} to ${endDate}\n\n`;
-        markdownContent += `## Summary\n\n`;
-        markdownContent += `This digest was generated from the KOI knowledge base using semantic search.\n\n`;
-        markdownContent += `## Recent Activity\n\n`;
-        markdownContent += resultsText;
+          // Final fallback: use search
+          const searchResults = await this.searchKnowledge({
+            query: 'Regen Network activity updates discussions governance',
+            limit: 100,
+            published_from: startDate,
+            published_to: endDate
+          });
+
+          // Extract text from search results
+          const resultsText = searchResults.content[0].text;
+
+          // Generate markdown digest
+          markdownContent = `# Regen Network Weekly Digest\n\n`;
+          markdownContent += `**Period:** ${startDate} to ${endDate}\n\n`;
+          markdownContent += `## Summary\n\n`;
+          markdownContent += `This digest was generated from the KOI knowledge base using semantic search.\n\n`;
+          markdownContent += `## Recent Activity\n\n`;
+          markdownContent += resultsText;
+        }
       }
 
       // Generate summary statistics
