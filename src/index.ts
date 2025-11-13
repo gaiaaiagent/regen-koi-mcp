@@ -693,17 +693,29 @@ class KOIServer {
 
       // Execute the Python script directly
       const { spawn } = await import('child_process');
-      const scriptPath = '/opt/projects/koi-processor/scripts/run_weekly_aggregator.py';
-      const pythonPath = '/opt/projects/koi-processor/venv/bin/python3';
+      const path = await import('path');
+      const fs = await import('fs');
+
+      // Use paths relative to the MCP server directory
+      const mcpServerDir = path.join(__dirname, '..');
+      const scriptPath = path.join(mcpServerDir, 'python', 'scripts', 'run_weekly_aggregator.py');
+      const configPath = path.join(mcpServerDir, 'python', 'config', 'weekly_aggregator.json');
+
+      // Try to find python3 or python
+      const pythonPath = 'python3'; // Will use system python3
+
+      // Check if Python script exists
+      if (!fs.existsSync(scriptPath)) {
+        console.error(`[${SERVER_NAME}] Python script not found at ${scriptPath}`);
+        throw new Error(`Python script not found. Please run the setup script to install Python dependencies.`);
+      }
 
       // Build command args - use preview mode when not saving to file
-      const scriptArgs = [scriptPath];
+      const scriptArgs = [scriptPath, '--config', configPath];
 
       if (save_to_file) {
         // Save to file mode - need output directory
-        const fs = await import('fs');
-        const path = await import('path');
-        const outputDir = output_path || '/opt/projects/koi-processor/output/weekly_digests';
+        const outputDir = output_path || path.join(mcpServerDir, 'python', 'output', 'weekly_digests');
 
         if (!fs.existsSync(outputDir)) {
           fs.mkdirSync(outputDir, { recursive: true });
@@ -726,7 +738,7 @@ class KOIServer {
       console.error(`[${SERVER_NAME}] Executing: ${pythonPath} ${scriptArgs.join(' ')}`);
 
       const pythonProcess = spawn(pythonPath, scriptArgs, {
-        cwd: '/opt/projects/koi-processor',
+        cwd: path.join(mcpServerDir, 'python'),
         env: { ...process.env }
       });
 

@@ -1,0 +1,75 @@
+{
+  "database": {
+    "host": "localhost",
+    "port": 5433,
+    "database": "eliza",
+    "user": "postgres",
+    "password": "postgres"
+  },
+  "bge_server_url": "http://localhost:8090",
+  "koi_coordinator_url": "http://localhost:8000",
+  "content": {
+    "min_confidence": 0.6,
+    "max_items": 500,
+    "clustering_eps": 0.3,
+    "min_cluster_size": 3,
+    "brief_word_count": 1000
+  },
+  "sources": {
+    "prioritize": [
+      "governance",
+      "ecocredits",
+      "discourse",
+      "twitter",
+      "medium",
+      "ledger"
+    ],
+    "exclude": []
+  },
+  "themes": {
+    "governance": [
+      "proposal",
+      "vote",
+      "validator",
+      "delegation",
+      "parameter"
+    ],
+    "ecocredits": [
+      "credit",
+      "batch",
+      "project",
+      "methodology",
+      "carbon",
+      "biodiversity"
+    ],
+    "community": [
+      "event",
+      "meeting",
+      "workshop",
+      "call",
+      "discussion"
+    ],
+    "technical": [
+      "update",
+      "release",
+      "feature",
+      "api",
+      "sdk",
+      "development"
+    ],
+    "regeneration": [
+      "regenerative",
+      "agriculture",
+      "soil",
+      "ecosystem",
+      "nature",
+      "climate"
+    ]
+  },
+  "notebooklm": {
+    "max_sources": 50,
+    "source_format": "markdown",
+    "include_metadata": true,
+    "chunk_size": 2000
+  }
+}
