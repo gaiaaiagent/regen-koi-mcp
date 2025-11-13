@@ -864,23 +864,34 @@ class KOIServer {
         console.error(`[${SERVER_NAME}] Saved digest to ${savedFilePath}`);
       }
 
-      // Format response
-      let responseText = `# Weekly Digest Generated\n\n`;
-      responseText += `**Period:** ${startDate} to ${endDate}\n`;
-      responseText += `**Word Count:** ${wordCount}\n`;
-      responseText += `**Sources Referenced:** ${sourceCount}\n`;
+      // Format response with resource for artifact rendering
+      const resourceUri = `digest://weekly/${startDate}_to_${endDate}.${format === 'json' ? 'json' : 'md'}`;
+      const mimeType = format === 'json' ? 'application/json' : 'text/markdown';
+
+      // Create summary text
+      let summaryText = `Generated weekly digest for ${startDate} to ${endDate}\n\n`;
+      summaryText += `📊 **Statistics:**\n`;
+      summaryText += `- Word Count: ${wordCount}\n`;
+      summaryText += `- Sources Referenced: ${sourceCount}\n`;
       if (savedFilePath) {
-        responseText += `**Saved to:** ${savedFilePath}\n`;
+        summaryText += `- Saved to: ${savedFilePath}\n`;
       }
-      responseText += `\n---\n\n`;
-      responseText += resultText;
+      summaryText += `\nThe full digest is provided below as a ${format} document.`;
 
       return {
         content: [
           {
             type: 'text',
-            text: responseText,
+            text: summaryText,
           },
+          {
+            type: 'resource',
+            resource: {
+              uri: resourceUri,
+              mimeType: mimeType,
+              text: resultText
+            }
+          }
         ],
       };
 
