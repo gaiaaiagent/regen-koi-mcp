@@ -28,39 +28,21 @@ Just restart Claude Desktop or reload VSCode to see the tools.
 
 The setup script will check for these and guide you if they're missing.
 
-## 🏠 Self-Hosted vs Hosted API
+## 🏠 Deployment Options
 
-### Default: Hosted API (Recommended)
+### 🌐 Option 1: Hosted API (Default - Recommended)
 By default, the MCP client connects to the **hosted KOI API** at `https://regen.gaiaai.xyz/api/koi`. This works out of the box - no additional setup required!
 
-### Self-Hosted: Run Your Own API Server (Optional)
-Want full control? The repo includes a complete KOI API server you can run locally.
+### 🖥️ Option 2: Self-Hosted API Server
+Want to run your own API server with direct database access? See [ARCHITECTURE.md](ARCHITECTURE.md) for setup instructions.
 
-**To set up the local server:**
-```bash
-cd server
-./setup.sh      # Install server dependencies
-./start.sh -b   # Start in background
-```
+### 🏗️ Option 3: Full Self-Hosted Pipeline
+Want complete control including data collection? You'll need:
+- This repo (MCP client + API server)
+- [koi-sensors](https://github.com/gaiaaiagent/koi-sensors) - Data collection from Discourse, Ledger, etc.
+- [koi-processor](https://github.com/gaiaaiagent/koi-processor) - Batch processing pipeline
 
-**Configure the MCP client** to use your local server in `claude_desktop_config.json`:
-```json
-{
-  "env": {
-    "KOI_API_ENDPOINT": "http://localhost:8301/api/koi"
-  }
-}
-```
-
-**Server features:**
-- Hybrid search (vector + keyword with RRF)
-- Statistics and analytics
-- Weekly digest generation endpoint
-- Full database access control
-
-**Server requirements:**
-- PostgreSQL database with KOI schema
-- (Optional) BGE embedding server for vector search
+See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed setup instructions and architecture overview.
 
 ## 🎯 What This Does
 
@@ -356,4 +338,11 @@ Built by the Regen Network community to make ecological knowledge accessible to 
 
 ---
 
-*For self-hosting the KOI knowledge processing pipeline, see our [KOI Processor](https://github.com/gaiaaiagent/koi-processor) repository.*
+## 🏗️ Related Repositories
+
+This MCP client is part of the larger KOI ecosystem:
+
+- **[koi-sensors](https://github.com/gaiaaiagent/koi-sensors)** - Real-time data collection from Discourse, Regen Ledger, websites, etc.
+- **[koi-processor](https://github.com/gaiaaiagent/koi-processor)** - Batch processing pipeline for chunking, embedding, and graph construction
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for how these components work together.
