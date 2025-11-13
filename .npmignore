@@ -1,0 +1,47 @@
+# Source files (only ship dist/)
+src/
+tsconfig.json
+*.ts
+!*.d.ts
+
+# Development files
+.git/
+.github/
+.vscode/
+node_modules/
+*.log
+*.swp
+*.swo
+*~
+
+# Test files
+test/
+tests/
+*.test.js
+*.spec.js
+
+# Build artifacts
+*.tsbuildinfo
+
+# Documentation (keep README.md)
+docs/
+ARCHITECTURE.md
+CONTRIBUTING.md
+
+# Environment
+.env
+.env.*
+
+# Python/Server (not needed for MCP client)
+python/
+server/
+setup.sh
+venv/
+
+# Scripts
+scripts/setup.js
+scripts/eval-nl2sparql.js
+
+# Config files
+.eslintrc.*
+.prettierrc.*
