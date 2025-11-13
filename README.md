@@ -28,15 +28,39 @@ Just restart Claude Desktop or reload VSCode to see the tools.
 
 The setup script will check for these and guide you if they're missing.
 
-### How the Weekly Digest Tool Works
+## 🏠 Self-Hosted vs Hosted API
 
-The weekly digest tool uses the **KOI API** by default (no local setup required). It queries the hosted KOI knowledge base at `https://regen.gaiaai.xyz/api/koi` and generates a digest from the results.
+### Default: Hosted API (Recommended)
+By default, the MCP client connects to the **hosted KOI API** at `https://regen.gaiaai.xyz/api/koi`. This works out of the box - no additional setup required!
 
-**Advanced Option**: If you have a local KOI database and want to use the sophisticated Python digest generator:
-1. Set environment variable: `USE_LOCAL_PYTHON_DIGEST=true`
-2. Configure your database in `python/config/weekly_aggregator.json`
+### Self-Hosted: Run Your Own API Server (Optional)
+Want full control? The repo includes a complete KOI API server you can run locally.
 
-Most users don't need this - the KOI API method works great out of the box!
+**To set up the local server:**
+```bash
+cd server
+./setup.sh      # Install server dependencies
+./start.sh -b   # Start in background
+```
+
+**Configure the MCP client** to use your local server in `claude_desktop_config.json`:
+```json
+{
+  "env": {
+    "KOI_API_ENDPOINT": "http://localhost:8301/api/koi"
+  }
+}
+```
+
+**Server features:**
+- Hybrid search (vector + keyword with RRF)
+- Statistics and analytics
+- Weekly digest generation endpoint
+- Full database access control
+
+**Server requirements:**
+- PostgreSQL database with KOI schema
+- (Optional) BGE embedding server for vector search
 
 ## 🎯 What This Does
 
@@ -56,6 +80,28 @@ This MCP server gives AI assistants access to Regen Network's comprehensive know
 | `search_knowledge` | Hybrid search (vectors + graph with RRF) | `query` (string), `limit` (1–20, default 5), `published_from` (YYYY‑MM‑DD), `published_to` (YYYY‑MM‑DD), `include_undated` (bool, default false) |
 | `get_stats` | Knowledge base statistics | `detailed` (boolean) |
 | `generate_weekly_digest` | Generate weekly digest of Regen Network activity | `start_date` (YYYY-MM-DD, default: 7 days ago), `end_date` (YYYY-MM-DD, default: today), `save_to_file` (bool, default false), `output_path` (string), `format` ('markdown' or 'json', default: 'markdown') |
+
+## 🏗️ Architecture
+
+This repo contains everything you need to run a complete KOI MCP setup:
+
+```
+regen-koi-mcp/
+├── src/              # MCP client (connects to API)
+├── server/           # KOI API server (FastAPI)
+│   ├── src/          # API endpoints
+│   ├── setup.sh      # Server setup
+│   ├── start.sh      # Start server
+│   └── stop.sh       # Stop server
+└── python/           # Weekly digest generator
+    ├── src/          # Digest logic
+    ├── config/       # Configuration
+    └── setup.sh      # Python setup
+```
+
+**Two modes:**
+1. **Client-only** (default): MCP client → Hosted API
+2. **Self-hosted**: MCP client → Your local API → Your database
 
 ## 💻 Supported Clients
 

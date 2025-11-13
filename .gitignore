@@ -9,6 +9,12 @@ python/venv/
 python/__pycache__/
 python/src/__pycache__/
 python/src/content/__pycache__/
+server/venv/
+server/__pycache__/
+server/src/__pycache__/
+server/*.log
+server/*.pid
+server/.env
 *.pyc
 *.pyo
 *.pyd

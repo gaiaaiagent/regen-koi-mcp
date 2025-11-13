@@ -54,10 +54,51 @@ echo "⚙️  Configuring MCP clients..."
 npm run setup
 echo ""
 
-echo "✅ Setup complete!"
+echo "✅ MCP Client setup complete!"
+echo ""
+
+# Ask if user wants to set up the local API server
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "Optional: Set up local KOI API Server"
+echo ""
+echo "By default, the MCP client connects to the hosted KOI API."
+echo "Would you like to set up a local API server instead?"
+echo ""
+read -p "Set up local server? (y/N): " -n 1 -r
+echo ""
+
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo ""
+    echo "🔧 Setting up local KOI API Server..."
+    cd server
+    ./setup.sh
+    cd ..
+    echo ""
+    echo "✅ Local server setup complete!"
+    echo ""
+    echo "To start the server:"
+    echo "  cd server && ./start.sh --background"
+    echo ""
+    echo "To stop the server:"
+    echo "  cd server && ./stop.sh"
+    echo ""
+    echo "Then configure the MCP client to use: http://localhost:8301/api/koi"
+else
+    echo ""
+    echo "Skipping local server setup."
+    echo "The MCP client will use the hosted API at: https://regen.gaiaai.xyz/api/koi"
+    echo ""
+fi
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "Next steps:"
-echo "1. Configure your database in: python/config/weekly_aggregator.json"
-echo "2. Restart Claude Desktop (or your MCP client)"
-echo "3. Start using the KOI tools!"
+echo "1. Restart Claude Desktop (or your MCP client)"
+echo "2. Start using the KOI tools!"
 echo ""
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "3. (Optional) Configure your local database in: server/.env"
+    echo ""
+fi
