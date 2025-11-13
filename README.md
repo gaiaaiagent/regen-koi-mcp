@@ -45,30 +45,41 @@ Config file locations:
 
 Then restart Claude Desktop and you're done! 🎉
 
-**For existing git users**: Just update your config to use `npx` instead of `node` - see the config above. You'll automatically get updates!
+**For existing git users**: See the migration section below for a simple one-line script to switch to npx.
+
+---
+
+### 🔄 Migrating from Git Installation
+
+If you previously installed via `git clone`, switch to npx for automatic updates:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/gaiaaiagent/regen-koi-mcp/main/migrate.sh | bash
+```
+
+**What this does**:
+- ✅ Backs up your existing config
+- ✅ Updates `command: "node"` → `command: "npx"`
+- ✅ Updates `args` to use `regen-koi-mcp@latest`
+- ✅ Configures Claude Code CLI too
+- ✅ You get automatic updates forever!
+
+After migration, you can safely delete your old git clone directory.
 
 ---
 
 ### Option 2: Local Development (Git Clone)
 
-For contributing or local development:
+For contributors or local development only:
 
 ```bash
-# Clone the repository
 git clone https://github.com/gaiaaiagent/regen-koi-mcp
 cd regen-koi-mcp
-
-# Run the setup script (installs everything and configures clients)
-./setup.sh
+npm install
+npm run build
 ```
 
-The setup script will:
-- ✅ Install Node.js dependencies
-- ✅ Setup Python environment (optional, for advanced digest features)
-- ✅ Build the TypeScript code
-- ✅ Configure Claude Desktop & VSCode automatically
-
-Just restart Claude Desktop or reload VSCode to see the tools.
+Then manually configure your MCP client to point to the local `dist/index.js`.
 
 **Requirements:**
 - **Node.js 16+**: [Download here](https://nodejs.org)
