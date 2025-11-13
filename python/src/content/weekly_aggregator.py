@@ -46,6 +46,9 @@ class ContentItem:
     embedding: Optional[np.ndarray] = None
     cluster_id: Optional[int] = None
     relevance_score: float = 0.0
+    metadata: Optional[Dict[str, Any]] = None  # Store full metadata
+    thread_id: Optional[str] = None  # For thread aggregation
+    is_aggregated: bool = False  # True if this item represents multiple posts
 
 @dataclass
 class WeeklyDigest:
@@ -145,6 +148,7 @@ class WeeklyAggregator:
             SELECT
                 rid as id,
                 content,
+                metadata,
                 metadata->>'title' as title,
                 source_sensor as source,
                 metadata->>'url' as url,
@@ -199,7 +203,7 @@ class WeeklyAggregator:
                 AND published_confidence >= %s
         )
         SELECT
-            id, content, title, source, url,
+            id, content, metadata, title, source, url,
             publication_date, confidence, tags
         FROM source_groups
         WHERE
@@ -261,20 +265,145 @@ class WeeklyAggregator:
                 if not title or title == "":
                     title = "Untitled"
 
+                # Parse metadata
+                metadata = row['metadata'] if isinstance(row['metadata'], dict) else {}
+
+                # Extract thread ID from URL or parent_rid for forum posts
+                thread_id = None
+                if metadata.get('parent_rid'):
+                    # For chunked posts, use parent_rid as base thread identifier
+                    parent_rid = metadata.get('parent_rid', '')
+                    # Extract thread number from parent_rid or URL
+                    if 'forum.regen.network_' in parent_rid:
+                        # Format: regen.forum-post:forum.regen.network_413_post_2
+                        parts = parent_rid.split('_')
+                        if len(parts) >= 2:
+                            thread_num = parts[-2]  # Get thread number (e.g., "413")
+                            thread_id = f"forum.regen.network_{thread_num}"
+                    elif 'discourse.group_' in parent_rid:
+                        parts = parent_rid.split('_')
+                        if len(parts) >= 2:
+                            thread_num = parts[-2]
+                            thread_id = f"regencommons.discourse.group_{thread_num}"
+
                 items.append(ContentItem(
                     id=row['id'],
-                    content=content_text[:1000],  # Truncate for processing
+                    content=content_text,  # Store FULL content, not truncated
                     title=title,
                     source=row['source'] or "unknown",
                     url=row['url'],
                     publication_date=row['publication_date'],
                     confidence=row['confidence'],
-                    tags=tags
+                    tags=tags,
+                    metadata=metadata,
+                    thread_id=thread_id
                 ))
         
         logger.info(f"Collected {len(items)} items from past {days_back} days")
         return items
-    
+
+    def aggregate_threads(self, items: List[ContentItem]) -> List[ContentItem]:
+        """
+        Aggregate forum posts and chunks into complete threads.
+        Returns a new list where thread posts are combined into single items.
+        """
+        # Group items by thread_id
+        threads = defaultdict(list)
+        standalone_items = []
+
+        for item in items:
+            if item.thread_id:
+                threads[item.thread_id].append(item)
+            else:
+                standalone_items.append(item)
+
+        aggregated_items = []
+
+        # Process each thread
+        for thread_id, thread_items in threads.items():
+            if len(thread_items) == 1:
+                # Single item, no aggregation needed
+                aggregated_items.append(thread_items[0])
+            else:
+                # Multiple posts/chunks in this thread - aggregate them
+                # Sort by: post number (from rid), then chunk_index
+                def sort_key(item):
+                    # Extract post number from rid (e.g., forum.regen.network_413_post_2)
+                    rid = item.id
+                    post_num = 0
+                    if '_post_' in rid:
+                        parts = rid.split('_post_')
+                        if len(parts) > 1:
+                            # Extract number before '#chunk'
+                            post_part = parts[1].split('#')[0]
+                            try:
+                                post_num = int(post_part)
+                            except:
+                                pass
+
+                    # Get chunk index
+                    chunk_idx = 0
+                    if item.metadata and 'chunk_index' in item.metadata:
+                        try:
+                            chunk_idx = int(item.metadata['chunk_index'])
+                        except:
+                            pass
+
+                    return (post_num, chunk_idx)
+
+                thread_items.sort(key=sort_key)
+
+                # Combine all content
+                combined_content = []
+                all_tags = []
+                urls = []
+
+                for item in thread_items:
+                    # Add separator between posts (not chunks of same post)
+                    if combined_content and item.metadata.get('chunk_index', '0') == '0':
+                        combined_content.append("\n\n---\n\n")
+
+                    combined_content.append(item.content)
+                    all_tags.extend(item.tags)
+                    if item.url and item.url not in urls:
+                        urls.append(item.url)
+
+                # Use first item as base
+                first_item = thread_items[0]
+
+                # Extract thread title from URL
+                thread_title = first_item.title
+                if first_item.url and '/t/' in first_item.url:
+                    # URL format: https://forum.regen.network/t/thread-name/413/1
+                    url_parts = first_item.url.split('/t/')
+                    if len(url_parts) > 1:
+                        thread_part = url_parts[1].split('/')[0]
+                        # Convert URL slug to title
+                        thread_title = thread_part.replace('-', ' ').title()
+
+                # Create aggregated item
+                aggregated_item = ContentItem(
+                    id=thread_id,
+                    content='\n'.join(combined_content),
+                    title=f"Thread: {thread_title}",
+                    source=first_item.source,
+                    url=urls[0] if urls else first_item.url,  # Use first post URL
+                    publication_date=first_item.publication_date,  # Use earliest date
+                    confidence=first_item.confidence,
+                    tags=list(set(all_tags)),  # Unique tags
+                    metadata={'aggregated_urls': urls, 'post_count': len(thread_items)},
+                    thread_id=thread_id,
+                    is_aggregated=True
+                )
+
+                aggregated_items.append(aggregated_item)
+
+        # Add standalone items
+        aggregated_items.extend(standalone_items)
+
+        logger.info(f"Aggregated {len(threads)} threads from {len(items)} items into {len(aggregated_items)} items")
+        return aggregated_items
+
     def get_embeddings(self, items: List[ContentItem]) -> None:
         """Get BGE embeddings for content items"""
         embeddings_generated = 0
@@ -408,6 +537,12 @@ class WeeklyAggregator:
             lines.append(f"**Date:** {story.publication_date.strftime('%Y-%m-%d')}  \n")
             if story.url:
                 lines.append(f"**URL:** {story.url}  \n")
+
+            # Show if this is an aggregated thread
+            if story.is_aggregated and story.metadata:
+                post_count = story.metadata.get('post_count', 0)
+                lines.append(f"**Thread Posts:** {post_count}  \n")
+
             lines.append("\n")
 
             # FULL CONTENT - No truncation
@@ -499,20 +634,23 @@ class WeeklyAggregator:
     def generate_digest(self, days_back: int = 7) -> WeeklyDigest:
         """Generate the complete weekly digest"""
         logger.info(f"Generating weekly digest for past {days_back} days")
-        
+
         # Collect content
         items = self.collect_weekly_content(days_back)
-        
+
         if not items:
             logger.warning("No content found for digest")
             return None
-        
+
+        # Aggregate threads (combine forum posts and chunks)
+        items = self.aggregate_threads(items)
+
         # Get embeddings
         self.get_embeddings(items)
-        
+
         # Cluster content
         clusters = self.cluster_content(items)
-        
+
         # Rank content
         ranked_items = self.rank_content(items)
         
