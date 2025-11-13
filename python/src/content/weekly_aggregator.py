@@ -142,7 +142,11 @@ class WeeklyAggregator:
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days_back)
         
-        # Use a balanced query to get content from all sources
+        # Use a balanced query to get content from specific sources only:
+        # - Forum (discourse-sensor)
+        # - Ledger summaries (check metadata->>'url' for blockchain/ledger content)
+        # - Governance notes (regentokenomics.org from website-sensor)
+        # Exclude: notion, github, gitlab, podcast, telegram, twitter
         query = """
         WITH source_groups AS (
             SELECT
@@ -158,27 +162,15 @@ class WeeklyAggregator:
                 -- Group sources into categories to balance content
                 CASE
                     WHEN source_sensor LIKE '%%discourse%%' THEN 'forum'
-                    WHEN source_sensor LIKE '%%github-activity%%' THEN 'github'
-                    WHEN source_sensor LIKE '%%gitlab%%' THEN 'gitlab'
-                    WHEN source_sensor LIKE '%%twitter%%' THEN 'twitter'
-                    WHEN source_sensor LIKE '%%telegram%%' THEN 'telegram'
-                    WHEN source_sensor LIKE '%%notion%%' THEN 'notion'
-                    WHEN source_sensor LIKE '%%website%%' THEN 'website'
-                    WHEN source_sensor LIKE '%%medium%%' THEN 'medium'
-                    WHEN source_sensor LIKE '%%podcast%%' THEN 'podcast'
+                    WHEN source_sensor LIKE '%%website%%' AND metadata->>'url' LIKE '%%regentokenomics.org%%' THEN 'governance'
+                    WHEN source_sensor LIKE '%%website%%' AND metadata->>'url' LIKE '%%ledger%%' THEN 'ledger'
                     ELSE 'other'
                 END as source_category,
                 ROW_NUMBER() OVER (
                     PARTITION BY CASE
                         WHEN source_sensor LIKE '%%discourse%%' THEN 'forum'
-                        WHEN source_sensor LIKE '%%github-activity%%' THEN 'github'
-                        WHEN source_sensor LIKE '%%gitlab%%' THEN 'gitlab'
-                        WHEN source_sensor LIKE '%%twitter%%' THEN 'twitter'
-                        WHEN source_sensor LIKE '%%telegram%%' THEN 'telegram'
-                        WHEN source_sensor LIKE '%%notion%%' THEN 'notion'
-                        WHEN source_sensor LIKE '%%website%%' THEN 'website'
-                        WHEN source_sensor LIKE '%%medium%%' THEN 'medium'
-                        WHEN source_sensor LIKE '%%podcast%%' THEN 'podcast'
+                        WHEN source_sensor LIKE '%%website%%' AND metadata->>'url' LIKE '%%regentokenomics.org%%' THEN 'governance'
+                        WHEN source_sensor LIKE '%%website%%' AND metadata->>'url' LIKE '%%ledger%%' THEN 'ledger'
                         ELSE 'other'
                     END
                     ORDER BY published_at DESC, published_confidence DESC
@@ -201,23 +193,25 @@ class WeeklyAggregator:
                 AND published_at <= %s
                 -- Require reasonable confidence in the published date
                 AND published_confidence >= %s
+                -- ONLY include allowed sources: discourse (forum) and website (governance/ledger)
+                AND (
+                    source_sensor LIKE '%%discourse%%'
+                    OR (source_sensor LIKE '%%website%%' AND metadata->>'url' LIKE '%%regentokenomics.org%%')
+                    OR (source_sensor LIKE '%%website%%' AND metadata->>'url' LIKE '%%ledger%%')
+                )
         )
         SELECT
             id, content, metadata, title, source, url,
             publication_date, confidence, tags
         FROM source_groups
         WHERE
-            -- Get up to 200 items per source category to ensure diversity
-            (source_category = 'forum' AND category_rank <= 200)
-            OR (source_category = 'github' AND category_rank <= 150)
-            OR (source_category = 'twitter' AND category_rank <= 100)
-            OR (source_category = 'telegram' AND category_rank <= 100)
-            OR (source_category = 'gitlab' AND category_rank <= 150)
-            OR (source_category = 'notion' AND category_rank <= 200)
-            OR (source_category = 'website' AND category_rank <= 100)
-            OR (source_category = 'medium' AND category_rank <= 100)
-            OR (source_category = 'podcast' AND category_rank <= 100)
-            OR (source_category = 'other' AND category_rank <= 100)
+            -- Get content from allowed source categories only
+            source_category IN ('forum', 'governance', 'ledger')
+            AND (
+                (source_category = 'forum' AND category_rank <= 500)
+                OR (source_category = 'governance' AND category_rank <= 200)
+                OR (source_category = 'ledger' AND category_rank <= 200)
+            )
         ORDER BY publication_date DESC, confidence DESC
         LIMIT %s
         """
