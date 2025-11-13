@@ -107,7 +107,8 @@ function setupClaude() {
     command: 'node',
     args: [path.join(projectRoot, 'dist', 'index.js')],
     env: {
-      KOI_API_ENDPOINT: process.env.KOI_API_ENDPOINT || 'http://202.61.196.119:8301/api/koi'
+      // Prefer the public HTTPS endpoint exposed via Nginx
+      KOI_API_ENDPOINT: process.env.KOI_API_ENDPOINT || 'https://regen.gaiaai.xyz/api/koi'
     }
   };
 
@@ -126,7 +127,7 @@ function setupClaudeCode() {
       command: 'node',
       args: [path.join(projectRoot, 'dist', 'index.js')],
       env: {
-        KOI_API_ENDPOINT: process.env.KOI_API_ENDPOINT || 'http://202.61.196.119:8301/api/koi'
+        KOI_API_ENDPOINT: process.env.KOI_API_ENDPOINT || 'https://regen.gaiaai.xyz/api/koi'
       }
     });
 
@@ -186,7 +187,7 @@ function setupVSCode() {
     command: 'node',
     args: [path.join(projectRoot, 'dist', 'index.js')],
     env: {
-      KOI_API_ENDPOINT: process.env.KOI_API_ENDPOINT || 'http://202.61.196.119:8301/api/koi'
+      KOI_API_ENDPOINT: process.env.KOI_API_ENDPOINT || 'https://regen.gaiaai.xyz/api/koi'
     }
   };
 
@@ -198,7 +199,7 @@ function setupVSCode() {
     command: 'node',
     args: [path.join(projectRoot, 'dist', 'index.js')],
     env: {
-      KOI_API_ENDPOINT: process.env.KOI_API_ENDPOINT || 'http://202.61.196.119:8301/api/koi'
+      KOI_API_ENDPOINT: process.env.KOI_API_ENDPOINT || 'https://regen.gaiaai.xyz/api/koi'
     }
   };
 
@@ -223,7 +224,7 @@ function buildProject() {
 // Function to check if KOI API is running
 function checkKOIAPI() {
   console.log('🔍 Checking KOI API connection...');
-  const endpoint = process.env.KOI_API_ENDPOINT || 'http://202.61.196.119:8301/api/koi';
+  const endpoint = process.env.KOI_API_ENDPOINT || 'https://regen.gaiaai.xyz/api/koi';
 
   try {
     // Try to fetch stats endpoint
@@ -248,8 +249,8 @@ async function main() {
   if (!fs.existsSync(envPath)) {
     console.log('📋 Creating .env file...');
     const envContent = `# Regen KOI MCP Configuration
-# Connect to the remote Regen KOI server
-KOI_API_ENDPOINT=http://202.61.196.119:8301/api/koi
+# Connect to the public Regen KOI server (via HTTPS)
+KOI_API_ENDPOINT=https://regen.gaiaai.xyz/api/koi
 # Optional: Add your KOI API key if required
 # KOI_API_KEY=your_api_key_here
 `;
@@ -301,7 +302,7 @@ KOI_API_ENDPOINT=http://202.61.196.119:8301/api/koi
           command: 'node',
           args: [path.join(projectRoot, 'dist', 'index.js')],
           env: {
-            KOI_API_ENDPOINT: process.env.KOI_API_ENDPOINT || 'http://202.61.196.119:8301/api/koi'
+            KOI_API_ENDPOINT: process.env.KOI_API_ENDPOINT || 'https://regen.gaiaai.xyz/api/koi'
           }
         }
       }
@@ -311,7 +312,7 @@ KOI_API_ENDPOINT=http://202.61.196.119:8301/api/koi
       command: 'node',
       args: [path.join(projectRoot, 'dist', 'index.js')],
       env: {
-        KOI_API_ENDPOINT: process.env.KOI_API_ENDPOINT || 'http://202.61.196.119:8301/api/koi'
+        KOI_API_ENDPOINT: process.env.KOI_API_ENDPOINT || 'https://regen.gaiaai.xyz/api/koi'
       }
     })}'`);
   }

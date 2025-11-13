@@ -12,7 +12,7 @@ const JENA_ENDPOINT = process.env.JENA_ENDPOINT || 'http://localhost:3030/koi/sp
 const VECTOR_API_URL =
   process.env.API_URL ||
   process.env.KOI_API_ENDPOINT ||
-  'http://localhost:8301/api/koi';
+  'https://regen.gaiaai.xyz/api/koi';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 interface SPARQLResult {
@@ -339,6 +339,16 @@ export class HybridSearchClient {
       sparql: results.filter(r => r.type === 'sparql'),
       vector: results.filter(r => r.type === 'vector')
     };
+
+    // When nothing is returned from either branch, make it explicit
+    if (
+      grouped.both.length === 0 &&
+      grouped.sparql.length === 0 &&
+      grouped.vector.length === 0
+    ) {
+      output += 'No results found. The KOI API or graph may be unreachable, or the knowledge base did not match this query.\n';
+      return output;
+    }
 
     if (grouped.both.length > 0) {
       output += '## 🔗 Found in Both Sources\n';

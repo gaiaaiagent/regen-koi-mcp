@@ -650,6 +650,27 @@ class KOIServer {
     }
   }
 
+  private extractMarkdownFromPreview(stdout: string): string {
+    // Extract markdown content between MARKDOWN_CONTENT_START and MARKDOWN_CONTENT_END markers
+    const startMarker = 'MARKDOWN_CONTENT_START';
+    const endMarker = 'MARKDOWN_CONTENT_END';
+
+    const startIdx = stdout.indexOf(startMarker);
+    const endIdx = stdout.lastIndexOf(endMarker);
+
+    if (startIdx === -1 || endIdx === -1) {
+      // Markers not found - return empty string
+      return '';
+    }
+
+    // Extract the content between markers (skip the === lines)
+    const lines = stdout.substring(startIdx, endIdx).split('\n');
+    // Skip first 2 lines (marker and ===) and get everything until the last ===
+    const contentLines = lines.slice(2, -1);
+
+    return contentLines.join('\n').trim();
+  }
+
   private async generateWeeklyDigest(args: any) {
     const {
       start_date,
@@ -670,23 +691,41 @@ class KOIServer {
 
       console.error(`[${SERVER_NAME}] Generating weekly digest for ${startDate} to ${endDate}`);
 
-      // Prepare output directory
-      const outputDir = '/opt/projects/koi-processor/output/weekly_digests';
-      const fs = await import('fs');
-      const path = await import('path');
-
-      if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true });
-      }
-
       // Execute the Python script directly
       const { spawn } = await import('child_process');
       const scriptPath = '/opt/projects/koi-processor/scripts/run_weekly_aggregator.py';
       const pythonPath = '/opt/projects/koi-processor/venv/bin/python3';
 
-      console.error(`[${SERVER_NAME}] Executing: ${pythonPath} ${scriptPath}`);
+      // Build command args - use preview mode when not saving to file
+      const scriptArgs = [scriptPath];
 
-      const pythonProcess = spawn(pythonPath, [scriptPath, '--output', outputDir], {
+      if (save_to_file) {
+        // Save to file mode - need output directory
+        const fs = await import('fs');
+        const path = await import('path');
+        const outputDir = output_path || '/opt/projects/koi-processor/output/weekly_digests';
+
+        if (!fs.existsSync(outputDir)) {
+          fs.mkdirSync(outputDir, { recursive: true });
+        }
+
+        scriptArgs.push('--output-dir', outputDir);
+
+        if (format === 'json') {
+          scriptArgs.push('--format', 'json');
+        } else if (format === 'markdown') {
+          scriptArgs.push('--format', 'markdown');
+        } else {
+          scriptArgs.push('--format', 'both');
+        }
+      } else {
+        // Preview mode - no file operations
+        scriptArgs.push('--preview');
+      }
+
+      console.error(`[${SERVER_NAME}] Executing: ${pythonPath} ${scriptArgs.join(' ')}`);
+
+      const pythonProcess = spawn(pythonPath, scriptArgs, {
         cwd: '/opt/projects/koi-processor',
         env: { ...process.env }
       });
@@ -722,35 +761,48 @@ class KOIServer {
 
       console.error(`[${SERVER_NAME}] Script completed successfully`);
 
-      // Wait a moment for file writes to complete
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Try to read the generated markdown file
       let markdownContent = '';
       let jsonContent: any = null;
       let actualFilePath = '';
 
-      // Try to read the generated markdown file if script succeeded
-      if (exitCode === 0) {
-        try {
-          // Look for the most recent file
-          const files = fs.readdirSync(outputDir)
-            .filter(f => f.startsWith('weekly_digest_') && f.endsWith('.md'))
-            .sort()
-            .reverse();
+      // Handle the output based on mode
+      if (save_to_file) {
+        // File mode - read the generated files
+        const fs = await import('fs');
+        const path = await import('path');
+        const outputDir = output_path || '/opt/projects/koi-processor/output/weekly_digests';
 
-          if (files.length > 0) {
-            actualFilePath = path.join(outputDir, files[0]);
-            markdownContent = fs.readFileSync(actualFilePath, 'utf-8');
+        // Wait a moment for file writes to complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
-            // Try to load corresponding JSON
-            const jsonPath = actualFilePath.replace('.md', '.json');
-            if (fs.existsSync(jsonPath)) {
-              jsonContent = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
+        if (exitCode === 0) {
+          try {
+            // Look for the most recent file
+            const files = fs.readdirSync(outputDir)
+              .filter(f => f.startsWith('weekly_digest_') && f.endsWith('.md'))
+              .sort()
+              .reverse();
+
+            if (files.length > 0) {
+              actualFilePath = path.join(outputDir, files[0]);
+              markdownContent = fs.readFileSync(actualFilePath, 'utf-8');
+
+              // Try to load corresponding JSON
+              const jsonPath = actualFilePath.replace('.md', '.json');
+              if (fs.existsSync(jsonPath)) {
+                jsonContent = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
+              }
             }
+          } catch (readError) {
+            console.error(`[${SERVER_NAME}] Could not read generated file:`, readError);
           }
-        } catch (readError) {
-          console.error(`[${SERVER_NAME}] Could not read generated file:`, readError);
+        }
+      } else {
+        // Preview mode - parse stdout directly
+        if (exitCode === 0 && stdout) {
+          // The preview output includes both the formatted preview and the markdown content
+          // Extract the markdown content from stdout
+          markdownContent = this.extractMarkdownFromPreview(stdout);
         }
       }
 
