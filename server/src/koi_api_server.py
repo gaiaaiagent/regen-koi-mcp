@@ -91,11 +91,15 @@ def get_bge_embedding(text: str) -> Optional[List[float]]:
 
 # Pydantic models
 class SearchRequest(BaseModel):
-    query: str
+    # Support both 'query' and 'question' for compatibility
+    query: Optional[str] = None
+    question: Optional[str] = None
     limit: int = 5
     published_from: Optional[str] = None
     published_to: Optional[str] = None
     include_undated: bool = False
+    filters: Optional[Dict[str, Any]] = None
+    include_metadata: bool = True
 
 class SearchResult(BaseModel):
     rid: str
@@ -147,11 +151,22 @@ async def search(request: SearchRequest):
     Combines vector similarity and keyword search with RRF
     """
     try:
+        # Handle both 'query' and 'question' parameters
+        search_query = request.query or request.question
+        if not search_query:
+            raise HTTPException(status_code=400, detail="Either 'query' or 'question' parameter is required")
+
+        # Extract date filters from filters object if present
+        date_filters = request.filters.get('date_range', {}) if request.filters else {}
+        published_from = request.published_from or date_filters.get('start')
+        published_to = request.published_to or date_filters.get('end')
+        include_undated = request.include_undated or request.filters.get('include_undated', False) if request.filters else False
+
         conn = get_db_connection()
         cur = conn.cursor()
 
         # Get embedding for vector search
-        embedding = get_bge_embedding(request.query)
+        embedding = get_bge_embedding(search_query)
 
         results = []
 
@@ -160,13 +175,13 @@ async def search(request: SearchRequest):
             date_filter = ""
             params = [json.dumps(embedding), request.limit]
 
-            if request.published_from:
+            if published_from:
                 date_filter += " AND m.published_at >= %s::timestamptz"
-                params.append(request.published_from)
-            if request.published_to:
+                params.append(published_from)
+            if published_to:
                 date_filter += " AND m.published_at <= %s::timestamptz"
-                params.append(request.published_to)
-            if not request.include_undated and (request.published_from or request.published_to):
+                params.append(published_to)
+            if not include_undated and (published_from or published_to):
                 # Exclude undated documents
                 date_filter += " AND m.published_at IS NOT NULL"
 
@@ -194,14 +209,14 @@ async def search(request: SearchRequest):
         else:
             # Fallback to keyword search
             date_filter = ""
-            params = [f"%{request.query}%", f"%{request.query.replace(' ', '%')}%"]
+            params = [f"%{search_query}%", f"%{search_query.replace(' ', '%')}%"]
 
-            if request.published_from:
+            if published_from:
                 date_filter += f" AND m.published_at >= ${len(params) + 1}::timestamptz"
-                params.append(request.published_from)
-            if request.published_to:
+                params.append(published_from)
+            if published_to:
                 date_filter += f" AND m.published_at <= ${len(params) + 1}::timestamptz"
-                params.append(request.published_to)
+                params.append(published_to)
 
             params.append(request.limit)
 
@@ -231,19 +246,31 @@ async def search(request: SearchRequest):
         cur.close()
         conn.close()
 
-        return {
-            "query": request.query,
-            "results": [
-                {
-                    "rid": r["rid"],
-                    "content": r["content"][:500] + "..." if len(r["content"]) > 500 else r["content"],
+        # Format results for compatibility
+        formatted_results = [
+            {
+                "rid": r["rid"],
+                "content": r["content"],
+                "text": r["content"],  # Alias for compatibility
+                "metadata": {
                     "source": r["source"],
                     "url": r["url"],
-                    "score": float(r["similarity"]),
-                    "published_at": r["published_at"].isoformat() if r["published_at"] else None
-                }
-                for r in results
-            ],
+                },
+                "source": r["source"],
+                "url": r["url"],
+                "score": float(r["similarity"]),
+                "published_at": r["published_at"].isoformat() if r["published_at"] else None
+            }
+            for r in results
+        ]
+
+        # Return in both formats for compatibility
+        return {
+            "success": True,
+            "query": search_query,
+            "question": search_query,  # Alias
+            "memories": formatted_results,  # For hosted API compatibility
+            "results": formatted_results,   # Alternative format
             "count": len(results)
         }
     except Exception as e:
