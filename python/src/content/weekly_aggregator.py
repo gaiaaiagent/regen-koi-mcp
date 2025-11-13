@@ -24,6 +24,8 @@ from psycopg2.extras import RealDictCursor
 import numpy as np
 from sklearn.cluster import DBSCAN
 from collections import defaultdict, Counter
+import aiohttp
+import asyncio
 
 # Configure logging
 logging.basicConfig(
@@ -398,6 +400,137 @@ class WeeklyAggregator:
         logger.info(f"Aggregated {len(threads)} threads from {len(items)} items into {len(aggregated_items)} items")
         return aggregated_items
 
+    async def fetch_ledger_summaries(self, days_back: int = 7) -> List[ContentItem]:
+        """
+        Fetch ledger summaries directly from Regen blockchain REST API.
+        Returns governance proposals and ecocredit activity as ContentItems.
+        """
+        rest_endpoint = "https://regen-rest.publicnode.com"
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_back)
+        ledger_items = []
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                # Fetch governance proposals
+                try:
+                    async with session.get(
+                        f"{rest_endpoint}/cosmos/gov/v1/proposals",
+                        params={"pagination.limit": "100", "pagination.reverse": "true"},
+                        timeout=aiohttp.ClientTimeout(total=10)
+                    ) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            if data and "proposals" in data:
+                                for proposal in data["proposals"]:
+                                    # Check if proposal is within time window
+                                    submit_time = proposal.get("submit_time", "")
+                                    voting_end_time = proposal.get("voting_end_time", "")
+
+                                    relevant = False
+                                    pub_date = None
+
+                                    if voting_end_time:
+                                        voting_end_dt = datetime.fromisoformat(voting_end_time.replace('Z', '+00:00'))
+                                        if voting_end_dt >= cutoff_date:
+                                            relevant = True
+                                            pub_date = voting_end_dt
+
+                                    if submit_time and not relevant:
+                                        submit_dt = datetime.fromisoformat(submit_time.replace('Z', '+00:00'))
+                                        if submit_dt >= cutoff_date:
+                                            relevant = True
+                                            pub_date = submit_dt
+
+                                    if relevant and pub_date:
+                                        # Format proposal content
+                                        proposal_id = proposal.get("id", "")
+                                        title = proposal.get("title", f"Proposal #{proposal_id}")
+                                        status = proposal.get("status", "").replace("PROPOSAL_STATUS_", "")
+                                        summary = proposal.get("summary", "No summary provided")
+
+                                        # Build full content
+                                        content_parts = [
+                                            f"# {title}\n",
+                                            f"**Proposal ID:** {proposal_id}",
+                                            f"**Status:** {status}",
+                                            f"**Submitted:** {submit_time}",
+                                            f"**Voting Ends:** {voting_end_time}\n",
+                                            f"## Summary\n{summary}"
+                                        ]
+
+                                        # Add messages if available
+                                        messages = proposal.get("messages", [])
+                                        if messages:
+                                            content_parts.append("\n## Proposal Messages")
+                                            for msg in messages[:3]:  # Limit to first 3 messages
+                                                msg_type = msg.get("@type", "").split(".")[-1]
+                                                content_parts.append(f"- Type: {msg_type}")
+
+                                        ledger_items.append(ContentItem(
+                                            id=f"regen.proposal:{proposal_id}",
+                                            content="\n".join(content_parts),
+                                            title=f"Governance: {title}",
+                                            source="regen-ledger",
+                                            url=f"https://wallet.keplr.app/chains/regen/proposals/{proposal_id}",
+                                            publication_date=pub_date,
+                                            confidence=1.0,
+                                            tags=["governance", "proposal", status.lower()],
+                                            metadata={"proposal_id": proposal_id, "status": status}
+                                        ))
+                except Exception as e:
+                    logger.warning(f"Failed to fetch governance proposals: {e}")
+
+                # Fetch recent ecocredit batches
+                try:
+                    async with session.get(
+                        f"{rest_endpoint}/regen/ecocredit/v1/batches",
+                        params={"pagination.limit": "50"},
+                        timeout=aiohttp.ClientTimeout(total=10)
+                    ) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            if data and "batches" in data:
+                                for batch in data["batches"]:
+                                    # Check start/end date
+                                    start_date = batch.get("start_date")
+                                    if start_date:
+                                        try:
+                                            batch_date = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+                                            if batch_date >= cutoff_date:
+                                                denom = batch.get("denom", "")
+                                                project_id = batch.get("project_id", "")
+                                                issuer = batch.get("issuer", "")
+
+                                                content_parts = [
+                                                    f"# Ecocredit Batch: {denom}\n",
+                                                    f"**Project ID:** {project_id}",
+                                                    f"**Issuer:** {issuer}",
+                                                    f"**Start Date:** {start_date}",
+                                                    f"**End Date:** {batch.get('end_date', 'N/A')}",
+                                                ]
+
+                                                ledger_items.append(ContentItem(
+                                                    id=f"regen.ecocredit.batch:{denom}",
+                                                    content="\n".join(content_parts),
+                                                    title=f"Ecocredit Batch: {denom}",
+                                                    source="regen-ledger",
+                                                    url=f"https://app.regen.network/projects/{project_id}",
+                                                    publication_date=batch_date,
+                                                    confidence=1.0,
+                                                    tags=["ecocredit", "batch"],
+                                                    metadata={"batch_denom": denom, "project_id": project_id}
+                                                ))
+                                        except:
+                                            pass
+                except Exception as e:
+                    logger.warning(f"Failed to fetch ecocredit batches: {e}")
+
+        except Exception as e:
+            logger.error(f"Error fetching ledger summaries: {e}")
+
+        logger.info(f"Fetched {len(ledger_items)} ledger summary items")
+        return ledger_items
+
     def get_embeddings(self, items: List[ContentItem]) -> None:
         """Get BGE embeddings for content items"""
         embeddings_generated = 0
@@ -625,12 +758,30 @@ class WeeklyAggregator:
             "max_confidence": max(confidences)
         }
     
+    def _fetch_ledger_summaries_sync(self, days_back: int = 7) -> List[ContentItem]:
+        """Synchronous wrapper for async ledger fetch using thread pool"""
+        import concurrent.futures
+        try:
+            # Use thread pool to run async code in a new event loop
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, self.fetch_ledger_summaries(days_back))
+                return future.result(timeout=15)
+        except Exception as e:
+            logger.warning(f"Failed to fetch ledger summaries: {e}")
+            return []
+
     def generate_digest(self, days_back: int = 7) -> WeeklyDigest:
         """Generate the complete weekly digest"""
         logger.info(f"Generating weekly digest for past {days_back} days")
 
-        # Collect content
+        # Collect content from database
         items = self.collect_weekly_content(days_back)
+
+        # Fetch ledger summaries directly from blockchain
+        ledger_items = self._fetch_ledger_summaries_sync(days_back)
+        if ledger_items:
+            items.extend(ledger_items)
+            logger.info(f"Added {len(ledger_items)} ledger summary items")
 
         if not items:
             logger.warning("No content found for digest")
