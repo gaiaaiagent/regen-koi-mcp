@@ -330,7 +330,7 @@ class KOIServer {
 
     // Fallback to original vector search
     try {
-      const body: any = { question: query, limit };
+      const body: any = { query: query, limit };
       if (Object.keys(vectorFilters).length > 0) body.filters = vectorFilters;
       const response = await apiClient.post('/query', body);
 
@@ -357,8 +357,8 @@ class KOIServer {
     try {
       // Use query to search for entity information
       const response = await apiClient.post('/query', {
-        question: `Information about ${identifier}`,
-        top_k: 10
+        query: `Information about ${identifier}`,
+        limit: 10
       });
 
       return {
@@ -401,8 +401,8 @@ class KOIServer {
         let vectorResults = '';
         try {
           const response = await apiClient.post('/query', {
-            question: query,
-            top_k: 5
+            query: query,
+            limit: 5
           });
           const data: any = response.data as any;
           if (data?.results?.length > 0) {
@@ -435,8 +435,8 @@ class KOIServer {
       if (!isDirectSparql) {
         try {
           const response = await apiClient.post('/query', {
-            question: query,
-            top_k: 5
+            query: query,
+            limit: 5
           });
 
           const data: any = response.data as any;
@@ -473,8 +473,8 @@ class KOIServer {
       console.error(`[${SERVER_NAME}] Falling back to vector search`);
       try {
         const response = await apiClient.post('/query', {
-          question: `entity graph information about "${query}" including relationships, roles, connections, and associated entities`,
-          top_k: 30
+          query: `entity graph information about "${query}" including relationships, roles, connections, and associated entities`,
+          limit: 30
         });
 
         const data = response.data as any;
@@ -580,8 +580,8 @@ class KOIServer {
     try {
       // Use the query endpoint to search for credit class information
       const response = await apiClient.post('/query', {
-        question: "List Regen Network credit classes and ecological credits",
-        top_k: 20
+        query: "List Regen Network credit classes and ecological credits",
+        limit: 20
       });
 
       const data = response.data as any;
@@ -618,8 +618,8 @@ class KOIServer {
     try {
       // Use query endpoint to search for recent activity
       const response = await apiClient.post('/query', {
-        question: `Recent Regen Network activity updates news ${activity_type}`,
-        top_k: 15
+        query: `Recent Regen Network activity updates news ${activity_type}`,
+        limit: 15
       });
 
       const data = response.data as any;
@@ -982,7 +982,7 @@ class KOIServer {
     } catch {}
     try {
       // KOI API warm-up (vector path)
-      await apiClient.post('/query', { question: 'warmup', limit: 1 });
+      await apiClient.post('/query', { query: 'warmup', limit: 1 });
     } catch {}
     console.error(`[${SERVER_NAME}] Warm-up probes completed`);
   }
