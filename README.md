@@ -27,7 +27,7 @@ This MCP server gives AI assistants access to Regen Network's comprehensive know
 - Climate action and environmental data
 - Regen Registry credit classes
 
-**Note:** This MCP server connects to our hosted KOI API at `http://202.61.196.119:8301`, so you don't need to run any infrastructure locally.
+**Note:** This MCP server connects to our hosted KOI API at `https://regen.gaiaai.xyz/api/koi` (behind HTTPS via Nginx), so you don't need to run any infrastructure locally.
 
 ## 📦 Available Tools
 
@@ -35,6 +35,7 @@ This MCP server gives AI assistants access to Regen Network's comprehensive know
 |------|-------------|-----------|
 | `search_knowledge` | Hybrid search (vectors + graph with RRF) | `query` (string), `limit` (1–20, default 5), `published_from` (YYYY‑MM‑DD), `published_to` (YYYY‑MM‑DD), `include_undated` (bool, default false) |
 | `get_stats` | Knowledge base statistics | `detailed` (boolean) |
+| `generate_weekly_digest` | Generate weekly digest of Regen Network activity | `start_date` (YYYY-MM-DD, default: 7 days ago), `end_date` (YYYY-MM-DD, default: today), `save_to_file` (bool, default false), `output_path` (string), `format` ('markdown' or 'json', default: 'markdown') |
 
 ## 💻 Supported Clients
 
@@ -65,7 +66,7 @@ Any MCP-compatible client can use this server. Configure with:
   "command": "node",
   "args": ["/path/to/regen-koi-mcp/dist/index.js"],
   "env": {
-    "KOI_API_ENDPOINT": "http://localhost:8301/api/koi"
+    "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
   }
 }
 ```
@@ -88,7 +89,7 @@ Any MCP-compatible client can use this server. Configure with:
       "command": "node",
       "args": ["/absolute/path/to/regen-koi-mcp/dist/index.js"],
       "env": {
-        "KOI_API_ENDPOINT": "http://202.61.196.119:8301/api/koi"
+        "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
       }
     }
   }
@@ -102,7 +103,7 @@ Any MCP-compatible client can use this server. Configure with:
 Run the following command to configure the MCP server:
 
 ```bash
-claude mcp add-json regen-koi '{"command":"node","args":["/absolute/path/to/regen-koi-mcp/dist/index.js"],"env":{"KOI_API_ENDPOINT":"http://202.61.196.119:8301/api/koi"}}'
+claude mcp add-json regen-koi '{"command":"node","args":["/absolute/path/to/regen-koi-mcp/dist/index.js"],"env":{"KOI_API_ENDPOINT":"https://regen.gaiaai.xyz/api/koi"}}'
 ```
 
 Replace `/absolute/path/to/regen-koi-mcp` with the actual path to your installation.
@@ -118,7 +119,7 @@ You can also run directly from npm:
       "command": "npx",
       "args": ["-y", "regen-koi-mcp"],
       "env": {
-        "KOI_API_ENDPOINT": "http://localhost:8301/api/koi"
+    "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
       }
     }
   }
@@ -131,7 +132,7 @@ Create a `.env` file in the project root:
 
 ```env
 # Required: KOI API endpoint
-KOI_API_ENDPOINT=http://localhost:8301/api/koi
+KOI_API_ENDPOINT=https://regen.gaiaai.xyz/api/koi
 
 # Optional: API key if your KOI server requires authentication
 # KOI_API_KEY=your_api_key_here
@@ -222,7 +223,7 @@ node scripts/eval-nl2sparql.js
 ## 🛠️ Troubleshooting
 
 ### "KOI API not accessible"
-The setup connects to our hosted KOI API at `http://202.61.196.119:8301`. If you see connection errors, check your internet connection or firewall settings.
+The setup connects to our hosted KOI API at `https://regen.gaiaai.xyz/api/koi`. If you see connection errors, check your internet connection or firewall settings.
 
 ### "Tools not showing in Claude"
 1. Restart Claude Desktop after configuration
@@ -240,6 +241,33 @@ Once configured, you can ask Claude:
 - "Get statistics about the knowledge base"
 - "List active Regen Registry credit classes"
 - "Find recent activity on the Regen Network"
+- "Generate a weekly digest of Regen Network activity from the past week"
+- "Create a digest of discussions from January 1 to January 7, 2025"
+
+### Weekly Digest Tool
+
+The `generate_weekly_digest` tool creates comprehensive markdown summaries of Regen Network activity:
+
+**Features:**
+- Automatically aggregates content from the past 7 days (or custom date range)
+- Returns markdown content that can be used directly in Claude Desktop as an artifact
+- Optionally saves to a file for use with NotebookLM or other tools
+- Includes proper source citations and statistics
+
+**Examples:**
+
+```javascript
+// In Claude Desktop or Claude Code CLI:
+"Generate a weekly digest of Regen Network activity"
+
+// With custom date range:
+"Create a digest from December 1 to December 8, 2024"
+
+// Save to file:
+"Generate a weekly digest and save it to weekly_summary.md"
+```
+
+**Note:** The digest content is returned in the response, so in Claude Desktop it will be displayed inline (and may be created as an artifact). The `save_to_file` option is useful when you want a persistent copy on disk.
 
 ## 🤝 Contributing
 

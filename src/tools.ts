@@ -54,5 +54,39 @@ export const TOOLS: Tool[] = [
         }
       }
     }
+  },
+  {
+    name: 'generate_weekly_digest',
+    description: 'Generate a weekly digest of Regen Network activity and discussions. Returns markdown content suitable for NotebookLM or sharing. Optionally saves to a file.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        start_date: {
+          type: 'string',
+          format: 'date',
+          description: 'Start date for digest period (YYYY-MM-DD). Defaults to 7 days ago.'
+        },
+        end_date: {
+          type: 'string',
+          format: 'date',
+          description: 'End date for digest period (YYYY-MM-DD). Defaults to today.'
+        },
+        save_to_file: {
+          type: 'boolean',
+          description: 'Whether to save the digest to a file on disk. Default: false',
+          default: false
+        },
+        output_path: {
+          type: 'string',
+          description: 'Custom file path for saving (only used if save_to_file is true). Defaults to timestamped filename in current directory.'
+        },
+        format: {
+          type: 'string',
+          enum: ['markdown', 'json'],
+          description: 'Output format. Default: markdown',
+          default: 'markdown'
+        }
+      }
+    }
   }
 ];

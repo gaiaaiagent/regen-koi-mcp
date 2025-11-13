@@ -22,7 +22,8 @@ import HybridSearchClient from './hybrid-client.js';
 dotenv.config();
 
 // Configuration
-const KOI_API_ENDPOINT = process.env.KOI_API_ENDPOINT || 'http://localhost:8301/api/koi';
+// Prefer the public HTTPS endpoint unless overridden
+const KOI_API_ENDPOINT = process.env.KOI_API_ENDPOINT || 'https://regen.gaiaai.xyz/api/koi';
 const KOI_API_KEY = process.env.KOI_API_KEY || '';
 const SERVER_NAME = process.env.MCP_SERVER_NAME || 'regen-koi';
 const SERVER_VERSION = process.env.MCP_SERVER_VERSION || '1.0.0';
@@ -87,6 +88,8 @@ class KOIServer {
             return await this.searchKnowledge(args);
           case 'get_stats':
             return await this.getStats(args);
+          case 'generate_weekly_digest':
+            return await this.generateWeeklyDigest(args);
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
@@ -555,7 +558,8 @@ class KOIServer {
       formatted += `- **Total Documents**: 15,000+\n`;
       formatted += `- **Topics Covered**: Regen Network, Carbon Credits, Ecological Assets\n`;
       formatted += `- **Data Sources**: Multiple (Websites, Podcasts, Documentation)\n`;
-      formatted += `- **API Endpoint**: ${process.env.KOI_API_ENDPOINT || 'http://202.61.196.119:8301/api/koi'}\n`;
+      // Display the resolved endpoint that this server is using
+      formatted += `- **API Endpoint**: ${KOI_API_ENDPOINT}\n`;
 
       return {
         content: [
@@ -643,6 +647,194 @@ class KOIServer {
       };
     } catch (error) {
       throw new Error(`Failed to get recent activity: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private async generateWeeklyDigest(args: any) {
+    const {
+      start_date,
+      end_date,
+      save_to_file = false,
+      output_path,
+      format = 'markdown'
+    } = args || {};
+
+    try {
+      // Calculate date range
+      const now = new Date();
+      const defaultStartDate = new Date(now);
+      defaultStartDate.setDate(now.getDate() - 7);
+
+      const startDate = start_date || defaultStartDate.toISOString().split('T')[0];
+      const endDate = end_date || now.toISOString().split('T')[0];
+
+      console.error(`[${SERVER_NAME}] Generating weekly digest for ${startDate} to ${endDate}`);
+
+      // Prepare output directory
+      const outputDir = '/opt/projects/koi-processor/output/weekly_digests';
+      const fs = await import('fs');
+      const path = await import('path');
+
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+      }
+
+      // Execute the Python script directly
+      const { spawn } = await import('child_process');
+      const scriptPath = '/opt/projects/koi-processor/scripts/run_weekly_aggregator.py';
+      const pythonPath = '/opt/projects/koi-processor/venv/bin/python3';
+
+      console.error(`[${SERVER_NAME}] Executing: ${pythonPath} ${scriptPath}`);
+
+      const pythonProcess = spawn(pythonPath, [scriptPath, '--output', outputDir], {
+        cwd: '/opt/projects/koi-processor',
+        env: { ...process.env }
+      });
+
+      let stdout = '';
+      let stderr = '';
+
+      pythonProcess.stdout.on('data', (data) => {
+        stdout += data.toString();
+      });
+
+      pythonProcess.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      // Wait for the process to complete
+      const exitCode = await new Promise<number>((resolve) => {
+        pythonProcess.on('close', resolve);
+      });
+
+      if (exitCode !== 0) {
+        console.error(`[${SERVER_NAME}] Python script exited with code ${exitCode}`);
+        console.error(`[${SERVER_NAME}] stderr: ${stderr}`);
+
+        // Check if this is a "no content" error
+        if (stderr.includes('No content found') || stdout.includes('No content found')) {
+          console.error(`[${SERVER_NAME}] No content available for digest period, falling back to KOI search`);
+          // Don't throw - continue to fallback
+        } else {
+          throw new Error(`Digest generation script failed: ${stderr || 'Unknown error'}`);
+        }
+      }
+
+      console.error(`[${SERVER_NAME}] Script completed successfully`);
+
+      // Wait a moment for file writes to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Try to read the generated markdown file
+      let markdownContent = '';
+      let jsonContent: any = null;
+      let actualFilePath = '';
+
+      // Try to read the generated markdown file if script succeeded
+      if (exitCode === 0) {
+        try {
+          // Look for the most recent file
+          const files = fs.readdirSync(outputDir)
+            .filter(f => f.startsWith('weekly_digest_') && f.endsWith('.md'))
+            .sort()
+            .reverse();
+
+          if (files.length > 0) {
+            actualFilePath = path.join(outputDir, files[0]);
+            markdownContent = fs.readFileSync(actualFilePath, 'utf-8');
+
+            // Try to load corresponding JSON
+            const jsonPath = actualFilePath.replace('.md', '.json');
+            if (fs.existsSync(jsonPath)) {
+              jsonContent = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
+            }
+          }
+        } catch (readError) {
+          console.error(`[${SERVER_NAME}] Could not read generated file:`, readError);
+        }
+      }
+
+      // If no markdown content from script (either failed or no files), fall back to KOI search
+      if (!markdownContent) {
+        console.error(`[${SERVER_NAME}] Falling back to KOI search-based digest`);
+        const searchResults = await this.searchKnowledge({
+          query: 'Regen Network activity updates discussions governance',
+          limit: 20,
+          published_from: startDate,
+          published_to: endDate
+        });
+
+        // Extract text from search results
+        const resultsText = searchResults.content[0].text;
+
+        // Generate markdown digest
+        markdownContent = `# Regen Network Weekly Digest\n\n`;
+        markdownContent += `**Period:** ${startDate} to ${endDate}\n\n`;
+        markdownContent += `## Summary\n\n`;
+        markdownContent += `This digest was generated from KOI knowledge base search.\n\n`;
+        markdownContent += `**Note:** No recent content found in the digest database for this period. `;
+        markdownContent += `The KOI sensors may need to be running to collect fresh data.\n\n`;
+        markdownContent += `## Related Content from Knowledge Base\n\n`;
+        markdownContent += resultsText;
+      }
+
+      // Generate summary statistics
+      const wordCount = markdownContent.split(/\s+/).length;
+      const sourceCount = (markdownContent.match(/\[Source:/g) || []).length;
+
+      let resultText = '';
+
+      if (format === 'json') {
+        const jsonOutput = {
+          digest: markdownContent,
+          metadata: {
+            start_date: startDate,
+            end_date: endDate,
+            generated_at: new Date().toISOString(),
+            word_count: wordCount,
+            source_count: sourceCount
+          },
+          raw_data: jsonContent
+        };
+        resultText = JSON.stringify(jsonOutput, null, 2);
+      } else {
+        resultText = markdownContent;
+      }
+
+      // Save to file if requested
+      let savedFilePath = '';
+      if (save_to_file) {
+        const fs = await import('fs');
+        const path = await import('path');
+
+        savedFilePath = output_path || `weekly_digest_${endDate}.${format === 'json' ? 'json' : 'md'}`;
+        fs.writeFileSync(savedFilePath, resultText, 'utf-8');
+        console.error(`[${SERVER_NAME}] Saved digest to ${savedFilePath}`);
+      }
+
+      // Format response
+      let responseText = `# Weekly Digest Generated\n\n`;
+      responseText += `**Period:** ${startDate} to ${endDate}\n`;
+      responseText += `**Word Count:** ${wordCount}\n`;
+      responseText += `**Sources Referenced:** ${sourceCount}\n`;
+      if (savedFilePath) {
+        responseText += `**Saved to:** ${savedFilePath}\n`;
+      }
+      responseText += `\n---\n\n`;
+      responseText += resultText;
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: responseText,
+          },
+        ],
+      };
+
+    } catch (error) {
+      console.error(`[${SERVER_NAME}] Error generating weekly digest:`, error);
+      throw new Error(`Failed to generate weekly digest: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
