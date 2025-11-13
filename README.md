@@ -4,6 +4,16 @@ Access Regen Network's Knowledge Organization Infrastructure (KOI) through Model
 
 ## 🚀 Quick Start
 
+### One-Line Install (Easiest!)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/gaiaaiagent/regen-koi-mcp/main/install.sh | bash
+```
+
+This automatically configures Claude Desktop and Claude Code CLI. Just restart and you're done! 🎉
+
+---
+
 ### Option 1: NPM (Recommended - Auto-Updates)
 
 **No installation needed!** Just configure Claude Desktop with:
@@ -34,6 +44,8 @@ Config file locations:
 - **Linux**: `~/.config/Claude/claude_desktop_config.json`
 
 Then restart Claude Desktop and you're done! 🎉
+
+**For existing git users**: Just update your config to use `npx` instead of `node` - see the config above. You'll automatically get updates!
 
 ---
 
