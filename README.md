@@ -4,16 +4,53 @@ Access Regen Network's Knowledge Organization Infrastructure (KOI) through Model
 
 ## 🚀 Quick Start
 
+### Option 1: NPM (Recommended - Auto-Updates)
+
+**No installation needed!** Just configure Claude Desktop with:
+
+```json
+{
+  "mcpServers": {
+    "regen-koi": {
+      "command": "npx",
+      "args": ["-y", "regen-koi-mcp@latest"],
+      "env": {
+        "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
+      }
+    }
+  }
+}
+```
+
+**Benefits:**
+- ✅ Automatic updates - get new features without doing anything
+- ✅ No git clone, no build, no maintenance
+- ✅ Always uses the latest version
+- ✅ Works immediately
+
+Config file locations:
+- **Mac**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+- **Linux**: `~/.config/Claude/claude_desktop_config.json`
+
+Then restart Claude Desktop and you're done! 🎉
+
+---
+
+### Option 2: Local Development (Git Clone)
+
+For contributing or local development:
+
 ```bash
 # Clone the repository
-git clone https://github.com/regen-network/regen-koi-mcp
+git clone https://github.com/gaiaaiagent/regen-koi-mcp
 cd regen-koi-mcp
 
 # Run the setup script (installs everything and configures clients)
 ./setup.sh
 ```
 
-That's it! The setup script will:
+The setup script will:
 - ✅ Install Node.js dependencies
 - ✅ Setup Python environment (optional, for advanced digest features)
 - ✅ Build the TypeScript code
@@ -21,12 +58,9 @@ That's it! The setup script will:
 
 Just restart Claude Desktop or reload VSCode to see the tools.
 
-### Requirements
-
-- **Node.js 16+**: [Download here](https://nodejs.org) - **Required**
-- **Python 3.8+**: [Download here](https://python.org) - **Optional** (only for advanced local digest generation)
-
-The setup script will check for these and guide you if they're missing.
+**Requirements:**
+- **Node.js 16+**: [Download here](https://nodejs.org)
+- **Python 3.8+**: [Download here](https://python.org) - Optional (only for advanced local digest generation)
 
 ## 🏠 Deployment Options
 
