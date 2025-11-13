@@ -144,55 +144,20 @@ regen-koi-mcp/
 
 ## 💻 Supported Clients
 
-### Claude Desktop ✅
-
-The setup script automatically configures Claude Desktop. After running `npm run setup`, just restart Claude Desktop and you'll see the tools available.
-
-### Claude Code CLI ✅
-
-The setup script automatically configures Claude Code CLI. After running `npm run setup`, just restart Claude Code and you'll see the tools available.
-
-### VSCode Extensions
-
-#### Cline (Claude Dev) ✅
-Install from: [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=saoudrizwan.claude-dev)
-
-#### Continue ✅
-Install from: [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=Continue.continue)
-
-The setup script configures both extensions automatically.
-
-### Other Clients
-
-Any MCP-compatible client can use this server. Configure with:
-
-```json
-{
-  "command": "node",
-  "args": ["/path/to/regen-koi-mcp/dist/index.js"],
-  "env": {
-    "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
-  }
-}
-```
-
-## 🔧 Manual Setup
-
 ### Claude Desktop
 
-1. Find your config file:
-   - **Mac**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-   - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-   - **Linux**: `~/.config/Claude/claude_desktop_config.json`
+**One-line install:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/gaiaaiagent/regen-koi-mcp/main/install.sh | bash
+```
 
-2. Add the server configuration:
-
+Or manually add to config (`~/Library/Application Support/Claude/claude_desktop_config.json` on Mac, `~/.config/Claude/claude_desktop_config.json` on Linux):
 ```json
 {
   "mcpServers": {
     "regen-koi": {
-      "command": "node",
-      "args": ["/absolute/path/to/regen-koi-mcp/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "regen-koi-mcp@latest"],
       "env": {
         "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
       }
@@ -201,35 +166,263 @@ Any MCP-compatible client can use this server. Configure with:
 }
 ```
 
-3. Restart Claude Desktop
+---
 
 ### Claude Code CLI
 
-Run the following command to configure the MCP server:
-
+**One-line install:**
 ```bash
-claude mcp add-json regen-koi '{"command":"node","args":["/absolute/path/to/regen-koi-mcp/dist/index.js"],"env":{"KOI_API_ENDPOINT":"https://regen.gaiaai.xyz/api/koi"}}'
+claude mcp add regen-koi npx -y regen-koi-mcp@latest
 ```
 
-Replace `/absolute/path/to/regen-koi-mcp` with the actual path to your installation.
+Then set environment variable:
+```bash
+export KOI_API_ENDPOINT=https://regen.gaiaai.xyz/api/koi
+```
 
-### NPX Usage (No Installation)
+---
 
-You can also run directly from npm:
+### VS Code / VS Code Insiders
 
+**One-line install:**
+```bash
+code --add-mcp '{"name":"regen-koi","command":"npx","args":["-y","regen-koi-mcp@latest"],"env":{"KOI_API_ENDPOINT":"https://regen.gaiaai.xyz/api/koi"}}'
+```
+
+Or for VS Code Insiders:
+```bash
+code-insiders --add-mcp '{"name":"regen-koi","command":"npx","args":["-y","regen-koi-mcp@latest"],"env":{"KOI_API_ENDPOINT":"https://regen.gaiaai.xyz/api/koi"}}'
+```
+
+---
+
+### Cursor
+
+**Via Settings:**
+1. Open Cursor Settings
+2. Go to MCP section
+3. Click "Add new MCP Server"
+4. Enter:
+   - Name: `regen-koi`
+   - Command: `npx`
+   - Args: `-y regen-koi-mcp@latest`
+   - Env: `KOI_API_ENDPOINT=https://regen.gaiaai.xyz/api/koi`
+
+---
+
+### Windsurf
+
+Add to your Windsurf MCP config:
 ```json
 {
   "mcpServers": {
     "regen-koi": {
       "command": "npx",
-      "args": ["-y", "regen-koi-mcp"],
+      "args": ["-y", "regen-koi-mcp@latest"],
       "env": {
-    "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
+        "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
       }
     }
   }
 }
 ```
+
+---
+
+### Cline (VS Code Extension)
+
+Install [Cline from VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=saoudrizwan.claude-dev), then add to Cline's MCP settings:
+```json
+{
+  "mcpServers": {
+    "regen-koi": {
+      "command": "npx",
+      "args": ["-y", "regen-koi-mcp@latest"],
+      "env": {
+        "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
+      }
+    }
+  }
+}
+```
+
+---
+
+### Continue (VS Code Extension)
+
+Install [Continue from VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=Continue.continue), then add to Continue's config:
+```json
+{
+  "mcpServers": {
+    "regen-koi": {
+      "command": "npx",
+      "args": ["-y", "regen-koi-mcp@latest"],
+      "env": {
+        "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
+      }
+    }
+  }
+}
+```
+
+---
+
+### Goose
+
+**Via Settings:**
+1. Open Advanced settings
+2. Go to Extensions
+3. Add MCP server with:
+   - Command: `npx`
+   - Args: `-y regen-koi-mcp@latest`
+   - Env: `KOI_API_ENDPOINT=https://regen.gaiaai.xyz/api/koi`
+
+---
+
+### Warp
+
+**Via Settings:**
+1. Open Settings → AI → Manage MCP Servers
+2. Add new server
+
+Or use slash command:
+```bash
+/add-mcp regen-koi npx -y regen-koi-mcp@latest
+```
+
+---
+
+### Amp
+
+**One-line install:**
+```bash
+amp mcp add regen-koi -- npx -y regen-koi-mcp@latest
+```
+
+---
+
+### Factory
+
+**One-line install:**
+```bash
+droid mcp add regen-koi "npx -y regen-koi-mcp@latest"
+```
+
+Or use interactive UI with `/mcp` command.
+
+---
+
+### Codex
+
+**One-line install:**
+```bash
+codex mcp add regen-koi npx "-y regen-koi-mcp@latest"
+```
+
+Or manually edit `~/.codex/config.toml`:
+```toml
+[[mcp.servers]]
+name = "regen-koi"
+command = "npx"
+args = ["-y", "regen-koi-mcp@latest"]
+[mcp.servers.env]
+KOI_API_ENDPOINT = "https://regen.gaiaai.xyz/api/koi"
+```
+
+---
+
+### Opencode
+
+Add to `~/.config/opencode/opencode.json`:
+```json
+{
+  "mcpServers": {
+    "regen-koi": {
+      "command": "npx",
+      "args": ["-y", "regen-koi-mcp@latest"],
+      "env": {
+        "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
+      }
+    }
+  }
+}
+```
+
+---
+
+### Kiro
+
+Add to `.kiro/settings/mcp.json`:
+```json
+{
+  "mcpServers": {
+    "regen-koi": {
+      "command": "npx",
+      "args": ["-y", "regen-koi-mcp@latest"],
+      "env": {
+        "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
+      }
+    }
+  }
+}
+```
+
+---
+
+### LM Studio
+
+**Via Settings:**
+1. Open Program sidebar
+2. Go to MCP configuration
+3. Add server with npx command: `npx -y regen-koi-mcp@latest`
+
+---
+
+### Qodo Gen (VS Code / IntelliJ)
+
+**Via Chat Panel:**
+1. Open Qodo Gen chat
+2. Click "Connect more tools"
+3. Add MCP server:
+   - Command: `npx`
+   - Args: `-y regen-koi-mcp@latest`
+   - Env: `KOI_API_ENDPOINT=https://regen.gaiaai.xyz/api/koi`
+
+---
+
+### Gemini CLI
+
+Add to Gemini CLI MCP config:
+```json
+{
+  "mcpServers": {
+    "regen-koi": {
+      "command": "npx",
+      "args": ["-y", "regen-koi-mcp@latest"],
+      "env": {
+        "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
+      }
+    }
+  }
+}
+```
+
+---
+
+### Other MCP-Compatible Clients
+
+Any MCP-compatible client can use this server with:
+
+```json
+{
+  "command": "npx",
+  "args": ["-y", "regen-koi-mcp@latest"],
+  "env": {
+    "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
+  }
+}
+```
+
 
 ## 🌍 Environment Configuration
 
