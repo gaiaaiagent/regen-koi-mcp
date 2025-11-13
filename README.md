@@ -15,7 +15,7 @@ cd regen-koi-mcp
 
 That's it! The setup script will:
 - ✅ Install Node.js dependencies
-- ✅ Setup Python environment for weekly digest tool
+- ✅ Setup Python environment (optional, for advanced digest features)
 - ✅ Build the TypeScript code
 - ✅ Configure Claude Desktop & VSCode automatically
 
@@ -23,25 +23,20 @@ Just restart Claude Desktop or reload VSCode to see the tools.
 
 ### Requirements
 
-- **Node.js 16+**: [Download here](https://nodejs.org)
-- **Python 3.8+**: [Download here](https://python.org)
+- **Node.js 16+**: [Download here](https://nodejs.org) - **Required**
+- **Python 3.8+**: [Download here](https://python.org) - **Optional** (only for advanced local digest generation)
 
 The setup script will check for these and guide you if they're missing.
 
-### Database Configuration
+### How the Weekly Digest Tool Works
 
-Before using the weekly digest tool, configure your database in `python/config/weekly_aggregator.json`:
-```json
-{
-  "database": {
-    "host": "localhost",
-    "port": 5432,
-    "database": "your_database",
-    "user": "your_user",
-    "password": "your_password"
-  }
-}
-```
+The weekly digest tool uses the **KOI API** by default (no local setup required). It queries the hosted KOI knowledge base at `https://regen.gaiaai.xyz/api/koi` and generates a digest from the results.
+
+**Advanced Option**: If you have a local KOI database and want to use the sophisticated Python digest generator:
+1. Set environment variable: `USE_LOCAL_PYTHON_DIGEST=true`
+2. Configure your database in `python/config/weekly_aggregator.json`
+
+Most users don't need this - the KOI API method works great out of the box!
 
 ## 🎯 What This Does
 

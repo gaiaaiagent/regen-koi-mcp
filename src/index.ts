@@ -691,28 +691,37 @@ class KOIServer {
 
       console.error(`[${SERVER_NAME}] Generating weekly digest for ${startDate} to ${endDate}`);
 
-      // Execute the Python script directly
-      const { spawn } = await import('child_process');
-      const path = await import('path');
-      const fs = await import('fs');
-      const { fileURLToPath } = await import('url');
+      let markdownContent = '';
+      let jsonContent: any = null;
+      let usedPythonScript = false;
 
-      // Use paths relative to the MCP server directory
-      // In ES modules, we need to use import.meta.url instead of __dirname
-      const currentFile = fileURLToPath(import.meta.url);
-      const currentDir = path.dirname(currentFile);
-      const mcpServerDir = path.join(currentDir, '..');
-      const scriptPath = path.join(mcpServerDir, 'python', 'scripts', 'run_weekly_aggregator.py');
-      const configPath = path.join(mcpServerDir, 'python', 'config', 'weekly_aggregator.json');
+      // Check if user wants to use local Python script (for advanced users with local database)
+      const useLocalPython = process.env.USE_LOCAL_PYTHON_DIGEST === 'true';
 
-      // Try to find python3 or python
-      const pythonPath = 'python3'; // Will use system python3
+      if (useLocalPython) {
+        // Try to execute the Python script (for advanced local setup)
+        try {
+        const { spawn } = await import('child_process');
+        const path = await import('path');
+        const fs = await import('fs');
+        const { fileURLToPath } = await import('url');
 
-      // Check if Python script exists
-      if (!fs.existsSync(scriptPath)) {
-        console.error(`[${SERVER_NAME}] Python script not found at ${scriptPath}`);
-        throw new Error(`Python script not found. Please run the setup script to install Python dependencies.`);
-      }
+        // Use paths relative to the MCP server directory
+        // In ES modules, we need to use import.meta.url instead of __dirname
+        const currentFile = fileURLToPath(import.meta.url);
+        const currentDir = path.dirname(currentFile);
+        const mcpServerDir = path.join(currentDir, '..');
+        const scriptPath = path.join(mcpServerDir, 'python', 'scripts', 'run_weekly_aggregator.py');
+        const configPath = path.join(mcpServerDir, 'python', 'config', 'weekly_aggregator.json');
+
+        // Try to find python3 or python
+        const pythonPath = 'python3'; // Will use system python3
+
+        // Check if Python script exists
+        if (!fs.existsSync(scriptPath)) {
+          console.error(`[${SERVER_NAME}] Python script not found at ${scriptPath}, using fallback`);
+          throw new Error('Python script not found');
+        }
 
       // Build command args - use preview mode when not saving to file
       const scriptArgs = [scriptPath, '--config', configPath];
@@ -777,8 +786,6 @@ class KOIServer {
 
       console.error(`[${SERVER_NAME}] Script completed successfully`);
 
-      let markdownContent = '';
-      let jsonContent: any = null;
       let actualFilePath = '';
 
       // Handle the output based on mode
@@ -821,10 +828,16 @@ class KOIServer {
           markdownContent = this.extractMarkdownFromPreview(stdout);
         }
       }
+          usedPythonScript = true;
+        } catch (pythonError) {
+          // Python script failed - will use KOI API below
+          console.error(`[${SERVER_NAME}] Python digest failed, using KOI API:`, pythonError);
+        }
+      }
 
-      // If no markdown content from script (either failed or no files), fall back to KOI search
+      // If no markdown content (either Python disabled or failed), use KOI API
       if (!markdownContent) {
-        console.error(`[${SERVER_NAME}] Falling back to KOI search-based digest`);
+        console.error(`[${SERVER_NAME}] Generating digest from KOI API`);
         const searchResults = await this.searchKnowledge({
           query: 'Regen Network activity updates discussions governance',
           limit: 20,
@@ -839,10 +852,8 @@ class KOIServer {
         markdownContent = `# Regen Network Weekly Digest\n\n`;
         markdownContent += `**Period:** ${startDate} to ${endDate}\n\n`;
         markdownContent += `## Summary\n\n`;
-        markdownContent += `This digest was generated from KOI knowledge base search.\n\n`;
-        markdownContent += `**Note:** No recent content found in the digest database for this period. `;
-        markdownContent += `The KOI sensors may need to be running to collect fresh data.\n\n`;
-        markdownContent += `## Related Content from Knowledge Base\n\n`;
+        markdownContent += `This digest was generated from the KOI knowledge base using semantic search.\n\n`;
+        markdownContent += `## Recent Activity\n\n`;
         markdownContent += resultsText;
       }
 
@@ -886,6 +897,9 @@ class KOIServer {
 
       // Create summary text
       let summaryText = `Generated weekly digest for ${startDate} to ${endDate}\n\n`;
+      if (!usedPythonScript) {
+        summaryText += `📡 **Source:** KOI API search\n\n`;
+      }
       summaryText += `📊 **Statistics:**\n`;
       summaryText += `- Word Count: ${wordCount}\n`;
       summaryText += `- Sources Referenced: ${sourceCount}\n`;
