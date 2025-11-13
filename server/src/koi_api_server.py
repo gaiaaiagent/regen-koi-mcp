@@ -173,14 +173,14 @@ async def search(request: SearchRequest):
         if embedding:
             # Vector search with date filtering
             date_filter = ""
-            params = [json.dumps(embedding), request.limit]
+            date_params = []
 
             if published_from:
                 date_filter += " AND m.published_at >= %s::timestamptz"
-                params.append(published_from)
+                date_params.append(published_from)
             if published_to:
                 date_filter += " AND m.published_at <= %s::timestamptz"
-                params.append(published_to)
+                date_params.append(published_to)
             if not include_undated and (published_from or published_to):
                 # Exclude undated documents
                 date_filter += " AND m.published_at IS NOT NULL"
@@ -203,19 +203,25 @@ async def search(request: SearchRequest):
                 ORDER BY e.dim_1024 <=> %s::vector
                 LIMIT %s
             """
-            params_with_vector = [json.dumps(embedding)] + params
+            # Build params: [embedding for similarity, ...date params, embedding for ORDER BY, limit]
+            params_with_vector = [json.dumps(embedding)] + date_params + [json.dumps(embedding), request.limit]
+            print(f"DEBUG: date_filter='{date_filter}'", flush=True)
+            print(f"DEBUG: date_params={date_params}", flush=True)
+            print(f"DEBUG: params_with_vector length={len(params_with_vector)}, limit={request.limit}", flush=True)
+            print(f"DEBUG: SQL query:\n{query}", flush=True)
             cur.execute(query, params_with_vector)
             results = cur.fetchall()
+            print(f"DEBUG: Vector search returned {len(results)} results", flush=True)
         else:
             # Fallback to keyword search
             date_filter = ""
             params = [f"%{search_query}%", f"%{search_query.replace(' ', '%')}%"]
 
             if published_from:
-                date_filter += f" AND m.published_at >= ${len(params) + 1}::timestamptz"
+                date_filter += " AND m.published_at >= %s::timestamptz"
                 params.append(published_from)
             if published_to:
-                date_filter += f" AND m.published_at <= ${len(params) + 1}::timestamptz"
+                date_filter += " AND m.published_at <= %s::timestamptz"
                 params.append(published_to)
 
             params.append(request.limit)
