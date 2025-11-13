@@ -840,7 +840,7 @@ class KOIServer {
         console.error(`[${SERVER_NAME}] Generating digest from KOI API`);
         const searchResults = await this.searchKnowledge({
           query: 'Regen Network activity updates discussions governance',
-          limit: 20,
+          limit: 100,
           published_from: startDate,
           published_to: endDate
         });
