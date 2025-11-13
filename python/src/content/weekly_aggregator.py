@@ -892,6 +892,67 @@ class WeeklyAggregator:
 
         lines.append("\n")
 
+        # On-Chain Activity Section
+        lines.append("## On-Chain Activity\n")
+        lines.append("📊 **Regen Network 7-Day Update**\n\n")
+
+        # Gather proposal info
+        proposal_count = sum(1 for story in digest.top_stories if story.source == 'regen-ledger' and 'proposal' in story.id.lower())
+        if proposal_count > 0:
+            lines.append(f"**🗳️ Governance Activity**\n")
+            lines.append(f"• {proposal_count} active proposal(s)\n")
+            for story in digest.top_stories:
+                if story.source == 'regen-ledger' and 'proposal' in story.id.lower():
+                    prop_id = story.metadata.get('proposal_id', '') if story.metadata else ''
+                    voting_end = story.publication_date.strftime('%Y-%m-%d') if story.publication_date else 'N/A'
+                    lines.append(f"  - #{prop_id}: {story.title[:50]}...\n")
+                    lines.append(f"    Voting ends: {voting_end}\n")
+            lines.append("\n")
+
+        # Stats from digest
+        if digest.stats:
+            lines.append(f"**💱 Market & Credits**\n")
+            lines.append(f"• 🌱 Credit batches this week\n")
+            lines.append(f"• 📈 Market activity tracked\n\n")
+
+            lines.append(f"**⛓️ Network Stats**\n")
+            lines.append(f"• Network metrics available\n")
+            lines.append(f"• Sources: {digest.stats.get('unique_sources', 0)}\n\n")
+
+        # Sources Section
+        lines.append("## Sources\n\n")
+
+        # Group forum threads by domain
+        forum_threads = {}
+        for story in digest.top_stories:
+            if story.url and 'forum.' in story.url or 'discourse.group' in story.url:
+                if story.url not in forum_threads:
+                    post_count = story.metadata.get('post_count', 1) if story.metadata else 1
+                    pub_date = story.publication_date.strftime('%b %d') if story.publication_date else 'N/A'
+                    forum_threads[story.url] = {
+                        'posts': post_count,
+                        'date': pub_date,
+                        'title': story.title
+                    }
+
+        if forum_threads:
+            lines.append("### Discourse\n")
+            lines.append(f"- **Total activity**: {len(forum_threads)} discussions\n")
+            for url, info in forum_threads.items():
+                short_url = url[:70] + '...' if len(url) > 70 else url
+                lines.append(f"- [{short_url}]({url}) ({info['posts']} posts, {info['date']})\n")
+            lines.append("\n")
+
+        # Ledger sources
+        ledger_items = [s for s in digest.top_stories if s.source == 'regen-ledger']
+        if ledger_items:
+            lines.append("### Regen Ledger\n")
+            for item in ledger_items:
+                lines.append(f"- {item.title}\n")
+            lines.append("\n")
+
+        lines.append("---\n\n")
+
         # Full Content Section
         lines.append("## Full Content\n")
         lines.append("*This section contains the complete content from all sources this week.*\n\n")
