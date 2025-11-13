@@ -81,7 +81,7 @@ export class HybridSearchClient {
    */
   async queryVector(query: string, limit: number = 10, filters?: any): Promise<VectorResult[]> {
     try {
-      const body: any = { question: query, limit, include_metadata: true };
+      const body: any = { query: query, limit, include_metadata: true };
       if (filters && Object.keys(filters).length > 0) body.filters = filters;
       const response = await axios.post(`${VECTOR_API_URL}/query`, body);
 
