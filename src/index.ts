@@ -695,9 +695,13 @@ class KOIServer {
       const { spawn } = await import('child_process');
       const path = await import('path');
       const fs = await import('fs');
+      const { fileURLToPath } = await import('url');
 
       // Use paths relative to the MCP server directory
-      const mcpServerDir = path.join(__dirname, '..');
+      // In ES modules, we need to use import.meta.url instead of __dirname
+      const currentFile = fileURLToPath(import.meta.url);
+      const currentDir = path.dirname(currentFile);
+      const mcpServerDir = path.join(currentDir, '..');
       const scriptPath = path.join(mcpServerDir, 'python', 'scripts', 'run_weekly_aggregator.py');
       const configPath = path.join(mcpServerDir, 'python', 'config', 'weekly_aggregator.json');
 
