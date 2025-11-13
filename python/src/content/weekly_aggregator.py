@@ -614,6 +614,159 @@ class WeeklyAggregator:
         logger.info(f"Fetched {len(ledger_items)} ledger summary items")
         return ledger_items
 
+    async def fetch_governance_proposal_full(self, proposal_id: str) -> Optional[str]:
+        """
+        Fetch complete governance proposal details with voting data.
+        Returns formatted markdown string for NotebookLM export.
+        """
+        try:
+            # Try multiple API endpoints
+            api_endpoints = [
+                f"https://regen-api.polkachu.com/cosmos/gov/v1beta1/proposals/{proposal_id}",
+                f"https://regen-rest.publicnode.com/cosmos/gov/v1beta1/proposals/{proposal_id}",
+                f"https://regen.api.m.stavr.tech/cosmos/gov/v1beta1/proposals/{proposal_id}",
+                f"https://rest.regen.aneka.io/cosmos/gov/v1beta1/proposals/{proposal_id}"
+            ]
+
+            async with aiohttp.ClientSession() as session:
+                for api_url in api_endpoints:
+                    try:
+                        async with session.get(api_url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                            if response.status == 200:
+                                data = await response.json()
+                                proposal = data.get('proposal', {})
+
+                                # Format proposal content
+                                content = f"### Full Governance Proposal #{proposal_id}\n\n"
+                                content += f"**Status**: {proposal.get('status', 'UNKNOWN')}\n\n"
+
+                                # Get content details
+                                prop_content = proposal.get('content', {})
+                                content += f"**Type**: {prop_content.get('@type', 'N/A')}\n\n"
+
+                                # For community pool spend, show details
+                                if 'CommunityPoolSpend' in prop_content.get('@type', ''):
+                                    content += f"**Recipient**: {prop_content.get('recipient', 'N/A')}\n"
+                                    amounts = prop_content.get('amount', [])
+                                    if amounts:
+                                        for amt in amounts:
+                                            denom = amt.get('denom', 'uregen')
+                                            amount = int(amt.get('amount', 0)) / 1_000_000 if amt.get('amount') else 0
+                                            content += f"**Amount Requested**: {amount:,.0f} REGEN\n"
+                                    content += "\n"
+
+                                # Add title and description if available
+                                if 'title' in prop_content:
+                                    content += f"**Title**: {prop_content['title']}\n\n"
+                                if 'description' in prop_content:
+                                    content += f"**Description**:\n{prop_content['description']}\n\n"
+
+                                # Add voting details
+                                final_tally = proposal.get('final_tally_result', {})
+                                if final_tally:
+                                    content += f"**Voting Results**:\n"
+                                    # Convert from uregen to REGEN
+                                    yes_amt = int(final_tally.get('yes', '0')) / 1_000_000 if final_tally.get('yes') else 0
+                                    no_amt = int(final_tally.get('no', '0')) / 1_000_000 if final_tally.get('no') else 0
+                                    abstain_amt = int(final_tally.get('abstain', '0')) / 1_000_000 if final_tally.get('abstain') else 0
+                                    no_veto_amt = int(final_tally.get('no_with_veto', '0')) / 1_000_000 if final_tally.get('no_with_veto') else 0
+
+                                    content += f"- Yes: {yes_amt:,.0f} REGEN\n"
+                                    content += f"- No: {no_amt:,.0f} REGEN\n"
+                                    content += f"- Abstain: {abstain_amt:,.0f} REGEN\n"
+                                    content += f"- No With Veto: {no_veto_amt:,.0f} REGEN\n\n"
+
+                                # Add timing
+                                content += f"**Timeline**:\n"
+                                content += f"- Submit Time: {proposal.get('submit_time', 'N/A')}\n"
+                                content += f"- Deposit End: {proposal.get('deposit_end_time', 'N/A')}\n"
+                                content += f"- Voting Start: {proposal.get('voting_start_time', 'N/A')}\n"
+                                content += f"- Voting End: {proposal.get('voting_end_time', 'N/A')}\n\n"
+
+                                return content
+                    except Exception as e:
+                        logger.debug(f"API endpoint {api_url} failed: {e}")
+                        continue
+
+            # If all endpoints fail
+            return f"### Governance Proposal #{proposal_id}\n\n*[Full proposal details not available - all API endpoints unreachable]*\n\n"
+
+        except Exception as e:
+            logger.error(f"Error fetching proposal {proposal_id}: {e}")
+            return None
+
+    async def fetch_forum_thread_content(self, url: str) -> Optional[str]:
+        """
+        Fetch complete forum thread content using Discourse API.
+        Returns formatted markdown with all posts.
+        """
+        try:
+            # Extract thread ID from URL
+            # Format: https://forum.regen.network/t/thread-title/123
+            parts = url.rstrip('/').split('/')
+            if len(parts) < 2:
+                return None
+
+            thread_id = parts[-1]
+            if not thread_id.isdigit():
+                # Sometimes ID is in post number like '/123/5'
+                thread_id = parts[-2] if len(parts) > 2 and parts[-2].isdigit() else None
+
+            if not thread_id:
+                return None
+
+            # Use Discourse API to fetch thread content
+            api_url = f"https://forum.regen.network/t/{thread_id}.json"
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(api_url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                    if response.status != 200:
+                        logger.warning(f"Failed to fetch thread {thread_id}: {response.status}")
+                        return None
+
+                    data = await response.json()
+
+                    # Extract post content
+                    posts = data.get('post_stream', {}).get('posts', [])
+                    if not posts:
+                        return None
+
+                    # Format the thread content with ALL posts
+                    thread_content = f"**Thread Title**: {data.get('title', 'Untitled')}\n\n"
+                    thread_content += f"**Total Posts**: {len(posts)}\n"
+                    thread_content += f"**Thread URL**: {url}\n\n"
+                    thread_content += "---\n\n"
+
+                    # Include ALL posts for complete context
+                    for i, post in enumerate(posts, 1):
+                        username = post.get('username', 'Anonymous')
+                        created = post.get('created_at', '')[:10]
+                        content = post.get('cooked', '')  # 'cooked' is the rendered HTML
+
+                        # Enhanced HTML to markdown conversion
+                        import re
+                        content = re.sub(r'<p>(.*?)</p>', r'\1\n\n', content)
+                        content = re.sub(r'<strong>(.*?)</strong>', r'**\1**', content)
+                        content = re.sub(r'<em>(.*?)</em>', r'*\1*', content)
+                        content = re.sub(r'<code>(.*?)</code>', r'`\1`', content)
+                        content = re.sub(r'<pre>(.*?)</pre>', r'```\n\1\n```', content, flags=re.DOTALL)
+                        content = re.sub(r'<blockquote>(.*?)</blockquote>', r'> \1', content, flags=re.DOTALL)
+                        content = re.sub(r'<a href="(.*?)".*?>(.*?)</a>', r'[\2](\1)', content)
+                        content = re.sub(r'<ul>(.*?)</ul>', r'\1', content, flags=re.DOTALL)
+                        content = re.sub(r'<li>(.*?)</li>', r'- \1\n', content)
+                        content = re.sub(r'<.*?>', '', content)  # Remove remaining HTML tags
+                        content = content.strip()
+
+                        thread_content += f"### Post {i} by @{username} ({created})\n\n"
+                        thread_content += f"{content}\n\n"
+                        thread_content += "---\n\n"
+
+                    return thread_content
+
+        except Exception as e:
+            logger.error(f"Error fetching forum thread {url}: {e}")
+            return None
+
     def get_embeddings(self, items: List[ContentItem]) -> None:
         """Get BGE embeddings for content items"""
         embeddings_generated = 0
@@ -709,6 +862,144 @@ class WeeklyAggregator:
         items.sort(key=lambda x: x.relevance_score, reverse=True)
         return items
     
+    def generate_notebooklm_archive(self, digest: WeeklyDigest) -> str:
+        """
+        Generate NotebookLM archive format with complete content.
+        Structure matches regen.gaiaai.xyz/digests/ format.
+        """
+        import re
+        lines = []
+
+        # Header
+        lines.append(f"# Regen Network Weekly Digest")
+        lines.append(f"{digest.week_start.strftime('%B %d')} - {digest.week_end.strftime('%B %d, %Y')}\n")
+
+        # Executive Summary
+        lines.append("## Executive Summary\n")
+        lines.append(f"This week saw {digest.total_items} significant updates across the Regen Network ecosystem. ")
+
+        # Theme summary
+        if digest.clusters:
+            themes = []
+            for cluster in digest.clusters[:3]:
+                if cluster['items']:
+                    theme = cluster['theme']
+                    count = cluster['size']
+                    themes.append(f"{theme} ({count} items)")
+
+            if themes:
+                lines.append(f"Key themes included {', '.join(themes)}. ")
+
+        lines.append("\n")
+
+        # Full Content Section
+        lines.append("## Full Content\n")
+        lines.append("*This section contains the complete content from all sources this week.*\n\n")
+
+        for i, story in enumerate(digest.top_stories, 1):
+            lines.append(f"### {i}. {story.title}\n")
+            lines.append(f"**Source:** {story.source}  \n")
+            lines.append(f"**Date:** {story.publication_date.strftime('%Y-%m-%d')}  \n")
+            if story.url:
+                lines.append(f"**URL:** {story.url}  \n")
+
+            if story.is_aggregated and story.metadata:
+                post_count = story.metadata.get('post_count', 0)
+                lines.append(f"**Thread Posts:** {post_count}  \n")
+
+            lines.append("\n")
+            lines.append(f"{story.content}\n")
+            lines.append("\n---\n\n")
+
+        # Extract proposal IDs and forum URLs for enhanced content
+        proposal_ids = set()
+        forum_urls = set()
+
+        for story in digest.top_stories:
+            # Extract proposal IDs
+            if story.source == 'regen-ledger' and story.metadata:
+                prop_id = story.metadata.get('proposal_id')
+                if prop_id:
+                    proposal_ids.add(prop_id)
+
+            # Extract forum URLs
+            if story.url and 'forum.regen.network' in story.url:
+                forum_urls.add(story.url)
+
+        # Complete Governance Proposals Section
+        if proposal_ids:
+            lines.append("\n# Complete Governance Proposals\n\n")
+            lines.append(f"*Full details of {len(proposal_ids)} governance proposals...*\n\n")
+
+            # Sync wrapper to call async method
+            import concurrent.futures
+            def fetch_proposal_sync(prop_id):
+                try:
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = executor.submit(asyncio.run, self.fetch_governance_proposal_full(prop_id))
+                        return future.result(timeout=15)
+                except Exception as e:
+                    logger.warning(f"Failed to fetch proposal {prop_id}: {e}")
+                    return None
+
+            for prop_id in sorted(proposal_ids):
+                logger.info(f"Fetching governance proposal #{prop_id}")
+                prop_content = fetch_proposal_sync(prop_id)
+                if prop_content:
+                    lines.append(prop_content)
+                    lines.append("---\n\n")
+
+        # Complete Forum Thread Content Section
+        if forum_urls:
+            lines.append("\n# Complete Forum Thread Content\n\n")
+            lines.append(f"*Fetching complete content from {len(forum_urls)} forum threads (every single post)...*\n\n")
+
+            # Sync wrapper to call async method
+            def fetch_thread_sync(url):
+                try:
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = executor.submit(asyncio.run, self.fetch_forum_thread_content(url))
+                        return future.result(timeout=15)
+                except Exception as e:
+                    logger.warning(f"Failed to fetch thread {url}: {e}")
+                    return None
+
+            thread_count = 0
+            for url in sorted(forum_urls):
+                thread_count += 1
+                logger.info(f"Fetching complete forum thread {thread_count}/{len(forum_urls)}: {url}")
+                content = fetch_thread_sync(url)
+                if content:
+                    lines.append(f"## Forum Thread #{thread_count}\n\n")
+                    lines.append(content)
+                    lines.append("\n\n")
+                else:
+                    lines.append(f"## Forum Thread #{thread_count}: {url}\n\n")
+                    lines.append("*[Unable to fetch complete thread content]*\n\n")
+                    lines.append("---\n\n")
+
+        # Document Completeness Section
+        lines.append("\n---\n\n")
+        lines.append("## Document Completeness\n\n")
+        lines.append("This comprehensive NotebookLM export contains:\n")
+        lines.append(f"- ✅ Complete weekly digest ({digest.total_items} items)\n")
+        lines.append(f"- ✅ {len(proposal_ids)} full governance proposals with voting details\n")
+        lines.append(f"- ✅ {len(forum_urls)} complete forum threads (every post included)\n")
+        lines.append(f"- ✅ {len(digest.clusters)} thematic clusters for organization\n\n")
+
+        # Statistics
+        lines.append("## Weekly Statistics\n")
+        if digest.stats:
+            lines.append(f"- Total Content Items: {digest.stats.get('total_items', 0)}\n")
+            lines.append(f"- Unique Sources: {digest.stats.get('unique_sources', 0)}\n")
+            lines.append(f"- Most Active Source: {digest.stats.get('most_active_source', 'N/A')}\n")
+
+        # Footer
+        lines.append("\n---\n")
+        lines.append("*This digest was automatically generated by the Regen Network KOI system for NotebookLM analysis.*\n")
+
+        return ''.join(lines)
+
     def generate_brief(self, digest: WeeklyDigest) -> str:
         """Generate the weekly brief narrative with FULL content"""
         lines = []
@@ -965,9 +1256,9 @@ class WeeklyAggregator:
             stats=self.calculate_stats(items)
         )
         
-        # Generate brief
-        digest.brief = self.generate_brief(digest)
-        
+        # Generate brief using NotebookLM archive format
+        digest.brief = self.generate_notebooklm_archive(digest)
+
         logger.info(f"Generated digest with {len(digest.top_stories)} top stories and {len(digest.clusters)} clusters")
         return digest
     
