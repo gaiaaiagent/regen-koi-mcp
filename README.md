@@ -9,30 +9,39 @@ Access Regen Network's Knowledge Organization Infrastructure (KOI) through Model
 git clone https://github.com/regen-network/regen-koi-mcp
 cd regen-koi-mcp
 
-# Install Node.js dependencies
-npm install
-
-# Setup Python environment for weekly digest tool
-cd python
+# Run the setup script (installs everything and configures clients)
 ./setup.sh
-cd ..
-
-# Run automated setup (configures Claude Desktop & VSCode automatically)
-npm run setup
 ```
 
-That's it! The setup script will automatically configure the MCP server for your installed clients. Just restart Claude Desktop or reload VSCode to see the tools.
+That's it! The setup script will:
+- ✅ Install Node.js dependencies
+- ✅ Setup Python environment for weekly digest tool
+- ✅ Build the TypeScript code
+- ✅ Configure Claude Desktop & VSCode automatically
 
-### Python Requirements
+Just restart Claude Desktop or reload VSCode to see the tools.
 
-The weekly digest tool requires Python 3.8+ with the following packages (automatically installed by `python/setup.sh`):
-- psycopg2-binary (database access)
-- numpy (numerical operations)
-- scikit-learn (clustering)
-- requests (API calls)
-- python-dotenv (configuration)
+### Requirements
 
-**Important:** Make sure to configure your database settings in `python/config/weekly_aggregator.json` before using the weekly digest tool.
+- **Node.js 16+**: [Download here](https://nodejs.org)
+- **Python 3.8+**: [Download here](https://python.org)
+
+The setup script will check for these and guide you if they're missing.
+
+### Database Configuration
+
+Before using the weekly digest tool, configure your database in `python/config/weekly_aggregator.json`:
+```json
+{
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "database": "your_database",
+    "user": "your_user",
+    "password": "your_password"
+  }
+}
+```
 
 ## 🎯 What This Does
 
