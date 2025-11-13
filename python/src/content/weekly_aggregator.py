@@ -266,21 +266,24 @@ class WeeklyAggregator:
 
                 # Extract thread ID from URL or parent_rid for forum posts
                 thread_id = None
-                if metadata.get('parent_rid'):
-                    # For chunked posts, use parent_rid as base thread identifier
-                    parent_rid = metadata.get('parent_rid', '')
-                    # Extract thread number from parent_rid or URL
-                    if 'forum.regen.network_' in parent_rid:
-                        # Format: regen.forum-post:forum.regen.network_413_post_2
-                        parts = parent_rid.split('_')
-                        if len(parts) >= 2:
-                            thread_num = parts[-2]  # Get thread number (e.g., "413")
-                            thread_id = f"forum.regen.network_{thread_num}"
-                    elif 'discourse.group_' in parent_rid:
-                        parts = parent_rid.split('_')
-                        if len(parts) >= 2:
-                            thread_num = parts[-2]
-                            thread_id = f"regencommons.discourse.group_{thread_num}"
+                url = metadata.get('url', '')
+                if url:
+                    # Extract thread number from URL
+                    # Format: https://forum.regen.network/t/thread-title/546/1
+                    #         https://regencommons.discourse.group/t/thread-title/72/3
+                    try:
+                        if 'forum.regen.network/t/' in url:
+                            parts = url.split('/t/')[1].split('/')
+                            if len(parts) >= 2:
+                                thread_num = parts[1]  # Get thread number
+                                thread_id = f"forum.regen.network_{thread_num}"
+                        elif 'discourse.group/t/' in url:
+                            parts = url.split('/t/')[1].split('/')
+                            if len(parts) >= 2:
+                                thread_num = parts[1]
+                                thread_id = f"regencommons.discourse.group_{thread_num}"
+                    except:
+                        pass
 
                 items.append(ContentItem(
                     id=row['id'],
@@ -297,6 +300,86 @@ class WeeklyAggregator:
         
         logger.info(f"Collected {len(items)} items from past {days_back} days")
         return items
+
+    def fetch_complete_threads(self, thread_ids: List[str]) -> List[ContentItem]:
+        """
+        Fetch ALL posts from the specified thread IDs (complete thread history).
+        This ensures we get every post in a thread, not just recent ones.
+        """
+        if not thread_ids or not self.db_conn:
+            return []
+
+        complete_items = []
+
+        with self.db_conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            for thread_id in thread_ids:
+                # Extract forum and thread number
+                # Format: "forum.regen.network_546" or "regencommons.discourse.group_72"
+                # RID format: "regen.forum-post:forum.regen.network_546_post_1#chunk0"
+                if 'forum.regen.network_' in thread_id:
+                    thread_num = thread_id.split('_')[-1]
+                    # Match both posts and topic
+                    pattern_post = f'regen.forum-post:forum.regen.network_{thread_num}_%'
+                    pattern_topic = f'regen.forum-topic:forum.regen.network_topic_{thread_num}%'
+                elif 'discourse.group_' in thread_id:
+                    thread_num = thread_id.split('_')[-1]
+                    pattern_post = f'regen.forum-post:regencommons.discourse.group_{thread_num}_%'
+                    pattern_topic = f'regen.forum-topic:regencommons.discourse.group_topic_{thread_num}%'
+                else:
+                    continue
+
+                # Fetch ALL posts and chunks for this thread
+                query = """
+                    SELECT
+                        rid as id,
+                        content,
+                        metadata,
+                        metadata->>'title' as title,
+                        source_sensor as source,
+                        metadata->>'url' as url,
+                        published_at as publication_date,
+                        published_confidence as confidence,
+                        metadata->>'tags' as tags
+                    FROM koi_memories
+                    WHERE (rid LIKE %s OR rid LIKE %s)
+                        AND superseded_at IS NULL
+                        AND event_type != 'FORGET'
+                    ORDER BY published_at ASC, rid ASC
+                """
+
+                cursor.execute(query, (pattern_post, pattern_topic))
+
+                for row in cursor.fetchall():
+                    tags = json.loads(row['tags']) if row['tags'] else []
+
+                    # Extract content text
+                    content_text = ""
+                    if isinstance(row['content'], dict):
+                        content_text = row['content'].get('text', '') or str(row['content'])
+                    else:
+                        content_text = str(row['content'])
+
+                    # Extract title
+                    title = row['title'] or "Untitled"
+
+                    # Parse metadata
+                    metadata = row['metadata'] if isinstance(row['metadata'], dict) else {}
+
+                    complete_items.append(ContentItem(
+                        id=row['id'],
+                        content=content_text,
+                        title=title,
+                        source=row['source'] or "unknown",
+                        url=row['url'],
+                        publication_date=row['publication_date'],
+                        confidence=row['confidence'],
+                        tags=tags,
+                        metadata=metadata,
+                        thread_id=thread_id
+                    ))
+
+        logger.info(f"Fetched {len(complete_items)} complete thread posts from {len(thread_ids)} threads")
+        return complete_items
 
     def aggregate_threads(self, items: List[ContentItem]) -> List[ContentItem]:
         """
@@ -774,8 +857,24 @@ class WeeklyAggregator:
         """Generate the complete weekly digest"""
         logger.info(f"Generating weekly digest for past {days_back} days")
 
-        # Collect content from database
+        # Collect content from database (recent activity only)
         items = self.collect_weekly_content(days_back)
+
+        # Identify thread IDs from recent activity
+        thread_ids = set()
+        for item in items:
+            if item.thread_id:
+                thread_ids.add(item.thread_id)
+
+        # Fetch COMPLETE thread histories (all posts, not just recent)
+        if thread_ids:
+            logger.info(f"Fetching complete histories for {len(thread_ids)} threads")
+            complete_thread_items = self.fetch_complete_threads(list(thread_ids))
+
+            # Replace partial thread data with complete threads
+            # Keep non-thread items
+            non_thread_items = [item for item in items if not item.thread_id]
+            items = complete_thread_items + non_thread_items
 
         # Fetch ledger summaries directly from blockchain
         ledger_items = self._fetch_ledger_summaries_sync(days_back)
