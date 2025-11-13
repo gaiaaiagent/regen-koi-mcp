@@ -122,6 +122,7 @@ async def root():
     }
 
 @app.get("/health")
+@app.get("/api/koi/health")  # Also support at /api/koi/health
 async def health():
     """Health check"""
     db_healthy = False
@@ -139,6 +140,7 @@ async def health():
     }
 
 @app.post("/api/koi/search")
+@app.post("/api/koi/query")  # Backward compatibility alias
 async def search(request: SearchRequest):
     """
     Hybrid search across KOI knowledge base
