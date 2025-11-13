@@ -17,8 +17,11 @@ node_modules/
 # Test files
 test/
 tests/
+test-*.js
+test_*.js
 *.test.js
 *.spec.js
+results/
 
 # Build artifacts
 *.tsbuildinfo
@@ -27,10 +30,15 @@ tests/
 docs/
 ARCHITECTURE.md
 CONTRIBUTING.md
+TOOL_ROUTING.md
+PUBLISHING.md
 
 # Environment
 .env
 .env.*
+data/
+*.db
+*.service
 
 # Python/Server (not needed for MCP client)
 python/
@@ -39,8 +47,10 @@ setup.sh
 venv/
 
 # Scripts
-scripts/setup.js
-scripts/eval-nl2sparql.js
+scripts/
+setup.sh
+install.sh
+migrate.sh
 
 # Config files
 .eslintrc.*

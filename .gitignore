@@ -55,3 +55,11 @@ data/
 
 # Service files
 *.service
+
+# Test files (keep in local dev only)
+test-*.js
+test_*.js
+results/
+
+# Scripts (keep setup.js for npm setup)
+scripts/eval-*.js
