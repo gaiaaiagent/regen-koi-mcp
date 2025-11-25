@@ -88,5 +88,60 @@ export const TOOLS: Tool[] = [
         }
       }
     }
+  },
+  {
+    name: 'search_github_docs',
+    description: 'Search Regen Network GitHub repositories for documentation, README files, configuration files, and technical content. Searches regen-ledger (blockchain), regen-web (frontend), regen-data-standards (schemas), and regenie-corpus (docs). Note: Currently searches documentation and config files, not source code.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Search query (e.g., "ecocredit module", "validator setup", "governance voting")'
+        },
+        repository: {
+          type: 'string',
+          description: 'Optional: Filter by specific repo. Omit to search all 4 repositories.',
+          enum: ['regen-ledger', 'regen-web', 'regen-data-standards', 'regenie-corpus']
+        },
+        limit: {
+          type: 'number',
+          minimum: 1,
+          maximum: 20,
+          default: 10,
+          description: 'Maximum number of results to return'
+        }
+      },
+      required: ['query']
+    }
+  },
+  {
+    name: 'get_repo_overview',
+    description: 'Get a structured overview of a specific Regen Network repository including description, key files (README, CONTRIBUTING, etc.), and links to documentation.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        repository: {
+          type: 'string',
+          description: 'Repository to get overview for',
+          enum: ['regen-ledger', 'regen-web', 'regen-data-standards', 'regenie-corpus']
+        }
+      },
+      required: ['repository']
+    }
+  },
+  {
+    name: 'get_tech_stack',
+    description: 'Get technical stack information for Regen Network repositories including languages, frameworks, dependencies, build tools, and infrastructure. Can show all repos or filter to a specific one.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        repository: {
+          type: 'string',
+          description: 'Optional: Filter to specific repo. Omit to show all repositories.',
+          enum: ['regen-ledger', 'regen-web', 'regen-data-standards', 'regenie-corpus']
+        }
+      }
+    }
   }
 ];
