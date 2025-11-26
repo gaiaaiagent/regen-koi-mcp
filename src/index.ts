@@ -25,7 +25,6 @@ import { executeGraphTool } from './graph_tool.js';
 dotenv.config();
 
 // Configuration
-// Prefer the public HTTPS endpoint unless overridden
 const KOI_API_ENDPOINT = process.env.KOI_API_ENDPOINT || 'https://regen.gaiaai.xyz/api/koi';
 const KOI_API_KEY = process.env.KOI_API_KEY || '';
 const SERVER_NAME = process.env.MCP_SERVER_NAME || 'regen-koi';
@@ -325,7 +324,7 @@ class KOIServer {
   }
 
   private async searchKnowledge(args: any) {
-    const { query, limit = 5, published_from, published_to, include_undated = false, useHybrid = true } = args || {};
+    const { query, limit = 5, published_from, published_to, include_undated = false, useHybrid = false } = args || {};
     const vectorFilters: any = {};
 
     // Respect explicit date filter
@@ -376,7 +375,7 @@ class KOIServer {
 
     // Fallback to original vector search
     try {
-      const body: any = { query: query, limit };
+      const body: any = { question: query, limit };
       if (Object.keys(vectorFilters).length > 0) body.filters = vectorFilters;
       const response = await apiClient.post('/search', body);
 
@@ -392,7 +391,7 @@ class KOIServer {
           },
         ],
       };
-    } catch (error) {
+    } catch (error: any) {
       throw new Error(`Failed to search knowledge: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
