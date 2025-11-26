@@ -47,8 +47,10 @@
   "homepage": "https://github.com/gaiaaiagent/regen-koi-mcp#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.20.0",
+    "@types/pg": "^8.15.6",
     "axios": "^1.7.7",
     "dotenv": "^16.4.5",
+    "pg": "^8.16.3",
     "regen-koi-mcp": "^1.0.0"
   },
   "devDependencies": {

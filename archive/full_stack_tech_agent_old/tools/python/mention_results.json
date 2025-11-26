@@ -1,0 +1,459 @@
+{
+  "doc_count": 5867,
+  "total_mentions": 3630,
+  "entities_loaded": 63,
+  "keeper_count": 3,
+  "msg_count": 60,
+  "mention_details": [
+    {
+      "doc_id": "62cb6d05-9c0e-41c8-a009-a3d74ee082b4",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/simulation/msg_sell.go",
+      "entity_name": "MsgSell_Order",
+      "entity_type": "Msg",
+      "surface_form": "MsgSell_Order",
+      "confidence": 1.0,
+      "context": "dIntBetween(r, 1, 50))) sellOrders[i] = &types.MsgSell_Order{ BatchDenom: batches[i].Denom, Qua"
+    },
+    {
+      "doc_id": "62cb6d05-9c0e-41c8-a009-a3d74ee082b4",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/simulation/msg_sell.go",
+      "entity_name": "MsgSell",
+      "entity_type": "Msg",
+      "surface_form": "MsgSell",
+      "confidence": 1.0,
+      "context": "xpiration: &exp, } } msg := &types.MsgSell{ Seller: seller.Address.String(), Orders: s"
+    },
+    {
+      "doc_id": "4275d6a1-8ec9-4af5-bea3-d664238fcdd9",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/keeper/keeper_test.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "keeper",
+      "confidence": 0.9,
+      "context": "package keeper import ( \"context\" \"github.com/golang/mock/go"
+    },
+    {
+      "doc_id": "bc397afa-4b5b-4bc7-8a10-5d62ad0c251a",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/keeper/keeper_test.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "keeper",
+      "confidence": 0.9,
+      "context": "dresscodec.NewBech32Codec(\"regen\") // setup test keeper s.ctrl = gomock.NewController(t) assert.NilErro"
+    },
+    {
+      "doc_id": "f992b207-d876-4d5e-965f-af18ee8a9ce1",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/keeper/keeper_test.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "Keeper",
+      "confidence": 1.0,
+      "context": "teStore ctx context.Context k Keeper ctrl *gomock.Controller addrs []sd"
+    },
+    {
+      "doc_id": "37bd954e-e8ae-48f5-990f-217158105393",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/basket/keeper/invariants.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "keeper",
+      "confidence": 0.9,
+      "context": "ck // SA1019: using deprecated b.Exponent package keeper import ( \"context\" \"fmt\" stdmath \"math\" \"sor"
+    },
+    {
+      "doc_id": "37bd954e-e8ae-48f5-990f-217158105393",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/basket/keeper/invariants.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "Keeper",
+      "confidence": 1.0,
+      "context": "n-network/regen-ledger/x/ecocredit/v4\" ) func (k Keeper) RegisterInvariants(ir sdk.InvariantRegistry) {"
+    },
+    {
+      "doc_id": "37bd954e-e8ae-48f5-990f-217158105393",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/basket/keeper/invariants.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "Keeper",
+      "confidence": 1.0,
+      "context": "et-supply\", k.basketSupplyInvariant()) } func (k Keeper) basketSupplyInvariant() sdk.Invariant { return"
+    },
+    {
+      "doc_id": "75a1a607-41c3-4022-bcc5-0abc6ab0f9c6",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/basket/keeper/msg_put_test.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "keeper",
+      "confidence": 0.9,
+      "context": "package keeper import ( \"encoding/json\" \"fmt\" stdmath \"math\""
+    },
+    {
+      "doc_id": "466323ef-c83c-4a32-b051-a5c38d9c24e7",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/basket/keeper/msg_put_test.go",
+      "entity_name": "MsgPut",
+      "entity_type": "Msg",
+      "surface_form": "MsgPut",
+      "confidence": 1.0,
+      "context": "TheMessage(a gocuke.DocString) { s.msg = &types.MsgPut{} err := jsonpb.UnmarshalString(a.Content, s.msg"
+    },
+    {
+      "doc_id": "775341c0-4b60-483b-b231-d7d2b29f9d5f",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/keeper/query_sell_orders_by_seller_test.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "keeper",
+      "confidence": 0.9,
+      "context": "package keeper import ( \"testing\" \"gotest.tools/v3/assert\""
+    },
+    {
+      "doc_id": "02515e03-13c9-4538-8554-fbd1be895b8e",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/keeper/msg_gov_send_from_fee_pool_test.go",
+      "entity_name": "MsgGovSendFromFeePool",
+      "entity_type": "Msg",
+      "surface_form": "MsgGovSendFromFeePool",
+      "confidence": 1.0,
+      "context": "e = setupBase(t, 2) s.msg = &types.MsgGovSendFromFeePool{ Coins: sdk.NewCoins(sdk.NewCoin(\"regen\", math."
+    },
+    {
+      "doc_id": "4d0193aa-4c9b-4323-b952-c8301d375515",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/basket/keeper/msg_put.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "keeper",
+      "confidence": 0.9,
+      "context": "package keeper import ( \"context\" \"time\" sdk \"github.com/co"
+    },
+    {
+      "doc_id": "6d6c5331-5b3a-41de-8a2a-b2767cc2e3da",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/basket/keeper/msg_put.go",
+      "entity_name": "MsgPut",
+      "entity_type": "Msg",
+      "surface_form": "MsgPut",
+      "confidence": 1.0,
+      "context": "(ecocredit.GasCostPerIteration, \"ecocredit/basket/MsgPut credit iteration\") } // mint and send tokens t"
+    },
+    {
+      "doc_id": "2e3d00a0-6120-4e12-9b94-0a1f2966f36f",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/keeper/msg_cancel_sell_order_test.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "keeper",
+      "confidence": 0.9,
+      "context": "//nolint:revive,stylecheck package keeper import ( \"encoding/json\" \"strconv\" \"testing\""
+    },
+    {
+      "doc_id": "2e3d00a0-6120-4e12-9b94-0a1f2966f36f",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/keeper/msg_cancel_sell_order_test.go",
+      "entity_name": "MsgCancelSellOrder",
+      "entity_type": "Msg",
+      "surface_form": "MsgCancelSellOrder",
+      "confidence": 1.0,
+      "context": "gCancelSellOrderResponse msg *types.MsgCancelSellOrder e"
+    },
+    {
+      "doc_id": "dfce9c3b-1d5e-49b2-aa07-892a77e50fbb",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/basket/keeper/msg_take.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "keeper",
+      "confidence": 0.9,
+      "context": "package keeper import ( \"context\" \"fmt\" stdmath \"math\" sdk"
+    },
+    {
+      "doc_id": "dfce9c3b-1d5e-49b2-aa07-892a77e50fbb",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/basket/keeper/msg_take.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "keeper",
+      "confidence": 0.9,
+      "context": "om/regen-network/regen-ledger/x/ecocredit/v4/base/keeper\" basetypes \"github.com/regen-network/regen-ledge"
+    },
+    {
+      "doc_id": "dfce9c3b-1d5e-49b2-aa07-892a77e50fbb",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/basket/keeper/msg_take.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "Keeper",
+      "confidence": 1.0,
+      "context": "ledger/x/ecocredit/v4/basket/types/v1\" ) func (k Keeper) Take(ctx context.Context, msg *types.MsgTake) (*"
+    },
+    {
+      "doc_id": "dfce9c3b-1d5e-49b2-aa07-892a77e50fbb",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/basket/keeper/msg_take.go",
+      "entity_name": "MsgTake",
+      "entity_type": "Msg",
+      "surface_form": "MsgTake",
+      "confidence": 1.0,
+      "context": "c (k Keeper) Take(ctx context.Context, msg *types.MsgTake) (*types.MsgTakeResponse, error) { if err := msg"
+    },
+    {
+      "doc_id": "bfdc771d-55b6-4c3e-b76f-116ba5b6ef25",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/keeper/query_allowed_denoms_test.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "keeper",
+      "confidence": 0.9,
+      "context": "package keeper import ( \"testing\" \"gotest.tools/v3/assert\""
+    },
+    {
+      "doc_id": "ee94c073-509e-4053-846c-e42ae2610374",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/basket/keeper/msg_update_curator.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "keeper",
+      "confidence": 0.9,
+      "context": "package keeper import ( \"context\" sdk \"github.com/cosmos/cos"
+    },
+    {
+      "doc_id": "ee94c073-509e-4053-846c-e42ae2610374",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/basket/keeper/msg_update_curator.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "Keeper",
+      "confidence": 1.0,
+      "context": "is an RPC to handle basket.UpdateCurator func (k Keeper) UpdateCurator(ctx context.Context, req *types.Ms"
+    },
+    {
+      "doc_id": "ee94c073-509e-4053-846c-e42ae2610374",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/basket/keeper/msg_update_curator.go",
+      "entity_name": "MsgUpdateCurator",
+      "entity_type": "Msg",
+      "surface_form": "MsgUpdateCurator",
+      "confidence": 1.0,
+      "context": "er) UpdateCurator(ctx context.Context, req *types.MsgUpdateCurator) (*types.MsgUpdateCuratorResponse, error) { if e"
+    },
+    {
+      "doc_id": "e8ad7061-5373-49c6-be82-24d6dd02be10",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/basket/keeper/invariants_test.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "keeper",
+      "confidence": 0.9,
+      "context": "package keeper import ( \"context\" \"testing\" \"github.com/str"
+    },
+    {
+      "doc_id": "90165626-f391-4136-b55e-925c131c25fd",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/basket/keeper/msg_put_test.go",
+      "entity_name": "MsgPut",
+      "entity_type": "Msg",
+      "surface_form": "MsgPut",
+      "confidence": 1.0,
+      "context": "*types.MsgPutResponse msg *types.MsgPut err error } func TestPut(t *tes"
+    },
+    {
+      "doc_id": "5c55d398-51b6-4f93-9d14-297c04ffb7d8",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/basket/keeper/msg_put_test.go",
+      "entity_name": "MsgPut",
+      "entity_type": "Msg",
+      "surface_form": "MsgPut",
+      "confidence": 1.0,
+      "context": "ectCalls() s.res, s.err = s.k.Put(s.ctx, &types.MsgPut{ Owner: s.alice.String(), BasketDenom:"
+    },
+    {
+      "doc_id": "5c55d398-51b6-4f93-9d14-297c04ffb7d8",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/basket/keeper/msg_put_test.go",
+      "entity_name": "MsgPut",
+      "entity_type": "Msg",
+      "surface_form": "MsgPut",
+      "confidence": 1.0,
+      "context": "ectCalls() s.res, s.err = s.k.Put(s.ctx, &types.MsgPut{ Owner: s.alice.String(), BasketDenom:"
+    },
+    {
+      "doc_id": "944ebe74-9516-4ac2-a0a9-aa9acce8d87f",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/keeper/msg_gov_send_from_fee_pool_test.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "keeper",
+      "confidence": 0.9,
+      "context": "package keeper import ( \"testing\" \"cosmossdk.io/math\" \"gith"
+    },
+    {
+      "doc_id": "944ebe74-9516-4ac2-a0a9-aa9acce8d87f",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/keeper/msg_gov_send_from_fee_pool_test.go",
+      "entity_name": "MsgGovSendFromFeePool",
+      "entity_type": "Msg",
+      "surface_form": "MsgGovSendFromFeePool",
+      "confidence": 1.0,
+      "context": "te err error msg *types.MsgGovSendFromFeePool moduleBalances map[string]sdk.Coins accountBal"
+    },
+    {
+      "doc_id": "944ebe74-9516-4ac2-a0a9-aa9acce8d87f",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/keeper/msg_gov_send_from_fee_pool_test.go",
+      "entity_name": "MsgGovSendFromFeePool",
+      "entity_type": "Msg",
+      "surface_form": "MsgGovSendFromFeePool",
+      "confidence": 1.0,
+      "context": "{ s.baseSuite = setupBase(t, 2) s.msg = &types.MsgGovSendFromFeePool{ Coins: sdk.NewCoins(sdk.NewCoin(\"regen\", math."
+    },
+    {
+      "doc_id": "520c16dd-b0e4-41c2-8ff9-1413dd19111c",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/keeper/keeper_test.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "keeper",
+      "confidence": 0.9,
+      "context": "dresscodec.NewBech32Codec(\"regen\") // setup test keeper s.ctrl = g"
+    },
+    {
+      "doc_id": "8ef1964d-9f87-4c45-9786-1a22ff0e0fe7",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/keeper/msg_cancel_sell_order_test.go",
+      "entity_name": "MsgCancelSellOrder",
+      "entity_type": "Msg",
+      "surface_form": "MsgCancelSellOrder",
+      "confidence": 1.0,
+      "context": "gCancelSellOrderResponse msg *types.MsgCancelSellOrder err error } func TestCancelSellOrd"
+    },
+    {
+      "doc_id": "8ef1964d-9f87-4c45-9786-1a22ff0e0fe7",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/keeper/msg_cancel_sell_order_test.go",
+      "entity_name": "MsgCancelSellOrder",
+      "entity_type": "Msg",
+      "surface_form": "MsgCancelSellOrder",
+      "confidence": 1.0,
+      "context": "TheMessage(a gocuke.DocString) { s.msg = &types.MsgCancelSellOrder{} err := jsonpb.UnmarshalString(a.Content, s.msg"
+    },
+    {
+      "doc_id": "f382d8d6-ed8a-4e8e-bbcd-d2c91122615f",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/basket/keeper/msg_put.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "Keeper",
+      "confidence": 1.0,
+      "context": "t: credit type, class, and date criteria. func (k Keeper) Put(ctx context.Context, req *types.MsgPut) (*ty"
+    },
+    {
+      "doc_id": "f382d8d6-ed8a-4e8e-bbcd-d2c91122615f",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/basket/keeper/msg_put.go",
+      "entity_name": "MsgPut",
+      "entity_type": "Msg",
+      "surface_form": "MsgPut",
+      "confidence": 1.0,
+      "context": "nc (k Keeper) Put(ctx context.Context, req *types.MsgPut) (*types.MsgPutResponse, error) { if err := req."
+    },
+    {
+      "doc_id": "1939e43d-1369-495d-88f3-aea43f93c86e",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/keeper/msg_gov_send_from_fee_pool_test.go",
+      "entity_name": "MsgGovSendFromFeePool",
+      "entity_type": "Msg",
+      "surface_form": "MsgGovSendFromFeePool",
+      "confidence": 1.0,
+      "context": "TheMessage(a gocuke.DocString) { s.msg = &types.MsgGovSendFromFeePool{} err := jsonpb.UnmarshalString(a.Content, s.msg"
+    },
+    {
+      "doc_id": "06ae6f9d-8a0c-4b85-b7cc-5fbf62db2aa8",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/basket/keeper/invariants.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "Keeper",
+      "confidence": 1.0,
+      "context": "ket id to the total number of eco credits func (k Keeper) computeBasketBalances(ctx context.Context) (map["
+    },
+    {
+      "doc_id": "e78d282f-b565-47e1-bb8d-ccc574530f72",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/simulation/msg_add_allowed_denom.go",
+      "entity_name": "MsgAddAllowedDenom",
+      "entity_type": "Msg",
+      "surface_form": "MsgAddAllowedDenom",
+      "confidence": 1.0,
+      "context": "om = types.MsgAddAllowedDenom{}.Route() func SimulateMsgAddAllowedDenom(txCfg"
+    },
+    {
+      "doc_id": "e78d282f-b565-47e1-bb8d-ccc574530f72",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/simulation/msg_add_allowed_denom.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "Keeper",
+      "confidence": 1.0,
+      "context": "per, qryClient types.QueryServer, govk govkeeper.Keeper, authority sdk.AccAddress, ) simtypes.Operation {"
+    },
+    {
+      "doc_id": "ce3b2bb5-18a3-478d-ab6d-8853260e4d87",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/simulation/msg_update_sell_order.go",
+      "entity_name": "MsgUpdateSellOrders",
+      "entity_type": "Msg",
+      "surface_form": "MsgUpdateSellOrders",
+      "confidence": 1.0,
+      "context": "llOrder = 100 var TypeMsgUpdateSellOrder = types.MsgUpdateSellOrders{}.Route() // SimulateMsgUpdateSellOrder generate"
+    },
+    {
+      "doc_id": "fa7a0f5b-2a23-44af-9da5-1a1fab397a65",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/simulation/msg_remove_allowed_denom.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "keeper",
+      "confidence": 0.9,
+      "context": "n\" govkeeper \"github.com/cosmos/cosmos-sdk/x/gov/keeper\" govtypes \"github.com/cosmos/cosmos-sdk/x/gov/ty"
+    },
+    {
+      "doc_id": "fa7a0f5b-2a23-44af-9da5-1a1fab397a65",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/simulation/msg_remove_allowed_denom.go",
+      "entity_name": "MsgRemoveAllowedDenom",
+      "entity_type": "Msg",
+      "surface_form": "MsgRemoveAllowedDenom",
+      "confidence": 1.0,
+      "context": "enom = 100 var TypeMsgRemoveAllowedDenom = types.MsgRemoveAllowedDenom{}.Route() func SimulateMsgRemoveAllowedDenom(txC"
+    },
+    {
+      "doc_id": "fae87578-f3af-46ce-94c5-81d02a2e3eb0",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/basket/keeper/invariants.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "Keeper",
+      "confidence": 1.0,
+      "context": "ket id to the total number of eco credits func (k Keeper) computeBasketBalances(ctx context.Context) (map["
+    },
+    {
+      "doc_id": "67d379dc-a37c-46c0-b15f-98e4728d6d8a",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/simulation/msg_remove_allowed_denom.go",
+      "entity_name": "MsgRemoveAllowedDenom",
+      "entity_type": "Msg",
+      "surface_form": "MsgRemoveAllowedDenom",
+      "confidence": 1.0,
+      "context": "generate deposit\"), nil, err } msg := types.MsgRemoveAllowedDenom{ Authority: authority.String(), Denom:"
+    },
+    {
+      "doc_id": "38e4f208-c171-4446-be42-c6aae4a314ea",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/keeper/query_allowed_denoms.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "keeper",
+      "confidence": 0.9,
+      "context": "package keeper import ( \"context\" api \"github.com/regen-netw"
+    },
+    {
+      "doc_id": "38e4f208-c171-4446-be42-c6aae4a314ea",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/keeper/query_allowed_denoms.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "Keeper",
+      "confidence": 1.0,
+      "context": "r/x/ecocredit/v4/marketplace/types/v1\" ) func (k Keeper) AllowedDenoms(ctx context.Context, req *types.Qu"
+    },
+    {
+      "doc_id": "000cbb15-2df3-4eb9-b6b8-1e764369b0b6",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/basket/keeper/msg_put.go",
+      "entity_name": "Keeper",
+      "entity_type": "Keeper",
+      "surface_form": "Keeper",
+      "confidence": 1.0,
+      "context": "atches the baskets specified credit type. func (k Keeper) canBasketAcceptCredit(ctx context.Context, baske"
+    },
+    {
+      "doc_id": "acbed834-f940-4f1d-8a26-ce081e2b134c",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/simulation/msg_cancel_sell_order.go",
+      "entity_name": "MsgCancelSellOrder",
+      "entity_type": "Msg",
+      "surface_form": "MsgCancelSellOrder",
+      "confidence": 1.0,
+      "context": "e/MsgCancelSellOrder with random values. func SimulateMsgCancelSellOrd"
+    },
+    {
+      "doc_id": "acbed834-f940-4f1d-8a26-ce081e2b134c",
+      "file_path": "https://github.com/regen-network/regen-ledger/blob/main/x/ecocredit/marketplace/simulation/msg_cancel_sell_order.go",
+      "entity_name": "MsgCancelSellOrder",
+      "entity_type": "Msg",
+      "surface_form": "MsgCancelSellOrder",
+      "confidence": 1.0,
+      "context": "er := orders[r.Intn(len(orders))] msg := &types.MsgCancelSellOrder{ Seller: se"
+    }
+  ]
+}

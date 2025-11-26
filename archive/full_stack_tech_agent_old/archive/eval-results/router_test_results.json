@@ -1,0 +1,353 @@
+{
+  "results": [
+    {
+      "query_id": "onboarding-001",
+      "query_text": "How does the ecocredit module handle credit retirement?",
+      "classification": {
+        "intent": "conceptual",
+        "detected_entities": [],
+        "recommended_route": "vector",
+        "confidence": 0.3333333333333333,
+        "reasoning": "No specific entities detected. Conceptual query best served by semantic search."
+      },
+      "latency_ms": 5,
+      "entity_recall": 0,
+      "expected_entities": [
+        "MsgRetire",
+        "Keeper"
+      ],
+      "detected_entities": [],
+      "missed_entities": [
+        "MsgRetire",
+        "Keeper"
+      ],
+      "route_correct": true
+    },
+    {
+      "query_id": "onboarding-002",
+      "query_text": "What is the basket module and what does it do?",
+      "classification": {
+        "intent": "conceptual",
+        "detected_entities": [],
+        "recommended_route": "vector",
+        "confidence": 0,
+        "reasoning": "No specific entities detected. Conceptual query best served by semantic search."
+      },
+      "latency_ms": 2,
+      "entity_recall": 0,
+      "expected_entities": [
+        "Keeper"
+      ],
+      "detected_entities": [],
+      "missed_entities": [
+        "Keeper"
+      ],
+      "route_correct": true
+    },
+    {
+      "query_id": "impact-001",
+      "query_text": "What messages does the ecocredit Keeper handle?",
+      "classification": {
+        "intent": "relationship",
+        "detected_entities": [
+          {
+            "name": "Keeper",
+            "entity_type": "Keeper",
+            "node_id": "844424930131971",
+            "score": 0.1521739
+          }
+        ],
+        "recommended_route": "graph",
+        "confidence": 0.22463767333333334,
+        "reasoning": "Query mentions entities (Keeper) with relationship keywords. Best served by graph traversal."
+      },
+      "latency_ms": 2,
+      "entity_recall": 0,
+      "expected_entities": [
+        "MsgCreateClass",
+        "MsgCreateBatch",
+        "MsgSend",
+        "MsgRetire",
+        "MsgCancel"
+      ],
+      "detected_entities": [
+        "Keeper"
+      ],
+      "missed_entities": [
+        "MsgCreateClass",
+        "MsgCreateBatch",
+        "MsgSend",
+        "MsgRetire",
+        "MsgCancel"
+      ],
+      "route_correct": true,
+      "expected_route": "graph"
+    },
+    {
+      "query_id": "impact-002",
+      "query_text": "Which Keeper handles MsgCreateBatch?",
+      "classification": {
+        "intent": "relationship",
+        "detected_entities": [
+          {
+            "name": "MsgCreateBatch",
+            "entity_type": "Msg",
+            "node_id": "1125899906842652",
+            "score": 0.42857143
+          },
+          {
+            "name": "MsgCreateBatch_BatchIssuance",
+            "entity_type": "Msg",
+            "node_id": "1125899906842679",
+            "score": 0.32608697
+          },
+          {
+            "name": "MsgCreate",
+            "entity_type": "Msg",
+            "node_id": "1125899906842629",
+            "score": 0.25
+          },
+          {
+            "name": "Keeper",
+            "entity_type": "Keeper",
+            "node_id": "844424930131971",
+            "score": 0.2
+          }
+        ],
+        "recommended_route": "graph",
+        "confidence": 0.5238095246666666,
+        "reasoning": "Query mentions entities (MsgCreateBatch, MsgCreateBatch_BatchIssuance, MsgCreate, Keeper) with relationship keywords. Best served by graph traversal."
+      },
+      "latency_ms": 1,
+      "entity_recall": 1,
+      "expected_entities": [
+        "Keeper"
+      ],
+      "detected_entities": [
+        "MsgCreateBatch",
+        "MsgCreateBatch_BatchIssuance",
+        "MsgCreate",
+        "Keeper"
+      ],
+      "missed_entities": [],
+      "route_correct": true,
+      "expected_route": "graph"
+    },
+    {
+      "query_id": "impact-003",
+      "query_text": "What messages are related to credit batches?",
+      "classification": {
+        "intent": "conceptual",
+        "detected_entities": [],
+        "recommended_route": "vector",
+        "confidence": 0,
+        "reasoning": "No specific entities detected. Conceptual query best served by semantic search."
+      },
+      "latency_ms": 2,
+      "entity_recall": 0,
+      "expected_entities": [
+        "MsgCreateBatch",
+        "MsgSend",
+        "MsgRetire",
+        "MsgCancel"
+      ],
+      "detected_entities": [],
+      "missed_entities": [
+        "MsgCreateBatch",
+        "MsgSend",
+        "MsgRetire",
+        "MsgCancel"
+      ],
+      "route_correct": false,
+      "expected_route": "unified"
+    },
+    {
+      "query_id": "integration-001",
+      "query_text": "How do I create a new credit class?",
+      "classification": {
+        "intent": "conceptual",
+        "detected_entities": [],
+        "recommended_route": "vector",
+        "confidence": 0.3333333333333333,
+        "reasoning": "No specific entities detected. Conceptual query best served by semantic search."
+      },
+      "latency_ms": 1,
+      "entity_recall": 0,
+      "expected_entities": [
+        "MsgCreateClass"
+      ],
+      "detected_entities": [],
+      "missed_entities": [
+        "MsgCreateClass"
+      ],
+      "route_correct": true
+    },
+    {
+      "query_id": "integration-002",
+      "query_text": "What parameters does MsgSend require?",
+      "classification": {
+        "intent": "entity_lookup",
+        "detected_entities": [
+          {
+            "name": "MsgSend",
+            "entity_type": "Msg",
+            "node_id": "1125899906842655",
+            "score": 0.21621622
+          }
+        ],
+        "recommended_route": "graph",
+        "confidence": 0.21621622,
+        "reasoning": "Query focuses on specific entities (MsgSend). Direct graph lookup."
+      },
+      "latency_ms": 1,
+      "entity_recall": 1,
+      "expected_entities": [
+        "MsgSend"
+      ],
+      "detected_entities": [
+        "MsgSend"
+      ],
+      "missed_entities": [],
+      "route_correct": true
+    },
+    {
+      "query_id": "integration-003",
+      "query_text": "How do I retire credits from a basket?",
+      "classification": {
+        "intent": "conceptual",
+        "detected_entities": [],
+        "recommended_route": "vector",
+        "confidence": 0.3333333333333333,
+        "reasoning": "No specific entities detected. Conceptual query best served by semantic search."
+      },
+      "latency_ms": 1,
+      "entity_recall": 0,
+      "expected_entities": [
+        "MsgTake",
+        "MsgRetire"
+      ],
+      "detected_entities": [],
+      "missed_entities": [
+        "MsgTake",
+        "MsgRetire"
+      ],
+      "route_correct": true
+    },
+    {
+      "query_id": "audit-001",
+      "query_text": "Find all documentation mentioning MsgRetire",
+      "classification": {
+        "intent": "entity_lookup",
+        "detected_entities": [
+          {
+            "name": "MsgRetire",
+            "entity_type": "Msg",
+            "node_id": "1125899906842657",
+            "score": 0.25641027
+          }
+        ],
+        "recommended_route": "graph",
+        "confidence": 0.25641027,
+        "reasoning": "Query focuses on specific entities (MsgRetire). Direct graph lookup."
+      },
+      "latency_ms": 0,
+      "entity_recall": 1,
+      "expected_entities": [
+        "MsgRetire"
+      ],
+      "detected_entities": [
+        "MsgRetire"
+      ],
+      "missed_entities": [],
+      "route_correct": true,
+      "expected_route": "graph"
+    },
+    {
+      "query_id": "audit-002",
+      "query_text": "What entities are related to credit batches?",
+      "classification": {
+        "intent": "conceptual",
+        "detected_entities": [],
+        "recommended_route": "vector",
+        "confidence": 0,
+        "reasoning": "No specific entities detected. Conceptual query best served by semantic search."
+      },
+      "latency_ms": 1,
+      "entity_recall": 0,
+      "expected_entities": [
+        "MsgCreateBatch",
+        "MsgSend",
+        "MsgRetire",
+        "MsgCancel"
+      ],
+      "detected_entities": [],
+      "missed_entities": [
+        "MsgCreateBatch",
+        "MsgSend",
+        "MsgRetire",
+        "MsgCancel"
+      ],
+      "route_correct": false,
+      "expected_route": "unified"
+    },
+    {
+      "query_id": "audit-003",
+      "query_text": "What messages handle basket operations?",
+      "classification": {
+        "intent": "conceptual",
+        "detected_entities": [],
+        "recommended_route": "vector",
+        "confidence": 0,
+        "reasoning": "No specific entities detected. Conceptual query best served by semantic search."
+      },
+      "latency_ms": 1,
+      "entity_recall": 0,
+      "expected_entities": [
+        "MsgCreate",
+        "MsgPut",
+        "MsgTake"
+      ],
+      "detected_entities": [],
+      "missed_entities": [
+        "MsgCreate",
+        "MsgPut",
+        "MsgTake"
+      ],
+      "route_correct": true
+    }
+  ],
+  "summary": {
+    "total_queries": 11,
+    "avg_latency_ms": 1.5454545454545454,
+    "max_latency_ms": 5,
+    "avg_entity_recall": 0.2727272727272727,
+    "route_accuracy": 0.8181818181818182,
+    "by_journey": {
+      "onboarding": {
+        "count": 2,
+        "avg_recall": 0,
+        "avg_latency_ms": 3.5
+      },
+      "impact": {
+        "count": 3,
+        "avg_recall": 0.3333333333333333,
+        "avg_latency_ms": 1.6666666666666667
+      },
+      "integration": {
+        "count": 3,
+        "avg_recall": 0.3333333333333333,
+        "avg_latency_ms": 1
+      },
+      "audit": {
+        "count": 3,
+        "avg_recall": 0.3333333333333333,
+        "avg_latency_ms": 0.6666666666666666
+      }
+    },
+    "by_intent": {
+      "conceptual": 7,
+      "relationship": 2,
+      "entity_lookup": 2
+    }
+  }
+}
