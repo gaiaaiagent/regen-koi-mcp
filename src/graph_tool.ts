@@ -3,9 +3,14 @@
  *
  * Provides an MCP tool interface for querying the Apache AGE graph database
  * containing Regen Network code entities and relationships.
+ *
+ * Supports two modes:
+ * 1. API mode: When KOI_API_ENDPOINT is set, uses HTTP API at /api/koi/graph
+ * 2. Direct mode: Connects directly to PostgreSQL (only works on server)
  */
 
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import axios from 'axios';
 import {
   GraphClient,
   createGraphClient,
@@ -18,6 +23,10 @@ import {
   ModuleSearchResult,
   ModuleEntity,
 } from './graph_client.js';
+
+// Check if we should use API mode
+const KOI_API_ENDPOINT = process.env.KOI_API_ENDPOINT || '';
+const USE_GRAPH_API = !!KOI_API_ENDPOINT;
 
 // Tool definition following the pattern from tools.ts
 export const GRAPH_TOOL: Tool = {
@@ -76,6 +85,27 @@ interface Hit {
 }
 
 /**
+ * Execute graph query via HTTP API
+ */
+async function executeViaApi(args: any): Promise<any> {
+  const graphApiUrl = `${KOI_API_ENDPOINT}/graph`;
+
+  try {
+    const response = await axios.post(graphApiUrl, args, {
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 30000,
+    });
+
+    return response.data;
+  } catch (error: any) {
+    if (error.response) {
+      throw new Error(`API error: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
+    }
+    throw error;
+  }
+}
+
+/**
  * Execute the query_code_graph tool
  */
 export async function executeGraphTool(args: any) {
@@ -91,7 +121,97 @@ export async function executeGraphTool(args: any) {
     };
   }
 
-  // Create graph client
+  // Use API mode if KOI_API_ENDPOINT is set
+  if (USE_GRAPH_API) {
+    try {
+      const startTime = Date.now();
+      const apiResult = await executeViaApi(args);
+      const duration_ms = Date.now() - startTime;
+
+      // Format API results
+      const results = apiResult.results || [];
+      const total_results = results.length;
+
+      let markdownSummary = '';
+      let hits: Hit[] = [];
+
+      // Format based on query type
+      switch (query_type) {
+        case 'list_repos':
+          markdownSummary = `# Indexed Repositories\n\nFound **${total_results}** repositories:\n\n`;
+          markdownSummary += '| Repository | Entity Count |\n|------------|-------------|\n';
+          results.forEach((r: any) => {
+            const name = r.name || r.result?.name || 'unknown';
+            const count = r.entity_count || r.result?.entity_count || 0;
+            markdownSummary += `| ${name} | ${count} |\n`;
+            hits.push({ entity_type: 'Repository', entity_name: name, content_preview: `${count} entities` });
+          });
+          break;
+
+        case 'find_by_type':
+          markdownSummary = `# Entities of Type: ${args.entity_type}\n\nFound **${total_results}** ${args.entity_type}(s):\n\n`;
+          results.forEach((r: any, i: number) => {
+            const entity = r.result || r;
+            markdownSummary += `## ${i + 1}. ${entity.name}\n`;
+            markdownSummary += `- **File:** \`${entity.file_path || 'N/A'}\`\n`;
+            if (entity.line_number) markdownSummary += `- **Line:** ${entity.line_number}\n`;
+            markdownSummary += '\n';
+            hits.push({
+              entity_type: args.entity_type,
+              entity_name: entity.name,
+              file_path: entity.file_path,
+              line_number: entity.line_number,
+            });
+          });
+          break;
+
+        case 'search_entities':
+          markdownSummary = `# Search Results: "${entity_name}"\n\nFound **${total_results}** matching entities:\n\n`;
+          results.forEach((r: any, i: number) => {
+            const entity = r.result || r;
+            const label = entity.label || 'Entity';
+            markdownSummary += `## ${i + 1}. ${entity.name} (${label})\n`;
+            markdownSummary += `- **Repository:** ${entity.repo || 'N/A'}\n`;
+            markdownSummary += `- **File:** \`${entity.file_path || 'N/A'}\`\n`;
+            markdownSummary += '\n';
+            hits.push({
+              entity_type: label,
+              entity_name: entity.name,
+              file_path: entity.file_path,
+            });
+          });
+          break;
+
+        default:
+          // Generic formatting for other query types
+          markdownSummary = `# ${query_type} Results\n\nFound **${total_results}** results:\n\n`;
+          results.forEach((r: any, i: number) => {
+            const entity = r.result || r;
+            markdownSummary += `${i + 1}. ${JSON.stringify(entity)}\n`;
+            hits.push({ entity_name: entity.name || 'unknown', content_preview: JSON.stringify(entity).substring(0, 100) });
+          });
+      }
+
+      const jsonData = JSON.stringify({ hits, metadata: { query_type, duration_ms, total_results, via: 'api' } }, null, 2);
+
+      return {
+        content: [{
+          type: 'text',
+          text: markdownSummary + '\n\n---\n\n<details>\n<summary>Raw JSON (for eval harness)</summary>\n\n```json\n' + jsonData + '\n```\n</details>'
+        }]
+      };
+    } catch (error) {
+      console.error('[query_code_graph] API Error:', error);
+      return {
+        content: [{
+          type: 'text',
+          text: `Error querying graph via API: ${error instanceof Error ? error.message : 'Unknown error'}`
+        }]
+      };
+    }
+  }
+
+  // Fall back to direct PostgreSQL connection (only works on server)
   const client = createGraphClient();
 
   try {
