@@ -1,0 +1,267 @@
+[
+  {
+    "query_id": "onboarding-001",
+    "journey": "onboarding",
+    "query": "How does the ecocredit module handle credit retirement?",
+    "graph_recall_5": 0,
+    "graph_recall_10": 0,
+    "vector_recall_5": 0.25,
+    "vector_recall_10": 0.25,
+    "improvement_at_5": -0.25,
+    "improvement_at_10": -0.25,
+    "graph_found": [],
+    "graph_missing": [
+      "MsgRetire",
+      "Keeper",
+      "regen-ledger/x/ecocredit/README.md",
+      "regen-ledger/x/ecocredit/spec/03_messages.md"
+    ],
+    "vector_found": [
+      "Keeper"
+    ],
+    "vector_missing": [
+      "MsgRetire",
+      "regen-ledger/x/ecocredit/README.md",
+      "regen-ledger/x/ecocredit/spec/03_messages.md"
+    ],
+    "notes": "Should return both docs and code entities. Tests doc-to-code bridging."
+  },
+  {
+    "query_id": "onboarding-002",
+    "journey": "onboarding",
+    "query": "What is the basket module and what does it do?",
+    "graph_recall_5": 0,
+    "graph_recall_10": 0,
+    "vector_recall_5": 0,
+    "vector_recall_10": 0.5,
+    "improvement_at_5": 0,
+    "improvement_at_10": -0.5,
+    "graph_found": [],
+    "graph_missing": [
+      "Keeper",
+      "regen-ledger/x/ecocredit/basket/README.md"
+    ],
+    "vector_found": [],
+    "vector_missing": [
+      "Keeper",
+      "regen-ledger/x/ecocredit/basket/README.md"
+    ],
+    "notes": "Basket keeper documentation - tests basic doc retrieval"
+  },
+  {
+    "query_id": "impact-001",
+    "journey": "impact",
+    "query": "What messages does the ecocredit Keeper handle?",
+    "graph_recall_5": 0,
+    "graph_recall_10": 0,
+    "vector_recall_5": 0,
+    "vector_recall_10": 0,
+    "improvement_at_5": 0,
+    "improvement_at_10": 0,
+    "graph_found": [],
+    "graph_missing": [
+      "MsgCreateClass",
+      "MsgCreateBatch",
+      "MsgSend",
+      "MsgRetire",
+      "MsgCancel"
+    ],
+    "vector_found": [],
+    "vector_missing": [
+      "MsgCreateClass",
+      "MsgCreateBatch",
+      "MsgSend",
+      "MsgRetire",
+      "MsgCancel"
+    ],
+    "notes": "Direct graph query - should excel with graph search"
+  },
+  {
+    "query_id": "impact-002",
+    "journey": "impact",
+    "query": "Which Keeper handles MsgCreateBatch?",
+    "graph_recall_5": 0,
+    "graph_recall_10": 0,
+    "vector_recall_5": 0,
+    "vector_recall_10": 0,
+    "improvement_at_5": 0,
+    "improvement_at_10": 0,
+    "graph_found": [],
+    "graph_missing": [
+      "Keeper"
+    ],
+    "vector_found": [],
+    "vector_missing": [
+      "Keeper"
+    ],
+    "notes": "Reverse relationship query - graph should outperform vector"
+  },
+  {
+    "query_id": "impact-003",
+    "journey": "impact",
+    "query": "What messages are related to credit batches?",
+    "graph_recall_5": 0,
+    "graph_recall_10": 0,
+    "vector_recall_5": 0,
+    "vector_recall_10": 0,
+    "improvement_at_5": 0,
+    "improvement_at_10": 0,
+    "graph_found": [],
+    "graph_missing": [
+      "MsgCreateBatch",
+      "MsgSend",
+      "MsgRetire",
+      "MsgCancel"
+    ],
+    "vector_found": [],
+    "vector_missing": [
+      "MsgCreateBatch",
+      "MsgSend",
+      "MsgRetire",
+      "MsgCancel"
+    ],
+    "notes": "Semantic relationship - both methods should find results"
+  },
+  {
+    "query_id": "integration-001",
+    "journey": "integration",
+    "query": "How do I create a new credit class?",
+    "graph_recall_5": 0,
+    "graph_recall_10": 0,
+    "vector_recall_5": 0,
+    "vector_recall_10": 0,
+    "improvement_at_5": 0,
+    "improvement_at_10": 0,
+    "graph_found": [],
+    "graph_missing": [
+      "MsgCreateClass",
+      "regen-ledger/x/ecocredit/README.md",
+      "regen-ledger/x/ecocredit/spec/03_messages.md"
+    ],
+    "vector_found": [],
+    "vector_missing": [
+      "MsgCreateClass",
+      "regen-ledger/x/ecocredit/README.md",
+      "regen-ledger/x/ecocredit/spec/03_messages.md"
+    ],
+    "notes": "Should find both docs explaining and the Msg definition"
+  },
+  {
+    "query_id": "integration-002",
+    "journey": "integration",
+    "query": "What parameters does MsgSend require?",
+    "graph_recall_5": 1,
+    "graph_recall_10": 1,
+    "vector_recall_5": 0,
+    "vector_recall_10": 0,
+    "improvement_at_5": 1,
+    "improvement_at_10": 1,
+    "graph_found": [
+      "MsgSend"
+    ],
+    "graph_missing": [],
+    "vector_found": [],
+    "vector_missing": [
+      "MsgSend"
+    ],
+    "notes": "Should return Msg node with fields - tests entity detail retrieval"
+  },
+  {
+    "query_id": "integration-003",
+    "journey": "integration",
+    "query": "How do I retire credits from a basket?",
+    "graph_recall_5": 0,
+    "graph_recall_10": 0,
+    "vector_recall_5": 0,
+    "vector_recall_10": 0,
+    "improvement_at_5": 0,
+    "improvement_at_10": 0,
+    "graph_found": [],
+    "graph_missing": [
+      "MsgTake",
+      "MsgRetire",
+      "regen-ledger/x/ecocredit/basket/README.md"
+    ],
+    "vector_found": [],
+    "vector_missing": [
+      "MsgTake",
+      "MsgRetire",
+      "regen-ledger/x/ecocredit/basket/README.md"
+    ],
+    "notes": "Multi-step process - needs both basket and ecocredit modules"
+  },
+  {
+    "query_id": "audit-001",
+    "journey": "audit",
+    "query": "Find all documentation mentioning MsgRetire",
+    "graph_recall_5": 0,
+    "graph_recall_10": 0,
+    "vector_recall_5": 0,
+    "vector_recall_10": 0,
+    "improvement_at_5": 0,
+    "improvement_at_10": 0,
+    "graph_found": [],
+    "graph_missing": [
+      "MsgRetire",
+      "regen-ledger/x/ecocredit/README.md",
+      "regen-ledger/x/ecocredit/spec/03_messages.md"
+    ],
+    "vector_found": [],
+    "vector_missing": [
+      "MsgRetire",
+      "regen-ledger/x/ecocredit/README.md",
+      "regen-ledger/x/ecocredit/spec/03_messages.md"
+    ],
+    "notes": "Graph query for MENTIONS edges - graph should excel"
+  },
+  {
+    "query_id": "audit-002",
+    "journey": "audit",
+    "query": "What entities are related to credit batches?",
+    "graph_recall_5": 0,
+    "graph_recall_10": 0,
+    "vector_recall_5": 0,
+    "vector_recall_10": 0,
+    "improvement_at_5": 0,
+    "improvement_at_10": 0,
+    "graph_found": [],
+    "graph_missing": [
+      "MsgCreateBatch",
+      "MsgSend",
+      "MsgRetire",
+      "MsgCancel"
+    ],
+    "vector_found": [],
+    "vector_missing": [
+      "MsgCreateBatch",
+      "MsgSend",
+      "MsgRetire",
+      "MsgCancel"
+    ],
+    "notes": "Co-occurrence in docs - tests graph relationship traversal"
+  },
+  {
+    "query_id": "audit-003",
+    "journey": "audit",
+    "query": "What messages handle basket operations?",
+    "graph_recall_5": 0,
+    "graph_recall_10": 0,
+    "vector_recall_5": 0,
+    "vector_recall_10": 0,
+    "improvement_at_5": 0,
+    "improvement_at_10": 0,
+    "graph_found": [],
+    "graph_missing": [
+      "MsgCreate",
+      "MsgPut",
+      "MsgTake"
+    ],
+    "vector_found": [],
+    "vector_missing": [
+      "MsgCreate",
+      "MsgPut",
+      "MsgTake"
+    ],
+    "notes": "Basket-specific messages - tests domain filtering"
+  }
+]

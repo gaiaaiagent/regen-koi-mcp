@@ -1,0 +1,104 @@
+{
+  "queries": [
+    {
+      "id": "onboarding-001",
+      "journey": "onboarding",
+      "query": "How does the ecocredit module handle credit retirement?",
+      "expected_rids": [
+        "regen-ledger/x/ecocredit/README.md",
+        "regen-ledger/x/ecocredit/spec/03_messages.md"
+      ],
+      "expected_entities": ["MsgRetire", "Keeper"],
+      "notes": "Should return both docs and code entities. Tests doc-to-code bridging."
+    },
+    {
+      "id": "onboarding-002",
+      "journey": "onboarding",
+      "query": "What is the basket module and what does it do?",
+      "expected_rids": [
+        "regen-ledger/x/ecocredit/basket/README.md"
+      ],
+      "expected_entities": ["Keeper"],
+      "notes": "Basket keeper documentation - tests basic doc retrieval"
+    },
+    {
+      "id": "impact-001",
+      "journey": "impact",
+      "query": "What messages does the ecocredit Keeper handle?",
+      "expected_entities": ["MsgCreateClass", "MsgCreateBatch", "MsgSend", "MsgRetire", "MsgCancel"],
+      "query_type": "msgs_for_keeper",
+      "notes": "Direct graph query - should excel with graph search"
+    },
+    {
+      "id": "impact-002",
+      "journey": "impact",
+      "query": "Which Keeper handles MsgCreateBatch?",
+      "expected_entities": ["Keeper"],
+      "query_type": "keeper_for_msg",
+      "notes": "Reverse relationship query - graph should outperform vector"
+    },
+    {
+      "id": "impact-003",
+      "journey": "impact",
+      "query": "What messages are related to credit batches?",
+      "expected_entities": ["MsgCreateBatch", "MsgSend", "MsgRetire", "MsgCancel"],
+      "query_type": "related_entities",
+      "notes": "Semantic relationship - both methods should find results"
+    },
+    {
+      "id": "integration-001",
+      "journey": "integration",
+      "query": "How do I create a new credit class?",
+      "expected_entities": ["MsgCreateClass"],
+      "expected_rids": [
+        "regen-ledger/x/ecocredit/README.md",
+        "regen-ledger/x/ecocredit/spec/03_messages.md"
+      ],
+      "notes": "Should find both docs explaining and the Msg definition"
+    },
+    {
+      "id": "integration-002",
+      "journey": "integration",
+      "query": "What parameters does MsgSend require?",
+      "expected_entities": ["MsgSend"],
+      "notes": "Should return Msg node with fields - tests entity detail retrieval"
+    },
+    {
+      "id": "integration-003",
+      "journey": "integration",
+      "query": "How do I retire credits from a basket?",
+      "expected_entities": ["MsgTake", "MsgRetire"],
+      "expected_rids": [
+        "regen-ledger/x/ecocredit/basket/README.md"
+      ],
+      "notes": "Multi-step process - needs both basket and ecocredit modules"
+    },
+    {
+      "id": "audit-001",
+      "journey": "audit",
+      "query": "Find all documentation mentioning MsgRetire",
+      "query_type": "docs_mentioning",
+      "expected_entities": ["MsgRetire"],
+      "expected_rids": [
+        "regen-ledger/x/ecocredit/README.md",
+        "regen-ledger/x/ecocredit/spec/03_messages.md"
+      ],
+      "notes": "Graph query for MENTIONS edges - graph should excel"
+    },
+    {
+      "id": "audit-002",
+      "journey": "audit",
+      "query": "What entities are related to credit batches?",
+      "expected_entities": ["MsgCreateBatch", "MsgSend", "MsgRetire", "MsgCancel"],
+      "query_type": "related_entities",
+      "notes": "Co-occurrence in docs - tests graph relationship traversal"
+    },
+    {
+      "id": "audit-003",
+      "journey": "audit",
+      "query": "What messages handle basket operations?",
+      "expected_entities": ["MsgCreate", "MsgPut", "MsgTake"],
+      "notes": "Basket-specific messages - tests domain filtering"
+    }
+  ]
+}

@@ -114,11 +114,25 @@ This MCP server gives AI assistants access to Regen Network's comprehensive know
 
 ## 📦 Available Tools
 
+### Knowledge Base Search
 | Tool | Description | Key Inputs |
 |------|-------------|-----------|
 | `search_knowledge` | Hybrid search (vectors + graph with RRF) | `query` (string), `limit` (1–20, default 5), `published_from` (YYYY‑MM‑DD), `published_to` (YYYY‑MM‑DD), `include_undated` (bool, default false) |
+| `hybrid_search` | Intelligent search routing (auto-detects entity vs conceptual queries) | `query` (string), `limit` (1–50, default 10) |
 | `get_stats` | Knowledge base statistics | `detailed` (boolean) |
 | `generate_weekly_digest` | Generate weekly digest of Regen Network activity | `start_date` (YYYY-MM-DD, default: 7 days ago), `end_date` (YYYY-MM-DD, default: today), `save_to_file` (bool, default false), `output_path` (string), `format` ('markdown' or 'json', default: 'markdown') |
+
+### Code Knowledge Graph
+| Tool | Description | Key Inputs |
+|------|-------------|-----------|
+| `query_code_graph` | Query relationships between Keepers, Messages, Events, and Documentation | `query_type` (enum: keeper_for_msg, msgs_for_keeper, docs_mentioning, entities_in_doc, related_entities), `entity_name` (string), `doc_path` (string) |
+
+### GitHub Documentation
+| Tool | Description | Key Inputs |
+|------|-------------|-----------|
+| `search_github_docs` | Search Regen GitHub repos for documentation and technical content | `query` (string), `repository` (optional: regen-ledger, regen-web, regen-data-standards, regenie-corpus), `limit` (1-20, default 10) |
+| `get_repo_overview` | Get structured overview of a Regen repository | `repository` (enum: regen-ledger, regen-web, regen-data-standards, regenie-corpus) |
+| `get_tech_stack` | Get technical stack information for Regen repositories | `repository` (optional, omit to show all repos) |
 
 ## 🏗️ Architecture
 
@@ -585,6 +599,43 @@ MIT License - see LICENSE file for details
 ## 🌟 Credits
 
 Built by the Regen Network community to make ecological knowledge accessible to AI assistants everywhere.
+
+---
+
+## 🛠️ Developer & Deployment Documentation
+
+For developers and operators who want to run their own instance or contribute:
+
+| Document | Description |
+|----------|-------------|
+| [docs/INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md) | Server requirements, PostgreSQL setup, Apache AGE installation |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Production deployment guide, systemd setup, monitoring |
+| [docs/TECHNICAL_ASSISTANT_PROJECT.md](docs/TECHNICAL_ASSISTANT_PROJECT.md) | Full project tracking and implementation details |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | System architecture and component overview |
+
+### Quick Local Development with Docker
+
+Spin up a complete development stack with PostgreSQL + pgvector + Apache AGE:
+
+```bash
+cd docker/
+docker-compose up -d
+```
+
+This starts everything needed for full functionality including graph queries.
+
+### Deploy Scripts
+
+```bash
+# Install Apache AGE on existing PostgreSQL
+./scripts/deploy/install-apache-age.sh
+
+# Setup database schema and extensions
+./scripts/deploy/setup-database.sh
+
+# Load graph data (entities, summaries, relationships)
+./scripts/deploy/load-graph-data.sh
+```
 
 ---
 

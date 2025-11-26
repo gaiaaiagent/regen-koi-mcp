@@ -1,0 +1,63 @@
+version: '3.8'
+
+# Regen KOI MCP - Development Stack
+# Includes PostgreSQL with pgvector + Apache AGE for full functionality
+
+services:
+  # PostgreSQL with pgvector and Apache AGE
+  postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres-age
+    container_name: regen-koi-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: koi
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../scripts/sql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # BGE Embedding Server (OpenAI-compatible)
+  bge-server:
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.2
+    container_name: regen-koi-bge
+    environment:
+      - MODEL_ID=BAAI/bge-large-en-v1.5
+    ports:
+      - "8090:80"
+    volumes:
+      - bge_cache:/data
+    # Note: For production, use GPU image for better performance:
+    # image: ghcr.io/huggingface/text-embeddings-inference:1.2
+
+  # KOI Hybrid RAG API (optional - for full hybrid search)
+  # Uncomment if you want to run the full KOI stack locally
+  # koi-api:
+  #   build:
+  #     context: ../
+  #     dockerfile: server/Dockerfile
+  #   container_name: regen-koi-api
+  #   environment:
+  #     DATABASE_URL: postgresql://postgres:postgres@postgres:5432/koi
+  #     BGE_SERVER_URL: http://bge-server:80
+  #   ports:
+  #     - "8301:8301"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+
+volumes:
+  postgres_data:
+  bge_cache:
+
+networks:
+  default:
+    name: regen-koi-network

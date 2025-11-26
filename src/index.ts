@@ -17,6 +17,9 @@ import { TOOLS } from './tools.js';
 // Use enhanced SPARQL client with focused retrieval
 import { SPARQLClient } from './sparql-client-enhanced.js';
 import HybridSearchClient from './hybrid-client.js';
+import { QueryRouter } from './query_router.js';
+import { UnifiedSearch } from './unified_search.js';
+import { executeGraphTool } from './graph_tool.js';
 
 // Load environment variables
 dotenv.config();
@@ -44,10 +47,43 @@ class KOIServer {
   private server: Server;
   private sparqlClient: SPARQLClient;
   private hybridClient: HybridSearchClient;
+  private queryRouter: QueryRouter | null = null;
+  private unifiedSearch: UnifiedSearch | null = null;
 
   constructor() {
     this.sparqlClient = new SPARQLClient();
     this.hybridClient = new HybridSearchClient();
+
+    // Initialize QueryRouter and UnifiedSearch if database config is available
+    try {
+      if (process.env.GRAPH_DB_HOST && process.env.GRAPH_DB_NAME) {
+        this.queryRouter = new QueryRouter({
+          host: process.env.GRAPH_DB_HOST,
+          port: parseInt(process.env.GRAPH_DB_PORT || '5432'),
+          database: process.env.GRAPH_DB_NAME,
+          user: process.env.GRAPH_DB_USER,
+          password: process.env.GRAPH_DB_PASSWORD,
+          entitySimilarityThreshold: parseFloat(process.env.ENTITY_SIMILARITY_THRESHOLD || '0.15'),
+        });
+
+        this.unifiedSearch = new UnifiedSearch({
+          host: process.env.GRAPH_DB_HOST,
+          port: parseInt(process.env.GRAPH_DB_PORT || '5432'),
+          database: process.env.GRAPH_DB_NAME,
+          user: process.env.GRAPH_DB_USER,
+          password: process.env.GRAPH_DB_PASSWORD,
+          graphName: process.env.GRAPH_NAME || 'regen_graph',
+          embeddingDimension: parseInt(process.env.EMBEDDING_DIM || '1536') as any,
+          rrfConstant: parseInt(process.env.RRF_K || '60'),
+        });
+
+        console.error(`[${SERVER_NAME}] Initialized QueryRouter and UnifiedSearch`);
+      } else {
+        console.error(`[${SERVER_NAME}] Graph database configuration not found - hybrid_search and query_code_graph tools will be unavailable`);
+      }
+    } catch (error) {
+      console.error(`[${SERVER_NAME}] Failed to initialize graph components:`, error);
+    }
     this.server = new Server(
       {
         name: SERVER_NAME,
@@ -84,12 +120,22 @@ class KOIServer {
         console.error(`[${SERVER_NAME}] Executing tool: ${name}`);
 
         switch (name) {
+          case 'query_code_graph':
+            return await executeGraphTool(args);
+          case 'hybrid_search':
+            return await this.handleHybridSearch(args);
           case 'search_knowledge':
             return await this.searchKnowledge(args);
           case 'get_stats':
             return await this.getStats(args);
           case 'generate_weekly_digest':
             return await this.generateWeeklyDigest(args);
+          case 'search_github_docs':
+            return await this.searchGithubDocs(args);
+          case 'get_repo_overview':
+            return await this.getRepoOverview(args);
+          case 'get_tech_stack':
+            return await this.getTechStack(args);
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
@@ -332,7 +378,7 @@ class KOIServer {
     try {
       const body: any = { query: query, limit };
       if (Object.keys(vectorFilters).length > 0) body.filters = vectorFilters;
-      const response = await apiClient.post('/query', body);
+      const response = await apiClient.post('/search', body);
 
       const data = response.data as any;
       const results = data.results || [];
@@ -953,6 +999,595 @@ class KOIServer {
     }
   }
 
+  /**
+   * Extract repository name from GitHub RID
+   * RID format: regen.github:github_{repo}_github_sensor_{id}_{repo}_{filepath}#chunk{n}
+   * or: regen.github:github_{repo}_{repo}_{filepath}#chunk{n}
+   */
+  private extractRepoFromRid(rid: string): string {
+    // Try pattern with sensor ID first
+    let match = rid.match(/regen\.github:github_([^_]+)_github_sensor/);
+    if (match) return match[1];
+
+    // Try pattern without sensor ID
+    match = rid.match(/regen\.github:github_([^_]+)_([^_]+)/);
+    return match ? match[1] : '';
+  }
+
+  /**
+   * Extract filepath from GitHub RID for deduplication
+   * Returns unique file identifier
+   */
+  private extractFilepathFromRid(rid: string): string {
+    // Pattern 1: with sensor ID: _github_sensor_{id}_{repo}_{filepath}#chunk{n}
+    let match = rid.match(/_github_sensor_[^_]+_[^_]+_(.+?)(?:#chunk\d+)?$/);
+    if (match) return match[1];
+
+    // Pattern 2: without sensor ID: github_{repo}_{repo}_{filepath}#chunk{n}
+    match = rid.match(/github_[^_]+_[^_]+_(.+?)(?:#chunk\d+)?$/);
+    return match ? match[1] : rid;
+  }
+
+  /**
+   * Format GitHub documentation search results as markdown
+   */
+  private formatGithubDocsResults(memories: any[], query: string): string {
+    if (memories.length === 0) {
+      return `No results found for "${query}" in GitHub documentation.\n\n**Suggestions:**\n- Try broader search terms\n- Check repository name spelling\n- Use \`search_knowledge\` for non-GitHub content`;
+    }
+
+    let output = `## GitHub Documentation Search Results\n\n`;
+    output += `**Query:** "${query}"\n`;
+    output += `**Results:** ${memories.length} documents found\n\n`;
+
+    memories.forEach((memory, index) => {
+      // Extract info from RID
+      const repo = this.extractRepoFromRid(memory.rid);
+      const filepath = this.extractFilepathFromRid(memory.rid);
+
+      // Get relevance score
+      const score = memory.similarity
+        ? `(relevance: ${(memory.similarity * 100).toFixed(0)}%)`
+        : '';
+
+      // Truncate content
+      const content = memory.content?.substring(0, 300) || '';
+
+      output += `### ${index + 1}. ${filepath} ${score}\n`;
+      output += `**Repository:** ${repo}\n`;
+      output += `**RID:** ${memory.rid}\n\n`;
+      output += `${content}${content.length >= 300 ? '...' : ''}\n\n`;
+      output += `---\n\n`;
+    });
+
+    return output;
+  }
+
+  /**
+   * Search GitHub documentation
+   * Implements client-side filtering based on Phase 0 findings
+   */
+  private async searchGithubDocs(args: any) {
+    const startTime = Date.now();
+    const { query, repository, limit = 10 } = args;
+
+    console.error(`[${SERVER_NAME}] Tool=search_github_docs Event=start Query="${query.substring(0, 50)}" Repository=${repository || 'all'}`);
+
+    try {
+      // Call Bun Hybrid RAG API (uses different field names than Python fallback)
+      // Request extra results to account for filtering/deduplication
+      const response = await apiClient.post('/query', {
+        question: query,  // Bun API uses "question" parameter
+        limit: Math.min(limit * 3, 50) // Request 3x to account for client-side filtering
+      });
+
+      const data = response.data as any;
+      const allMemories = data?.results || [];  // Bun API returns "results" array
+      const duration = Date.now() - startTime;
+
+      console.error(`[${SERVER_NAME}] Tool=search_github_docs Event=api_response RawResults=${allMemories.length} Duration=${duration}ms`);
+
+      // CLIENT-SIDE FILTERING (handles Phase 0 issues)
+      const filteredMemories = allMemories
+        // Filter 1: Only GitHub results (fixes 10-20% leakage from Phase 0)
+        .filter((m: any) => m.rid?.startsWith('regen.github:'))
+
+        // Filter 2: Repository filter if specified
+        .filter((m: any) => {
+          if (!repository) return true;
+          const repo = this.extractRepoFromRid(m.rid);
+          return repo === repository;
+        })
+
+        // Filter 3: Deduplicate by filepath (handles duplicate sensor IDs from Phase 0)
+        .filter((m: any, index: number, arr: any[]) => {
+          const filepath = this.extractFilepathFromRid(m.rid);
+          return arr.findIndex((x: any) =>
+            this.extractFilepathFromRid(x.rid) === filepath
+          ) === index;
+        })
+
+        // Take only requested amount
+        .slice(0, limit);
+
+      console.error(`[${SERVER_NAME}] Tool=search_github_docs Event=filtered FilteredResults=${filteredMemories.length}`);
+
+      // Format and return results
+      const formattedOutput = this.formatGithubDocsResults(filteredMemories, query);
+
+      console.error(`[${SERVER_NAME}] Tool=search_github_docs Event=success FinalResults=${filteredMemories.length} TotalDuration=${Date.now() - startTime}ms`);
+
+      return {
+        content: [{
+          type: 'text',
+          text: formattedOutput
+        }]
+      };
+
+    } catch (error) {
+      console.error(`[${SERVER_NAME}] Tool=search_github_docs Event=error`, error);
+
+      // Handle specific error types
+      if ((error as any).code === 'ECONNREFUSED') {
+        return {
+          content: [{
+            type: 'text',
+            text: 'KOI API is currently unavailable. Please try again later or check your network connection.'
+          }]
+        };
+      }
+
+      if ((error as any).code === 'ETIMEDOUT' || (error as any).message?.includes('timeout')) {
+        return {
+          content: [{
+            type: 'text',
+            text: 'Request timed out. The server may be busy. Please try again with a smaller limit.'
+          }]
+        };
+      }
+
+      // Generic error
+      return {
+        content: [{
+          type: 'text',
+          text: `Error searching GitHub documentation: ${error instanceof Error ? error.message : 'Unknown error occurred'}`
+        }]
+      };
+    }
+  }
+
+  /**
+   * Get repository overview
+   * Provides structured overview of a specific Regen Network repository
+   */
+  private async getRepoOverview(args: any) {
+    const startTime = Date.now();
+    const { repository } = args;
+
+    console.error(`[${SERVER_NAME}] Tool=get_repo_overview Event=start Repository=${repository}`);
+
+    try {
+      // Search for README and key documentation files
+      const queries = [
+        `${repository} README documentation overview`,
+        `${repository} CONTRIBUTING guidelines`,
+        `${repository} architecture structure`
+      ];
+
+      // Execute searches in parallel
+      const responses = await Promise.all(
+        queries.map(query =>
+          apiClient.post('/query', {
+            question: query,
+            limit: 20
+          })
+        )
+      );
+
+      // Combine and filter all memories
+      const allMemories: any[] = [];
+      responses.forEach(response => {
+        const data = response.data as any;
+        const memories = data?.results || [];  // Bun API returns "results"
+        allMemories.push(...memories);
+      });
+
+      console.error(`[${SERVER_NAME}] Tool=get_repo_overview Event=api_response RawResults=${allMemories.length}`);
+
+      // CLIENT-SIDE FILTERING
+      const filteredMemories = allMemories
+        // Filter 1: Only GitHub results
+        .filter((m: any) => m.rid?.startsWith('regen.github:'))
+
+        // Filter 2: Only specified repository
+        .filter((m: any) => {
+          const repo = this.extractRepoFromRid(m.rid);
+          return repo === repository;
+        })
+
+        // Filter 3: Deduplicate by filepath
+        .filter((m: any, index: number, arr: any[]) => {
+          const filepath = this.extractFilepathFromRid(m.rid);
+          return arr.findIndex((x: any) =>
+            this.extractFilepathFromRid(x.rid) === filepath
+          ) === index;
+        });
+
+      console.error(`[${SERVER_NAME}] Tool=get_repo_overview Event=filtered FilteredResults=${filteredMemories.length}`);
+
+      // Format output
+      const formattedOutput = this.formatRepoOverview(repository, filteredMemories);
+
+      console.error(`[${SERVER_NAME}] Tool=get_repo_overview Event=success FinalResults=${filteredMemories.length} TotalDuration=${Date.now() - startTime}ms`);
+
+      return {
+        content: [{
+          type: 'text',
+          text: formattedOutput
+        }]
+      };
+
+    } catch (error) {
+      console.error(`[${SERVER_NAME}] Tool=get_repo_overview Event=error`, error);
+
+      return {
+        content: [{
+          type: 'text',
+          text: `Error getting repository overview: ${error instanceof Error ? error.message : 'Unknown error occurred'}`
+        }]
+      };
+    }
+  }
+
+  /**
+   * Format repository overview as markdown
+   */
+  private formatRepoOverview(repository: string, memories: any[]): string {
+    let output = `# ${repository} - Repository Overview\n\n`;
+
+    if (memories.length === 0) {
+      output += `No documentation found for ${repository}.\n\n`;
+      output += `**Note:** The GitHub sensor primarily indexes documentation and config files. `;
+      output += `Try using \`search_github_docs\` with specific queries.\n`;
+      return output;
+    }
+
+    // Categorize files
+    const readmeFiles: any[] = [];
+    const contributingFiles: any[] = [];
+    const docFiles: any[] = [];
+    const configFiles: any[] = [];
+
+    memories.forEach(memory => {
+      const filepath = this.extractFilepathFromRid(memory.rid).toLowerCase();
+
+      if (filepath.includes('readme')) {
+        readmeFiles.push(memory);
+      } else if (filepath.includes('contributing') || filepath.includes('code_of_conduct')) {
+        contributingFiles.push(memory);
+      } else if (filepath.includes('doc') || filepath.includes('.md')) {
+        docFiles.push(memory);
+      } else {
+        configFiles.push(memory);
+      }
+    });
+
+    // Repository description section
+    output += `## Repository Description\n\n`;
+
+    // Use README content if available
+    if (readmeFiles.length > 0) {
+      const readme = readmeFiles[0];
+      const content = readme.content?.substring(0, 400) || '';
+      output += `${content}${content.length >= 400 ? '...' : ''}\n\n`;
+    } else {
+      output += `*No README found. Documentation may be limited for this repository.*\n\n`;
+    }
+
+    // Key files section
+    output += `## Key Files Found\n\n`;
+    output += `**Total Documentation Files:** ${memories.length}\n\n`;
+
+    if (readmeFiles.length > 0) {
+      output += `### README Files (${readmeFiles.length})\n`;
+      readmeFiles.slice(0, 5).forEach(file => {
+        const filepath = this.extractFilepathFromRid(file.rid);
+        output += `- ${filepath}\n`;
+      });
+      output += `\n`;
+    }
+
+    if (contributingFiles.length > 0) {
+      output += `### Contributing Guidelines (${contributingFiles.length})\n`;
+      contributingFiles.slice(0, 3).forEach(file => {
+        const filepath = this.extractFilepathFromRid(file.rid);
+        output += `- ${filepath}\n`;
+      });
+      output += `\n`;
+    }
+
+    if (docFiles.length > 0) {
+      output += `### Documentation Files (${docFiles.length})\n`;
+      docFiles.slice(0, 10).forEach(file => {
+        const filepath = this.extractFilepathFromRid(file.rid);
+        output += `- ${filepath}\n`;
+      });
+      if (docFiles.length > 10) {
+        output += `- ... and ${docFiles.length - 10} more\n`;
+      }
+      output += `\n`;
+    }
+
+    if (configFiles.length > 0) {
+      output += `### Configuration Files (${configFiles.length})\n`;
+      configFiles.slice(0, 5).forEach(file => {
+        const filepath = this.extractFilepathFromRid(file.rid);
+        output += `- ${filepath}\n`;
+      });
+      if (configFiles.length > 5) {
+        output += `- ... and ${configFiles.length - 5} more\n`;
+      }
+      output += `\n`;
+    }
+
+    // Links section
+    output += `## Links\n\n`;
+    output += `- **GitHub:** https://github.com/regen-network/${repository}\n`;
+    output += `- **Issues:** https://github.com/regen-network/${repository}/issues\n`;
+    output += `- **Pull Requests:** https://github.com/regen-network/${repository}/pulls\n\n`;
+
+    output += `---\n\n`;
+    output += `*Use \`search_github_docs\` with repository="${repository}" to explore specific topics.*\n`;
+
+    return output;
+  }
+
+  /**
+   * Get tech stack information
+   * Provides technical stack information for Regen Network repositories
+   */
+  private async getTechStack(args: any) {
+    const startTime = Date.now();
+    const { repository } = args;
+
+    console.error(`[${SERVER_NAME}] Tool=get_tech_stack Event=start Repository=${repository || 'all'}`);
+
+    try {
+      // Search for tech stack indicators
+      const queries = [
+        'package.json dependencies frameworks',
+        'go.mod go dependencies modules',
+        'Dockerfile CI CD configuration',
+        'Makefile build tools',
+        'Cargo.toml pyproject.toml'
+      ];
+
+      // Execute searches in parallel
+      const responses = await Promise.all(
+        queries.map(query =>
+          apiClient.post('/query', {
+            question: query,  // Bun API uses "question" parameter
+            limit: 15
+          })
+        )
+      );
+
+      // Combine all memories
+      const allMemories: any[] = [];
+      responses.forEach(response => {
+        const data = response.data as any;
+        const memories = data?.results || [];  // Bun API returns "results"
+        allMemories.push(...memories);
+      });
+
+      console.error(`[${SERVER_NAME}] Tool=get_tech_stack Event=api_response RawResults=${allMemories.length}`);
+
+      // CLIENT-SIDE FILTERING
+      let filteredMemories = allMemories
+        // Filter 1: Only GitHub results
+        .filter((m: any) => m.rid?.startsWith('regen.github:'))
+
+        // Filter 2: Repository filter if specified
+        .filter((m: any) => {
+          if (!repository) return true;
+          const repo = this.extractRepoFromRid(m.rid);
+          return repo === repository;
+        })
+
+        // Filter 3: Deduplicate by filepath
+        .filter((m: any, index: number, arr: any[]) => {
+          const filepath = this.extractFilepathFromRid(m.rid);
+          return arr.findIndex((x: any) =>
+            this.extractFilepathFromRid(x.rid) === filepath
+          ) === index;
+        });
+
+      console.error(`[${SERVER_NAME}] Tool=get_tech_stack Event=filtered FilteredResults=${filteredMemories.length}`);
+
+      // Format output
+      const formattedOutput = this.formatTechStack(filteredMemories, repository);
+
+      console.error(`[${SERVER_NAME}] Tool=get_tech_stack Event=success FinalResults=${filteredMemories.length} TotalDuration=${Date.now() - startTime}ms`);
+
+      return {
+        content: [{
+          type: 'text',
+          text: formattedOutput
+        }]
+      };
+
+    } catch (error) {
+      console.error(`[${SERVER_NAME}] Tool=get_tech_stack Event=error`, error);
+
+      return {
+        content: [{
+          type: 'text',
+          text: `Error getting tech stack: ${error instanceof Error ? error.message : 'Unknown error occurred'}`
+        }]
+      };
+    }
+  }
+
+  /**
+   * Format tech stack information as markdown
+   */
+  private formatTechStack(memories: any[], repository?: string): string {
+    const repoFilter = repository ? ` for ${repository}` : '';
+    let output = `# Technical Stack${repoFilter}\n\n`;
+
+    if (memories.length === 0) {
+      output += `No tech stack information found${repoFilter}.\n\n`;
+      output += `**Note:** The GitHub sensor primarily indexes documentation and config files. `;
+      output += `Some tech stack files may not be available.\n`;
+      return output;
+    }
+
+    // Categorize by file type and repository
+    const repoData: { [key: string]: {
+      packageJson: any[],
+      goMod: any[],
+      dockerfiles: any[],
+      makefiles: any[],
+      cargo: any[],
+      ci: any[],
+      other: any[]
+    }} = {};
+
+    memories.forEach(memory => {
+      const repo = this.extractRepoFromRid(memory.rid);
+      const filepath = this.extractFilepathFromRid(memory.rid).toLowerCase();
+
+      if (!repoData[repo]) {
+        repoData[repo] = {
+          packageJson: [],
+          goMod: [],
+          dockerfiles: [],
+          makefiles: [],
+          cargo: [],
+          ci: [],
+          other: []
+        };
+      }
+
+      if (filepath.includes('package.json')) {
+        repoData[repo].packageJson.push(memory);
+      } else if (filepath.includes('go.mod') || filepath.includes('go.sum')) {
+        repoData[repo].goMod.push(memory);
+      } else if (filepath.includes('dockerfile')) {
+        repoData[repo].dockerfiles.push(memory);
+      } else if (filepath.includes('makefile')) {
+        repoData[repo].makefiles.push(memory);
+      } else if (filepath.includes('cargo.toml') || filepath.includes('pyproject.toml')) {
+        repoData[repo].cargo.push(memory);
+      } else if (filepath.includes('.yml') || filepath.includes('.yaml') || filepath.includes('ci')) {
+        repoData[repo].ci.push(memory);
+      } else {
+        repoData[repo].other.push(memory);
+      }
+    });
+
+    // Output by repository
+    const repos = Object.keys(repoData).sort();
+
+    repos.forEach(repo => {
+      const data = repoData[repo];
+      output += `## ${repo}\n\n`;
+
+      // Determine primary language/stack
+      const languages: string[] = [];
+      if (data.packageJson.length > 0) languages.push('JavaScript/TypeScript (Node.js)');
+      if (data.goMod.length > 0) languages.push('Go');
+      if (data.cargo.length > 0) languages.push('Rust/Python');
+
+      if (languages.length > 0) {
+        output += `**Primary Languages:** ${languages.join(', ')}\n\n`;
+      }
+
+      // Package dependencies
+      if (data.packageJson.length > 0) {
+        output += `### JavaScript/TypeScript Dependencies\n`;
+        data.packageJson.forEach(file => {
+          const filepath = this.extractFilepathFromRid(file.rid);
+          output += `- **${filepath}**\n`;
+
+          // Try to extract dependency info from content
+          const content = file.content || '';
+          const depsMatch = content.match(/"dependencies":\s*{([^}]+)}/);
+          if (depsMatch) {
+            const deps = depsMatch[1].split(',').slice(0, 5);
+            deps.forEach((dep: string) => {
+              const cleaned = dep.trim().replace(/"/g, '');
+              if (cleaned) output += `  - ${cleaned}\n`;
+            });
+            if (depsMatch[1].split(',').length > 5) {
+              output += `  - ... and more\n`;
+            }
+          }
+        });
+        output += `\n`;
+      }
+
+      // Go modules
+      if (data.goMod.length > 0) {
+        output += `### Go Modules\n`;
+        data.goMod.forEach(file => {
+          const filepath = this.extractFilepathFromRid(file.rid);
+          output += `- **${filepath}**\n`;
+
+          // Try to extract module info from content
+          const content = file.content || '';
+          const lines = content.split('\n').filter((l: string) => l.trim().startsWith('require')).slice(0, 5);
+          lines.forEach((line: string) => {
+            const cleaned = line.trim();
+            if (cleaned) output += `  - ${cleaned}\n`;
+          });
+        });
+        output += `\n`;
+      }
+
+      // Build tools
+      if (data.makefiles.length > 0 || data.dockerfiles.length > 0) {
+        output += `### Build Tools & Infrastructure\n`;
+
+        if (data.makefiles.length > 0) {
+          output += `**Makefiles:**\n`;
+          data.makefiles.slice(0, 3).forEach(file => {
+            const filepath = this.extractFilepathFromRid(file.rid);
+            output += `- ${filepath}\n`;
+          });
+        }
+
+        if (data.dockerfiles.length > 0) {
+          output += `**Docker:**\n`;
+          data.dockerfiles.slice(0, 3).forEach(file => {
+            const filepath = this.extractFilepathFromRid(file.rid);
+            output += `- ${filepath}\n`;
+          });
+        }
+        output += `\n`;
+      }
+
+      // CI/CD
+      if (data.ci.length > 0) {
+        output += `### CI/CD Configuration\n`;
+        data.ci.slice(0, 5).forEach(file => {
+          const filepath = this.extractFilepathFromRid(file.rid);
+          output += `- ${filepath}\n`;
+        });
+        if (data.ci.length > 5) {
+          output += `- ... and ${data.ci.length - 5} more\n`;
+        }
+        output += `\n`;
+      }
+
+      output += `---\n\n`;
+    });
+
+    output += `*Use \`search_github_docs\` to explore specific dependency or configuration files.*\n`;
+
+    return output;
+  }
+
   private formatSearchResults(results: any[], query: string): string {
     if (!results || results.length === 0) {
       return `No results found for query: "${query}"`;
@@ -987,6 +1622,189 @@ class KOIServer {
     }
 
     return formatted;
+  }
+
+  /**
+   * Handle hybrid search - intelligent routing based on query classification
+   */
+  private async handleHybridSearch(args: any) {
+    const { query, limit = 10 } = args;
+
+    // Check if hybrid search is available
+    if (!this.queryRouter || !this.unifiedSearch) {
+      console.error(`[${SERVER_NAME}] Hybrid search not available - falling back to vector search`);
+      return await this.searchKnowledge({ query, limit });
+    }
+
+    try {
+      const startTime = Date.now();
+
+      // Step 1: Classify query
+      const classification = await this.queryRouter.classifyQuery(query);
+      console.error(`[${SERVER_NAME}] Query classified as: ${classification.intent} (route: ${classification.recommended_route})`);
+
+      let results: any[] = [];
+      let searchMetadata: any = {};
+
+      // Step 2: Execute appropriate search based on classification
+      if (classification.recommended_route === 'graph' && classification.detected_entities.length > 0) {
+        // Graph-only search for entity queries
+        const entityNames = classification.detected_entities.map(e => e.name);
+        const graphResults = await this.unifiedSearch.graphSearch(entityNames, limit);
+
+        results = graphResults.map(hit => ({
+          id: hit.id,
+          title: hit.title,
+          content: hit.content || '',
+          source: 'graph',
+          entity_type: hit.entity_type,
+          file_path: hit.file_path,
+          line_number: hit.line_number,
+          score: hit.final_score,
+        }));
+
+        searchMetadata = {
+          route: 'graph',
+          entities_detected: entityNames,
+        };
+
+      } else if (classification.recommended_route === 'vector') {
+        // Vector-only search for conceptual queries - use KOI API
+        const response = await apiClient.post('/query', {
+          question: query,
+          limit: limit
+        });
+
+        const data = response.data as any;
+        results = (data.results || []).map((r: any) => ({
+          id: r.rid || r.id,
+          title: r.title || 'Document',
+          content: r.content || '',
+          source: 'vector',
+          score: r.score || 0,
+          metadata: r.metadata,
+        }));
+
+        searchMetadata = {
+          route: 'vector',
+        };
+
+      } else {
+        // Unified/hybrid search - combine graph and vector
+        // For now, use vector search as we don't have embedding service integrated
+        console.error(`[${SERVER_NAME}] Unified search requested but falling back to vector search (embedding service not integrated)`);
+        const response = await apiClient.post('/query', {
+          question: query,
+          limit: limit
+        });
+
+        const data = response.data as any;
+        results = (data.results || []).map((r: any) => ({
+          id: r.rid || r.id,
+          title: r.title || 'Document',
+          content: r.content || '',
+          source: 'vector',
+          score: r.score || 0,
+          metadata: r.metadata,
+        }));
+
+        searchMetadata = {
+          route: 'hybrid_fallback_to_vector',
+          entities_detected: classification.detected_entities.map(e => e.name),
+          note: 'Embedding service not available - using vector search only',
+        };
+      }
+
+      const duration = Date.now() - startTime;
+
+      // Step 3: Format results
+      const markdown = this.formatHybridResults(results, classification, searchMetadata);
+
+      // MCP only supports type: 'text' - embed JSON as code block
+      const jsonData = JSON.stringify({
+        hits: results,
+        classification,
+        metadata: {
+          query,
+          route: classification.recommended_route,
+          duration_ms: duration,
+          total_results: results.length,
+          ...searchMetadata,
+        },
+      }, null, 2);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: markdown + '\n\n---\n\n<details>\n<summary>Raw JSON (for eval harness)</summary>\n\n```json\n' + jsonData + '\n```\n</details>',
+          },
+        ],
+      };
+
+    } catch (error) {
+      console.error(`[${SERVER_NAME}] Hybrid search error:`, error);
+      // Fallback to basic search
+      return await this.searchKnowledge({ query, limit });
+    }
+  }
+
+  /**
+   * Format hybrid search results as markdown
+   */
+  private formatHybridResults(results: any[], classification: any, metadata: any): string {
+    let output = `## Hybrid Search Results\n\n`;
+    output += `**Query Route:** ${metadata.route} (intent: ${classification.intent})\n`;
+
+    if (classification.detected_entities.length > 0) {
+      output += `**Detected Entities:** ${classification.detected_entities.map((e: any) => e.name).join(', ')}\n`;
+    }
+
+    output += `**Confidence:** ${(classification.confidence * 100).toFixed(1)}%\n`;
+    output += `**Results:** ${results.length}\n\n`;
+
+    if (classification.reasoning) {
+      output += `*${classification.reasoning}*\n\n`;
+    }
+
+    if (metadata.note) {
+      output += `> **Note:** ${metadata.note}\n\n`;
+    }
+
+    output += `---\n\n`;
+
+    results.forEach((hit, i) => {
+      output += `### ${i + 1}. ${hit.title || hit.id}\n`;
+
+      if (hit.entity_type) {
+        output += `**Type:** ${hit.entity_type} | `;
+      }
+
+      output += `**Source:** ${hit.source}`;
+
+      if (hit.score !== undefined) {
+        output += ` | **Score:** ${hit.score.toFixed(3)}`;
+      }
+
+      output += `\n\n`;
+
+      if (hit.file_path) {
+        output += `📁 \`${hit.file_path}\``;
+        if (hit.line_number) {
+          output += `:${hit.line_number}`;
+        }
+        output += `\n\n`;
+      }
+
+      if (hit.content) {
+        const preview = hit.content.substring(0, 300);
+        output += `${preview}${hit.content.length > 300 ? '...' : ''}\n\n`;
+      }
+
+      output += `---\n\n`;
+    });
+
+    return output;
   }
 
   async run() {

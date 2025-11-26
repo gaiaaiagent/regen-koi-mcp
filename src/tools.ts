@@ -3,8 +3,31 @@
  */
 
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { GRAPH_TOOL } from './graph_tool.js';
 
 export const TOOLS: Tool[] = [
+  GRAPH_TOOL,
+  {
+    name: 'hybrid_search',
+    description: 'Intelligent search that automatically routes to graph (for entity/relationship queries) or vector (for conceptual queries) based on query intent. Uses QueryRouter for classification and UnifiedSearch for hybrid retrieval with RRF fusion. Best for general questions about the Regen codebase.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Natural language query about Regen code, architecture, or documentation'
+        },
+        limit: {
+          type: 'number',
+          default: 10,
+          minimum: 1,
+          maximum: 50,
+          description: 'Maximum results to return (default: 10)'
+        }
+      },
+      required: ['query']
+    }
+  },
   {
     name: 'search_knowledge',
     description: 'Hybrid search across KOI (vectors + graph). Accepts optional published date range filter.',
@@ -85,6 +108,61 @@ export const TOOLS: Tool[] = [
           enum: ['markdown', 'json'],
           description: 'Output format. Default: markdown',
           default: 'markdown'
+        }
+      }
+    }
+  },
+  {
+    name: 'search_github_docs',
+    description: 'Search Regen Network GitHub repositories for documentation, README files, configuration files, and technical content. Searches regen-ledger (blockchain), regen-web (frontend), regen-data-standards (schemas), and regenie-corpus (docs). Note: Currently searches documentation and config files, not source code.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Search query (e.g., "ecocredit module", "validator setup", "governance voting")'
+        },
+        repository: {
+          type: 'string',
+          description: 'Optional: Filter by specific repo. Omit to search all 4 repositories.',
+          enum: ['regen-ledger', 'regen-web', 'regen-data-standards', 'regenie-corpus']
+        },
+        limit: {
+          type: 'number',
+          minimum: 1,
+          maximum: 20,
+          default: 10,
+          description: 'Maximum number of results to return'
+        }
+      },
+      required: ['query']
+    }
+  },
+  {
+    name: 'get_repo_overview',
+    description: 'Get a structured overview of a specific Regen Network repository including description, key files (README, CONTRIBUTING, etc.), and links to documentation.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        repository: {
+          type: 'string',
+          description: 'Repository to get overview for',
+          enum: ['regen-ledger', 'regen-web', 'regen-data-standards', 'regenie-corpus']
+        }
+      },
+      required: ['repository']
+    }
+  },
+  {
+    name: 'get_tech_stack',
+    description: 'Get technical stack information for Regen Network repositories including languages, frameworks, dependencies, build tools, and infrastructure. Can show all repos or filter to a specific one.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        repository: {
+          type: 'string',
+          description: 'Optional: Filter to specific repo. Omit to show all repositories.',
+          enum: ['regen-ledger', 'regen-web', 'regen-data-standards', 'regenie-corpus']
         }
       }
     }
