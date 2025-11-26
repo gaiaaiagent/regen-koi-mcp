@@ -42,8 +42,23 @@ class MultiLangEntityLoader:
         return s.replace("\\", "\\\\").replace("'", "\\'").replace("\n", " ").replace("\r", "")
 
     def extract_repo(self, file_path: str) -> str:
-        """Extract repository name from file path."""
-        parts = file_path.split('/')
+        """Extract repository name from file path.
+
+        Handles both absolute paths like /opt/projects/regen-repos/regen-ledger/...
+        and relative paths like regen-ledger/x/ecocredit/...
+        """
+        # Handle absolute paths with regen-repos pattern
+        match = re.search(r'regen-repos/([^/]+)', file_path)
+        if match:
+            return match.group(1)
+
+        # Handle paths with common repo patterns
+        for repo_name in ['regen-ledger', 'regen-web', 'GAIA', 'koi-sensors', 'koi-processor', 'koi-research', 'regen-koi-mcp']:
+            if f'/{repo_name}/' in file_path or file_path.startswith(f'{repo_name}/'):
+                return repo_name
+
+        # Fallback: first non-empty path component
+        parts = [p for p in file_path.split('/') if p]
         if parts:
             return parts[0]
         return 'unknown'
