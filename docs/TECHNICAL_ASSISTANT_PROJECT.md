@@ -2,7 +2,7 @@
 
 **Project Start Date:** 2025-11-24
 **Last Updated:** 2025-11-27
-**Status:** PHASE 2 COMPLETE - Generic Ontology LIVE 🚀
+**Status:** PHASE 5 COMPLETE - Concepts Layer LIVE 🚀
 
 ## Completed Phases
 - Phase 1 Validation: Complete (2025-11-25) - Embeddings validated, tools working
@@ -15,6 +15,7 @@
 - **Phase 1: Complete (2025-11-27) - Tree-sitter extraction with CALLS edges** ✅
 - **Checkpoint: Complete (2025-11-27) - Production migration successful** ✅
 - **Phase 2: Complete (2025-11-27) - Generic ontology with domain properties** ✅
+- **Phase 5: Complete (2025-11-27) - Concepts layer with MCP tools** ✅
 
 ## Critical Findings (2025-11-26) - ALL RESOLVED ✅
 - ~~**Production pipeline uses REGEX, not tree-sitter**~~ **FIXED 2025-11-27** - Tree-sitter LIVE in production
@@ -43,14 +44,61 @@
 - ✅ Rollback available: `regen_graph` (regex backup)
 
 **Production State:**
-- Active Graph: `regen_graph_v2` (tree-sitter + generic ontology)
+- Active Graph: `regen_graph_v2` (tree-sitter + generic ontology + concepts)
 - Backup Graph: `regen_graph` (regex - preserved)
-- MCP Server: Serving tree-sitter data with generic ontology
+- MCP Server: Serving 26,778 entities + 11 EXPLAINS edges
+- Concept Layer: 10 concepts with 3 MCP query tools
 
 **Next Options:**
-- Phase 5: Concepts layer (link code to human concepts)
-- Phase 6: MCP Tools expansion (new traversal queries)
-- Add TypeScript/Python extraction (expand language coverage)
+- Phase 6: MCP Tools expansion (add graph traversal queries like `find_callers`, `trace_dependencies`)
+- Expand concepts: Add 14 more concepts (24 total extracted, 10 currently loaded)
+- Add TypeScript/Python extraction (expand language coverage beyond Go)
+
+---
+
+### Phase 5 Summary (2025-11-27)
+
+**Goal:** Create a concept layer that maps human-friendly terms to underlying code entities.
+
+**Implementation:**
+| Component | Details |
+|-----------|---------|
+| Concept vertices | 10 concepts (Credit Class, Credit Batch, Credit Retirement, etc.) |
+| EXPLAINS edges | 11 edges linking concepts to code entities |
+| MCP tools | 3 new query types: `list_concepts`, `explain_concept`, `find_concept_for_query` |
+| Source | Extracted from x/ecocredit/spec/*.md and x/data/spec/*.md |
+
+**10 Core Concepts:**
+1. Credit Class - Primary abstraction for ecosystem service credits
+2. Credit Batch - Discrete batch of issued credits
+3. Credit Retirement - Permanent consumption of credits as offsets
+4. Credit Basket - Pool of credits meeting defined criteria
+5. Project - On-chain project implementing methodologies
+6. Marketplace - Buy and sell credit orders
+7. Data Anchor - Timestamped data attestation on-chain
+8. IRI - Internationalized Resource Identifier for data
+9. Credit Type - Unit of measurement for credits
+10. Credit Issuer - Authorized address to issue credit batches
+
+**User Journey Example:**
+```
+User: "What is credit retirement?"
+Claude: *calls explain_concept('Credit Retirement')*
+       → Returns: Concept + 4 MsgRetire implementations
+Claude: "Credit Retirement is the permanent consumption of credits as
+        offsets. Implemented in MsgRetire at 4 locations..."
+```
+
+**Benefits:**
+- **Natural language queries:** Users can ask "what is X?" instead of knowing entity names
+- **Concept discovery:** `list_concepts` shows available high-level topics
+- **Code grounding:** Each concept links to concrete implementations
+- **Keyword matching:** `find_concept_for_query('credits')` → 5 relevant concepts
+
+**Files Modified:**
+- Server: `/opt/projects/koi-processor/koi-query-api.ts` (added 3 query handlers)
+- Server: `~/koi-processor/scripts/extract_concepts.py` (concept extraction)
+- Database: `regen_graph_v2` (added Concept vertices + EXPLAINS edges)
 
 ---
 
@@ -279,8 +327,8 @@ Phase 0 (MVP Fix, 3-5 days)
 | **1: Tree-sitter** | 1-2 weeks | Extracts ≥90% of regex entities + CALLS/IMPORTS/IMPLEMENTS edges | +10-15% | ✅ **COMPLETE** |
 | **Checkpoint** | 2 days | Graph integrity verified; staging → production switch | Required | ✅ **COMPLETE** |
 | **2: Ontology** | 1 week | All types are generic; domain info in properties only | +5% | ✅ **COMPLETE** |
-| **5: Concepts** | 1 week | 20 core concepts manually curated and linked | +5% | **Priority 4** |
-| **6: MCP Tools** | Days/tool | All planned tools implemented and tested | +5% | **Priority 5** |
+| **5: Concepts** | 1 week | 10 concepts with MCP tools (list, explain, find) | +5% | ✅ **COMPLETE** |
+| **6: MCP Tools** | Days/tool | All planned tools implemented and tested | +5% | **Priority 4** |
 | **7: Production** | 1 week | Deployed, monitored, documented | N/A | **Priority 6** |
 | **3: Summarization** | 1-2 weeks | Module summaries searchable; hierarchy navigable | +5-10% | **Deferred** |
 | **4: Code Embeddings** | 1 week | Semantic search finds code entities by meaning | +15-20% | **Deferred** |
