@@ -21,11 +21,21 @@ import { QueryRouter } from './query_router.js';
 import { UnifiedSearch } from './unified_search.js';
 import { executeGraphTool } from './graph_tool.js';
 
+// DEBUG: Log ALL environment variables before dotenv
+const envKeys = Object.keys(process.env).filter(k => k.includes('KOI') || k.includes('GRAPH') || k.includes('DB'));
+console.error('[DEBUG] ALL RELEVANT ENV VARS:', envKeys);
+console.error('[DEBUG] KOI_API_ENDPOINT before dotenv:', process.env.KOI_API_ENDPOINT);
+console.error('[DEBUG] GRAPH_DB_HOST before dotenv:', process.env.GRAPH_DB_HOST);
+
 // Load environment variables
 dotenv.config();
 
+// DEBUG: Log environment after dotenv
+console.error('[DEBUG] KOI_API_ENDPOINT after dotenv:', process.env.KOI_API_ENDPOINT);
+
 // Configuration
 const KOI_API_ENDPOINT = process.env.KOI_API_ENDPOINT || 'https://regen.gaiaai.xyz/api/koi';
+console.error('[DEBUG] Final KOI_API_ENDPOINT:', KOI_API_ENDPOINT);
 const KOI_API_KEY = process.env.KOI_API_KEY || '';
 const SERVER_NAME = process.env.MCP_SERVER_NAME || 'regen-koi';
 const SERVER_VERSION = process.env.MCP_SERVER_VERSION || '1.0.0';
@@ -377,7 +387,7 @@ class KOIServer {
     try {
       const body: any = { question: query, limit };
       if (Object.keys(vectorFilters).length > 0) body.filters = vectorFilters;
-      const response = await apiClient.post('/search', body);
+      const response = await apiClient.post('/query', body);
 
       const data = response.data as any;
       const results = data.results || [];

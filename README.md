@@ -12,6 +12,8 @@ curl -fsSL https://raw.githubusercontent.com/gaiaaiagent/regen-koi-mcp/main/inst
 
 This automatically configures Claude Desktop and Claude Code CLI. Just restart and you're done! 🎉
 
+**Quick Test:** After restarting, open Claude and ask: _"What repositories are indexed in KOI?"_ to verify the tools are working.
+
 ---
 
 ### Option 1: NPM (Recommended - Auto-Updates)
@@ -44,6 +46,8 @@ Config file locations:
 - **Linux**: `~/.config/Claude/claude_desktop_config.json`
 
 Then restart Claude Desktop and you're done! 🎉
+
+**Quick Test:** Ask Claude: _"What repositories are indexed in KOI?"_ to verify the tools are working.
 
 **For existing git users**: See the migration section below for a simple one-line script to switch to npx.
 
@@ -112,6 +116,66 @@ This MCP server gives AI assistants access to Regen Network's comprehensive know
 
 **Note:** This MCP server connects to our hosted KOI API at `https://regen.gaiaai.xyz/api/koi` (behind HTTPS via Nginx), so you don't need to run any infrastructure locally.
 
+## 🎓 Quick Start: Example Queries
+
+Once you've installed the MCP server, try these queries in Claude to explore what's available:
+
+### 🔍 Discovery: What's Indexed?
+
+```
+"What repositories are indexed in the KOI knowledge base?"
+"What types of code entities exist?"
+"Show me statistics about what's in the knowledge base"
+```
+
+**What you'll get:** The system has indexed 5 repositories (regen-ledger, regen-web, koi-sensors, and more) with 23,728 code entities including Functions, Classes, Interfaces, and Cosmos SDK-specific types like Keepers and Messages.
+
+### 💻 Code Exploration: Find Specific Code
+
+```
+"What Keepers exist in regen-ledger?"
+"Find all functions related to MsgCreateBatch"
+"Show me all Message types in the ecocredit module"
+"What modules are in the regen-ledger repository?"
+"Search for retirement-related code"
+```
+
+**What you'll get:** Direct links to code entities with file paths, line numbers, and signatures. You can trace relationships between Keepers, Messages, and other components.
+
+### 📚 Documentation: Understanding the System
+
+```
+"Explain the ecocredit module architecture"
+"What's the tech stack for regen-web?"
+"Search GitHub docs for information about credit classes"
+"Get an overview of the regen-ledger repository"
+```
+
+**What you'll get:** Architectural explanations, technology choices, and relevant documentation from GitHub repositories.
+
+### 🔬 Advanced: Graph Traversal
+
+```
+"Which Keeper handles MsgCreateBatch?"
+"What messages does the ecocredit Keeper handle?"
+"Find all entities in the x/ecocredit/keeper/keeper.go file"
+"What documentation mentions MsgRetire?"
+```
+
+**What you'll get:** Relationship traversal through the code graph, showing connections between different parts of the codebase.
+
+### 📊 Knowledge Base: Recent Activity
+
+```
+"Generate a weekly digest of Regen Network discussions"
+"Search for recent discussions about carbon credits from the past week"
+"Find documentation about basket creation from 2024"
+```
+
+**What you'll get:** Summaries of community discussions, forum posts, and activity with source citations.
+
+---
+
 ## 📦 Available Tools
 
 ### Knowledge Base Search
@@ -133,6 +197,87 @@ This MCP server gives AI assistants access to Regen Network's comprehensive know
 | `search_github_docs` | Search Regen GitHub repos for documentation and technical content | `query` (string), `repository` (optional: regen-ledger, regen-web, regen-data-standards, regenie-corpus), `limit` (1-20, default 10) |
 | `get_repo_overview` | Get structured overview of a Regen repository | `repository` (enum: regen-ledger, regen-web, regen-data-standards, regenie-corpus) |
 | `get_tech_stack` | Get technical stack information for Regen repositories | `repository` (optional, omit to show all repos) |
+
+---
+
+## 🤔 What Can I Ask? User Guide
+
+This table helps you understand which tool to use for different tasks. Just ask Claude in natural language - it will automatically use the right tool.
+
+| **When You Want To...**                                  | **Ask Claude**                                           | **Tool Used**            |
+|----------------------------------------------------------|----------------------------------------------------------|--------------------------|
+| **Discover what's indexed**                              |                                                          |                          |
+| See what repositories are available                      | "What repositories are indexed?"                         | `list_repos`             |
+| See what types of code entities exist                    | "What entity types are available?"                       | `list_entity_types`      |
+| Get comprehensive statistics                             | "Show me statistics about the knowledge base"            | `get_entity_stats`       |
+| **Find specific code**                                   |                                                          |                          |
+| Find all entities of a type                              | "Show me all Keepers in regen-ledger"                    | `find_by_type`           |
+| Search for entities by name                              | "Find entities related to MsgCreateBatch"                | `search_entities`        |
+| Find related code entities                               | "What's related to the ecocredit Keeper?"                | `related_entities`       |
+| **Understand relationships**                             |                                                          |                          |
+| Find which Keeper handles a Message                      | "Which Keeper handles MsgCreateBatch?"                   | `keeper_for_msg`         |
+| Find what Messages a Keeper handles                      | "What messages does the ecocredit Keeper handle?"        | `msgs_for_keeper`        |
+| Find what documentation mentions an entity               | "What docs mention MsgRetire?"                           | `docs_mentioning`        |
+| Find entities in a file                                  | "What entities are in keeper.go?"                        | `entities_in_doc`        |
+| **Navigate by modules**                                  |                                                          |                          |
+| List all modules                                         | "What modules exist in regen-ledger?"                    | `list_modules`           |
+| Get details about a module                               | "Tell me about the ecocredit module"                     | `get_module`             |
+| Search for modules                                       | "Find modules related to baskets"                        | `search_modules`         |
+| Find entities in a module                                | "What entities are in the ecocredit module?"             | `module_entities`        |
+| **Search documentation**                                 |                                                          |                          |
+| Search GitHub docs                                       | "Search for documentation about credit classes"          | `search_github_docs`     |
+| Get repository overview                                  | "Give me an overview of regen-web"                       | `get_repo_overview`      |
+| Understand tech stack                                    | "What's the tech stack for regen-ledger?"                | `get_tech_stack`         |
+| **Search everything (hybrid)**                           |                                                          |                          |
+| Semantic search across code and docs                     | "How does credit retirement work?"                       | `hybrid_search`          |
+| Advanced filtering by date                               | "Find discussions about tokens from last week"           | `search_knowledge`       |
+| **Get activity summaries**                               |                                                          |                          |
+| Generate weekly digest                                   | "Create a weekly digest of Regen activity"               | `generate_weekly_digest` |
+
+### Query Type Reference
+
+The `query_code_graph` tool supports these query types:
+
+#### Discovery
+- **`list_repos`** - Show all indexed repositories with entity counts
+- **`list_entity_types`** - Show all entity types (Function, Class, Keeper, Message, etc.) with counts
+- **`get_entity_stats`** - Comprehensive statistics: entities by type, language, repository
+- **`list_modules`** - Show all modules across repositories
+
+#### Entity Queries
+- **`find_by_type`** - Find all entities of a specific type (requires `entity_type` parameter)
+- **`search_entities`** - Search entities by name pattern (requires `entity_name` parameter)
+- **`related_entities`** - Find entities related to a given entity (requires `entity_name` parameter)
+
+#### Relationship Queries
+- **`keeper_for_msg`** - Find which Keeper handles a Message (requires `entity_name` parameter)
+- **`msgs_for_keeper`** - Find what Messages a Keeper handles (requires `entity_name` parameter)
+- **`docs_mentioning`** - Find documentation mentioning an entity (requires `entity_name` parameter)
+- **`entities_in_doc`** - Find entities defined in a document (requires `doc_path` parameter)
+
+#### Module Queries
+- **`get_module`** - Get details about a specific module (requires `module_name` parameter)
+- **`search_modules`** - Search modules by keyword (requires `entity_name` parameter)
+- **`module_entities`** - Get entities in a module (requires `module_name` parameter)
+- **`module_for_entity`** - Find which module contains an entity (requires `entity_name` parameter)
+
+### What's Currently Indexed
+
+**Repositories:** 5 total
+- `regen-ledger`: 18,619 entities (Go, Cosmos SDK modules)
+- `regen-web`: 3,164 entities (TypeScript/React frontend)
+- `koi-sensors`: 1,250 entities (Python data collection)
+- `regen-koi-mcp`: 688 entities (TypeScript MCP server)
+- `regen-data-standards`: 6 entities (JSON schemas)
+
+**Entity Types:** 10 types
+- Function, Class, Interface, Method, Type
+- Keeper, Message, Query, Event (Cosmos SDK specific)
+- Module, Repository
+
+**Total:** 23,728 code entities
+
+---
 
 ## 🏗️ Architecture
 
@@ -184,15 +329,34 @@ Or manually add to config (`~/Library/Application Support/Claude/claude_desktop_
 
 ### Claude Code CLI
 
-**One-line install:**
+**Option 1: Use the automated installer (recommended)**
+```bash
+curl -fsSL https://raw.githubusercontent.com/gaiaaiagent/regen-koi-mcp/main/install.sh | bash
+```
+This configures both Claude Desktop and Claude Code CLI with the correct environment variables.
+
+**Option 2: Manual installation**
+1. Add the MCP server:
 ```bash
 claude mcp add regen-koi npx -y regen-koi-mcp@latest
 ```
 
-Then set environment variable:
-```bash
-export KOI_API_ENDPOINT=https://regen.gaiaai.xyz/api/koi
+2. Configure the environment variable in your Claude Code settings file (`~/.claude/settings.json` or similar):
+```json
+{
+  "mcpServers": {
+    "regen-koi": {
+      "command": "npx",
+      "args": ["-y", "regen-koi-mcp@latest"],
+      "env": {
+        "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
+      }
+    }
+  }
+}
 ```
+
+**Verification:** After installation, restart Claude Code and ask: "What repositories are indexed?" to verify the tools are working.
 
 ---
 
@@ -544,6 +708,27 @@ The setup connects to our hosted KOI API at `https://regen.gaiaai.xyz/api/koi`. 
 
 ### "Command not found"
 Make sure Node.js is installed and in your PATH. The setup script uses `node` command.
+
+### "Connection error: localhost:8301" or "localhost:8910"
+
+**Cause:** Claude caches MCP configurations in `~/.claude.json`. If you previously ran a local dev server, it may have cached `localhost` URLs that override your current config.
+
+**Fix:**
+```bash
+# 1. Check for cached localhost configs
+grep -i "localhost.*8301\|localhost.*8910" ~/.claude.json
+
+# 2. Backup your config
+cp ~/.claude.json ~/.claude.json.backup
+
+# 3. Replace localhost with public API
+sed -i '' 's|http://localhost:8301/api/koi|https://regen.gaiaai.xyz/api/koi|g' ~/.claude.json
+sed -i '' 's|http://localhost:8910/api/koi|https://regen.gaiaai.xyz/api/koi|g' ~/.claude.json
+
+# 4. Restart Claude Code/Desktop
+```
+
+**Prevention:** Always use `https://regen.gaiaai.xyz/api/koi` in MCP configs unless you're actively developing the API server locally.
 
 ## 📚 Example Usage
 

@@ -1,37 +1,137 @@
 # Regen Technical Collaboration Assistant - Project Tracking
 
 **Project Start Date:** 2025-11-24
-**Status:** ✅ PHASE 2c COMPLETE - RAPTOR Module Summaries & Graph Enhancement
-**Phase 1 Validation:** ✅ Complete (2025-11-25) - Embeddings validated, tools working
-**Phase 2a Validation:** ✅ Complete (2025-11-25) - Graph 3x better than vector on entity queries
-**Phase 2b Validation:** ✅ Complete (2025-11-25) - All 8 MCP tools working in Claude Code
-**Phase 2c Validation:** ✅ Complete (2025-11-25) - RAPTOR summaries for 66 modules, CONTAINS edges
-**Strategic Decision:** Skip Phase 1 deployment → Build unified Phase 2 pipeline
+**Last Updated:** 2025-11-27
+**Status:** PHASE 0 COMPLETE ✅ - Ready for Team Sharing
+
+## Completed Phases
+- Phase 1 Validation: Complete (2025-11-25) - Embeddings validated, tools working
+- Phase 2a Validation: Complete (2025-11-25) - Graph 3x better than vector on entity queries
+- Phase 2b Validation: Complete (2025-11-25) - All 8 MCP tools working in Claude Code
+- Phase 2c Validation: Complete (2025-11-25) - RAPTOR summaries for 66 modules, CONTAINS edges
+- **Phase 0.1: Complete (2025-11-26) - "N/A" metadata bug FIXED** ✅
+- **Phase 0.2: Complete (2025-11-26) - Discovery tools implemented** ✅
+- **Phase 0.3: Complete (2025-11-27) - Team onboarding documentation** ✅
+
+## Critical Findings (2025-11-26)
+- **Production pipeline uses REGEX, not tree-sitter** (79,712 entities via regex; tree-sitter was only POC with 63 entities)
+- ~~**MCP API returns incomplete metadata** (data exists in DB but not exposed)~~ **FIXED 2025-11-26**
+- **No relationship edges** (CALLS, IMPORTS, IMPLEMENTS missing)
+- **Mixed ontology** (domain-specific + generic vertex types)
 
 ---
 
-## Project Overview
+## Current Status: Phase 0 Complete - Ready for Team Sharing
 
-### Goal
-Extend the `regen-koi-mcp` server to become the **Regen Technical Collaboration Assistant** with tiered access control, providing developers and collaborators with powerful tools for code search, architectural understanding, and technical context.
+**Phase 0.3 Complete (2025-11-27):** Team onboarding documentation finished
+- ✅ Quick Start Guide with example queries
+- ✅ Installation instructions with verification steps
+- ✅ "What Can I Ask?" cheat sheet for all tools
 
-### Scope
-- Add technical/developer-focused MCP tools
-- Implement tiered access system (Public → Partner/Collaborator → Developer)
-- Leverage existing GitHub sensor infrastructure from `koi-sensors`
-- Maintain existing architecture (server API pattern)
-- Ensure backward compatibility with existing tools
+**Next Steps:**
+1. **Share with team** - README is ready for distribution
+2. **Gather feedback** - Which examples are most useful? What's confusing?
+3. **Consider Phase 1** - Tree-sitter implementation for better code extraction
 
-### Out of Scope
-- Building new authentication system for GitHub (repos are public)
-- Modifying core sensor or processor infrastructure (unless necessary)
-- Production deployment automation
+**Recommendation:** Get team feedback before investing in Phase 1 (tree-sitter).
+
+---
+
+### Phase 0.2 Summary (2025-11-26)
+
+**New Discovery Tools:**
+| Tool | What It Returns |
+|------|-----------------|
+| `list_entity_types` | 10 entity types with counts (23,728 total) |
+| `get_entity_stats` | Breakdown by type, language, repository |
+| `list_repos` | 5 repos: regen-ledger (18,619), regen-web (3,164), koi-sensors (1,250), regen-koi-mcp (688), regen-data-standards (6) |
+
+**Files Modified:**
+- Server: `/opt/projects/koi-processor/koi-query-api.ts`
+- Client: `regen-koi-mcp/src/graph_tool.ts`
+
+See: `regen-koi-mcp/docs/PHASE_0.2_COMPLETE.md` for full details.
+
+### Phase 0.3 Summary (2025-11-27)
+
+**Goal:** Make the MCP server immediately useful for team members through comprehensive documentation.
+
+**Documentation Added:**
+| Section | Content | Location |
+|---------|---------|----------|
+| Quick Start Guide | 15+ example queries in 5 categories | README.md lines 115-173 |
+| What Can I Ask? | User guide mapping tasks to tools | README.md lines 199-276 |
+| Installation Updates | Verification steps for all methods | README.md throughout |
+
+**Key Features:**
+- **Example-driven**: Users see what's possible immediately
+- **Natural language**: No need to memorize tool names
+- **Progressive disclosure**: Simple examples → advanced reference
+- **Self-service**: Complete onboarding without assistance
+
+~~**Known Issue:** Some queries return incomplete metadata (entity names showing as "undefined").~~ **RESOLVED 2025-11-27** - All queries now return proper metadata.
+
+See: `regen-koi-mcp/docs/PHASE_0.3_COMPLETE.md` for full details.
+
+### Phase 0.1 Fix Summary (2025-11-26)
+
+**Root Cause:** Cypher queries in `koi-query-api.ts` only requested specific fields, ignoring stored properties.
+
+**Fix Applied:**
+- Server (`/opt/projects/koi-processor/koi-query-api.ts`): Changed `RETURN n.field1, n.field2` → `RETURN properties(n) as entity`
+- Client (`regen-koi-mcp/src/graph_tool.ts`): Updated response parsing to handle new structure
+
+**Verified Working:** Entities now return `file_path`, `line_number`, `repo`, `language`, `docstring`
+
+---
+
+## Executive Summary
+
+### Current State (What's Working)
+| Component | Status | Details |
+|-----------|--------|---------|
+| Code Entities Indexed | 79,712 | Apache AGE property graph |
+| Document Embeddings | 36,771 docs / 34,828 embeddings | BGE 1024-dim in pgvector |
+| Hybrid RAG Search | Working | Vector + keyword with RRF fusion |
+| Git Provenance | Complete | Commit SHA, file paths, line numbers, CAT receipts |
+| Multi-Repo Indexing | Working | regen-ledger, regen-web, koi-sensors |
+| File Types | Comprehensive | .go, .ts, .tsx, .js, .py, .rs, .sol, .proto, .json, .yaml, .md |
+| MCP Tools | 8 working | All tools accessible in Claude Code |
+
+### Current State (What's Broken/Missing)
+| Issue | Impact | Priority |
+|-------|--------|----------|
+| ~~MCP API returns "N/A" for entity metadata~~ | ~~Can't demonstrate code graph value~~ | ✅ **FIXED** |
+| Code extraction uses regex (NOT tree-sitter) | Brittle, misses complex patterns | **High** |
+| No relationship edges in graph | Can't traverse call chains, dependencies | **High** |
+| Mixed ontology (Keeper, Message vs Entity, Function) | Confusing, domain-specific pollution | **Medium** |
+| Code entities not embedded | No semantic search over code | **Medium** (Deferred) |
+| No hierarchical summarization | Flat chunks only, no RAPTOR | **Low** (Deferred) |
+| No concept layer | Non-technical users can't navigate | **Low** |
+
+### Target State
+A production-ready MCP server that:
+1. Exposes rich code metadata through well-designed MCP tools
+2. Supports graph traversal (trace call chains, find dependencies, identify test coverage)
+3. Uses proper AST parsing (tree-sitter) for reliable code extraction
+4. Has a clean, generic ontology that works across languages and domains
+5. Enables semantic search over both documentation AND code
+6. Provides hierarchical understanding (function -> module -> package -> system)
+7. Provides concept-level explanations grounded in actual code references
+
+### Key Risks and Dependencies
+| Risk | Mitigation |
+|------|------------|
+| Tree-sitter migration complexity | Start with one language (Go), validate, then expand |
+| Re-extraction required for ontology cleanup | Can migrate incrementally, validate at each step |
+| API layer needs enhancement | Fix MVP issues first before adding features |
+| LLM costs for summarization | Use GPT-4o-mini, implement caching |
 
 ---
 
 ## User Journeys
 
-Tools are designed to support specific user needs. Each tool maps to one or more journeys:
+Tools are designed to support specific user needs:
 
 | Journey | Description | Example Query |
 |---------|-------------|---------------|
@@ -40,18 +140,15 @@ Tools are designed to support specific user needs. Each tool maps to one or more
 | **Integration** | Learn how to call or implement a service/message | "How do I send a MsgRetire from a client?" |
 | **Audit** | Trace where events are emitted and under what conditions | "Show every place EventBurn is emitted" |
 
-### Tool → Journey Mapping
+### Tool -> Journey Mapping
 
 | Tool | Journeys Supported |
 |------|-------------------|
 | `search_github_docs` | Onboarding, Integration |
 | `get_repo_overview` | Onboarding |
 | `get_tech_stack` | Onboarding, Integration |
-| `get_architecture_overview` | Onboarding, Impact |
-| `get_keeper_for_msg` | Impact, Integration |
-| `get_related_documentation` | Onboarding, Integration |
-| `get_call_graph` | Impact, Audit |
-| `analyze_dependencies` | Impact |
+| `query_code_graph` | Impact, Audit |
+| `hybrid_search` | All |
 
 ---
 
@@ -59,2284 +156,1062 @@ Tools are designed to support specific user needs. Each tool maps to one or more
 
 ### Gold Set Definition
 
-We maintain a curated set of test queries with expected results.
-
 **Location:** `evals/gold_set.json`
 
-→ *See [CODE_EXAMPLES.md#evaluation--gold-set](CODE_EXAMPLES.md#evaluation--gold-set) for JSON structure*
+### Success Metrics
 
-### Success Metric
+| Metric | Current | Target |
+|--------|---------|--------|
+| Recall@5 (Graph) | 9.1% | >=50% |
+| Recall@5 (Vector) | 2.3% | >=30% |
+| Entity queries | 100% (graph) | Maintain |
 
-**Recall@k:** Percentage of queries where at least one `expected_rid` or `expected_entity` appears in top-k results.
-
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| Recall@3 | ≥ 70% | At least 1 expected result in top 3 |
-| Recall@5 | ≥ 85% | At least 1 expected result in top 5 |
-
-### Tracking Progress
-
-| Phase | Recall@5 | Recall@10 | Notes |
-|-------|----------|-----------|-------|
-| Phase 1 (vector only) | 2.3% | 6.8% | Baseline - vector search alone |
-| Phase 2a (graph) | 9.1% | 9.1% | **3x improvement** - graph excels on entity queries |
-| Phase 2b (hybrid) | TBD | TBD | Target: combine graph + vector strengths |
-
-**Key Finding:** Graph achieves **100% recall** on entity-specific queries (e.g., "What parameters does MsgSend require?") where vector search returns 0%.
-
-| Journey | Graph @5 | Vector @5 | Winner |
-|---------|----------|-----------|--------|
-| Onboarding | 0.0% | 12.5% | Vector (natural language docs) |
-| Impact | 0.0% | 0.0% | Tie |
-| Integration | 33.3% | 0.0% | **Graph** (entity queries) |
-| Audit | 0.0% | 0.0% | Tie |
-
-### Gold Set Size
-
-- **Initial:** 20-30 queries covering all 4 journeys
-- **Target:** 50+ queries with good coverage of edge cases
-- **Maintenance:** Add failing queries as bugs are discovered
+### Key Finding
+Graph achieves **100% recall** on entity-specific queries where vector search returns 0%.
 
 ---
 
-## Access Tiers & Tools
+## Implementation Roadmap
 
-### Tier 1: Public (No Auth)
-**Existing Tools:**
-- ✅ `search_knowledge` - Hybrid search (vectors + graph)
-- ✅ `get_stats` - Knowledge base statistics
-- ✅ `generate_weekly_digest` - Weekly activity digest
+### Phase Dependencies & Sequence
 
-**New Tools Planned:**
-- ✅ `search_github_docs` - Search GitHub repos for documentation, README, configs **(Implemented 2025-11-24)**
-- ✅ `get_repo_overview` - Repository overview (structure, purpose, key files) **(Implemented 2025-11-24)**
-- ✅ `get_tech_stack` - Technical stack information **(Implemented 2025-11-24)**
+```
+Phase 0 (MVP Fix, 3-5 days)
+    │
+    └─> Phase 1 (Tree-sitter, 1-2 weeks)
+            │
+            └─> Checkpoint (Data Migration, 2 days)
+                    │
+                    └─> Phase 2 (Ontology, 1 week)
+                            │
+                            └─> Phase 5 (Concepts, 1 week)
+                                    │
+                                    └─> Phase 6 (MCP Tools, days/tool)
+                                            │
+                                            └─> Phase 7 (Production, 1 week)
 
-### Tier 2: Partner/Collaborator (Org Email Auth)
-**Tool Prefix:** `collab:` (proposed)
+    [DEFERRED] Phase 3: Hierarchical Summarization
+    [DEFERRED] Phase 4: Code Embeddings
+```
 
-**New Tools Planned:**
-- 🔲 `get_architecture_overview` - Deep system architecture and component relationships
-- 🔲 `search_integration_guides` - Internal integration documentation
-- 🔲 `get_tech_stack_deep` - Detailed stack info with internal rationale
+**Critical Path:** 0 → 1 → Checkpoint → 2 → 5 → 6 → 7
+**Deferred:** Phases 3 & 4 (add later if semantic code search needed; existing text embeddings cover 80% of use cases)
 
-### Tier 3: Developer (Dev Role)
-**Tool Prefix:** `dev:` (proposed)
+### Phase Summary with Success Criteria
 
-**New Tools Planned:**
-- 🔲 `analyze_dependencies` - Cross-repo dependency analysis
-- 🔲 `get_implementation_details` - Deep implementation context
-- 🔲 `search_internal_docs` - Search internal technical docs (Notion, etc.)
+| Phase | Effort | Done When | Recall Impact | Status |
+|-------|--------|-----------|---------------|--------|
+| **0: MVP Fix** | 3-5 days | API returns full entity metadata; can click through to code | +0% (foundation) | ✅ **COMPLETE** |
+| **1: Tree-sitter** | 1-2 weeks | Extracts ≥90% of regex entities + CALLS/IMPORTS/IMPLEMENTS edges | +10-15% | **Priority 2** |
+| **Checkpoint** | 2 days | Graph integrity verified; staging → production switch | Required | **Required** |
+| **2: Ontology** | 1 week | All types are generic; domain info in properties only | +5% | **Priority 3** |
+| **5: Concepts** | 1 week | 20 core concepts manually curated and linked | +5% | **Priority 4** |
+| **6: MCP Tools** | Days/tool | All planned tools implemented and tested | +5% | **Priority 5** |
+| **7: Production** | 1 week | Deployed, monitored, documented | N/A | **Priority 6** |
+| **3: Summarization** | 1-2 weeks | Module summaries searchable; hierarchy navigable | +5-10% | **Deferred** |
+| **4: Code Embeddings** | 1 week | Semantic search finds code entities by meaning | +15-20% | **Deferred** |
 
----
-
-## Implementation Checklist
-
-### Phase 1: Research & Discovery ✅
-- [x] Pull latest from all repos
-- [x] Create project tracking document
-- [x] Explore `regen-koi-mcp` codebase structure
-- [x] Review existing GitHub sensors (`github_activity`, `github`, `gitlab`)
-- [x] Assess what data is already in production database
-- [x] Document findings and propose implementation plan
-- [x] Review and improve proposal
-- [ ] **STOP** - Get approval before coding
-
-### Phase 0: Validate Data & API ✅ COMPLETE
-- [x] Test API filtering with actual requests (verify `source_sensor` filtering works)
-- [x] Sample production data to verify content quality
-- [x] Document exact `source_sensor` values available in production
-- [x] Verify wildcard patterns → **Finding:** Use `"source_sensor": "regen.github"` (not wildcards)
-- [x] Create API validation test script
-- [x] Document client-side filtering requirements
-
-### Phase 1a: Single Tool MVP ✅ COMPLETE (2025-11-24)
-- [x] Implement `search_github_docs` tool (most useful, validates approach)
-- [x] Write basic test script for the tool
-- [x] Test against production API
-- [x] Build passes with zero TypeScript errors
-
-**Implementation Details:**
-- Files modified: `src/tools.ts` (27 lines), `src/index.ts` (166 lines)
-- Test results: 3/5 passed (60%) - failures are API content gaps, not bugs
-- Key corrections applied from Phase 0:
-  - Used `query` parameter (NOT `question`)
-  - Read `memories` field (NOT `results`)
-  - NO server-side filters (100% client-side filtering)
-- Client-side filtering handles: RID prefix filtering, repo filtering, deduplication
-
-### Phase 1b: Complete Public Tools ✅ COMPLETE (2025-11-24)
-- [x] Implement `get_repo_overview` tool
-- [x] Implement `get_tech_stack` tool
-- [x] Build passes with zero TypeScript errors
-- [x] Test scripts created
-
-**Implementation Details:**
-- Files modified: `src/tools.ts` (lines 118-146), `src/index.ts` (lines 1120-1550)
-- `get_repo_overview`: Parallel queries for README, CONTRIBUTING, architecture docs
-- `get_tech_stack`: Searches for package.json, go.mod, Dockerfile, Makefile, CI configs
-- Both tools follow Phase 1a patterns (client-side filtering, proper error handling)
-
-### Infrastructure: GitHub Sensor Enhancement ✅ COMPLETE (2025-11-25)
-- [x] Expand file extensions for full codebase indexing
-- [x] Remove 30-day age filter (index ALL files)
-- [x] Add file size limit (500KB max)
-- [x] Update excluded directories for code repos
-- [x] Rename `doc_extensions` → `file_extensions`
-- [x] Python syntax check passed
-
-**File Modified:** `/Users/darrenzal/projects/RegenAI/koi-sensors/sensors/github/github_sensor.py`
-
-**New File Types Added:**
-- Source Code: `.go`, `.ts`, `.tsx`, `.js`, `.jsx`, `.py`, `.rs`, `.sol`
-- Protocol Buffers: `.proto` (CRITICAL for Cosmos SDK)
-- Build: `Makefile`, `Dockerfile*`, `docker-compose*.yml`
-- Dependencies: `go.mod`, `go.sum`
-- Schemas: `.sql`, `.graphql`, `.gql`
-- Scripts: `.sh`
-
-**Next Step:** ✅ COMPLETED - Local testing successful
-
-### Local Stack Testing ✅ COMPLETE (2025-11-25)
-- [x] Start KOI Coordinator (port 8005)
-- [x] Start BGE Embedding Server (port 8090)
-- [x] Start Event Bridge v2 (port 8100)
-- [x] Start Event Forwarder
-- [x] Run enhanced GitHub sensor on regen-ledger
-- [x] Verify data in PostgreSQL
-
-**Results:**
-- 810 documents discovered
-- 944 chunks stored in database
-- 97 unique files indexed
-- File breakdown: 66 `.md`, 25 `.go`, 1 other
-- Indexing time: ~2.5 minutes
-
-**Database Issues Resolved:**
-- Created `koi_memories` table (migration 003)
-- Added missing columns: `content_hash`, `published_at`, `published_confidence`
-- Fixed data type for `published_confidence` (NUMERIC)
-- Added unique index on `rid` for ON CONFLICT clause
+**Target:** Recall@5 from 9.1% → ~35-40% (Phases 0-2 + 5 + 6)
+**Math:** +10-15% (Phase 1) + 5% (Phase 2) + 5% (Phase 5) + 5% (Phase 6) = ~25-30% improvement
+**Note:** Hitting ≥50% recall likely requires Phases 3 & 4. Current plan prioritizes graph traversal; defer semantic code search unless needed.
 
 ---
 
-## 🔬 PHASE 1 VALIDATION COMPLETE (2025-11-25)
+### Phase 0: MVP Fix (Make Current System Functional)
+**Goal:** Get value from existing 79,712 entities immediately, no re-extraction required
+**Effort:** 3-5 days (strict timebox)
+
+**Rules:**
+- Do NOT write new extractors or modify regex parsing
+- If data isn't in DB, show "Unknown" not "N/A"
+- Focus ONLY on exposing what's already in Postgres/AGE
+- Fix the API layer, not the data layer
+
+#### 0.1 Fix MCP Tools to Expose Existing Metadata
+
+**Debugging Workflow (Local + Server):**
+```
+1. Test MCP tool locally → see "N/A" response
+2. SSH to server: ssh darren@202.61.196.119
+3. Run direct Cypher query to verify data exists:
+   psql -U postgres -d eliza
+   SELECT * FROM cypher('regen_graph', $$
+     MATCH (n:Function {name: 'MsgCreateBatch'})
+     RETURN properties(n)
+   $$) as (props agtype);
+4. Compare server response to MCP tool response
+5. Identify gap (likely in KOI API on server, not MCP tool locally)
+6. Fix the API endpoint on server OR the MCP tool parsing locally
+```
+
+**Root Cause Hypothesis:** The "N/A" issue is likely in the SQL/Cypher query, not the MCP tool.
+
+Current query probably does:
+```cypher
+-- BROKEN: Only returns specific columns, ignores JSONB properties
+MATCH (n:Function) RETURN n.name, n.id
+```
+
+Should do:
+```cypher
+-- FIXED: Returns full properties map
+MATCH (n:Function) RETURN properties(n) as props
+```
+
+Then the TypeScript API must iterate over `props` to populate the response.
+
+**Tasks:**
+- [x] **P0-1:** Audit API response vs database content (run Cypher directly, compare to API response) ✅
+- [x] **P0-2:** Update `/api/koi/graph` endpoint to return full entity properties via `properties(n)` ✅
+- [x] **P0-3:** Update MCP `query_code_graph` tool to display metadata (repo, file_path, line_number, signature) ✅
+- [x] **P0-4:** Test with 3 showcase queries ✅
+
+**Acceptance Criteria:** ✅ MET
+- `query_code_graph` returns entity with file path, line number, GitHub URL
+- Can click through to actual code location
+
+#### 0.2 Add Discovery Tools
+- [x] **P0-5:** Implement `list_entity_types` - Returns available entity types with counts ✅
+- [x] **P0-6:** Implement `list_repos` - Returns indexed repositories ✅
+- [x] **P0-7:** Implement `list_modules` - Returns modules in a repo ✅
+- [x] **P0-8:** Implement `get_entity_stats` - Returns graph statistics ✅
+
+**Acceptance Criteria:** ✅ MET
+- Users can discover what's in the index without guessing
+
+#### 0.3 Team Onboarding Documentation ✅ COMPLETE (2025-11-27)
+- [x] **P0-9:** Quick Start Guide with 5-10 example queries ✅
+- [x] **P0-10:** Review and update installation instructions ✅
+- [x] **P0-11:** "What Can I Ask?" cheat sheet ✅
+
+See: `docs/PHASE_0.3_COMPLETE.md` for full details.
+
+---
+
+### Phase 1: Tree-sitter Implementation
+**Goal:** Replace regex with proper AST parsing for reliable code extraction
+**Effort:** Medium (1-2 weeks)
+
+#### 1.1 Language Support Matrix
+
+| Language | Grammar | Priority | Patterns to Extract |
+|----------|---------|----------|---------------------|
+| Go | tree-sitter-go | **High** | functions, structs, interfaces, methods, imports |
+| TypeScript/TSX | tree-sitter-typescript | **High** | functions, classes, interfaces, imports, React components |
+| Python | tree-sitter-python | Medium | functions, classes, decorators, imports |
+| Protobuf | tree-sitter-proto | Medium | messages, services, RPCs |
+| Rust | tree-sitter-rust | Low | functions, structs, traits, impl blocks |
+| Solidity | tree-sitter-solidity | Low | contracts, functions, events |
+
+#### 1.2 Entity Extraction Queries (Go Example)
+
+```scheme
+;; Functions
+(function_declaration
+  name: (identifier) @function.name
+  parameters: (parameter_list) @function.params
+  result: (_)? @function.return_type
+  body: (block) @function.body) @function.def
+
+;; Structs
+(type_declaration
+  (type_spec
+    name: (type_identifier) @struct.name
+    type: (struct_type
+      (field_declaration_list) @struct.fields))) @struct.def
+
+;; Interfaces
+(type_declaration
+  (type_spec
+    name: (type_identifier) @interface.name
+    type: (interface_type) @interface.methods)) @interface.def
+
+;; Methods (receiver functions)
+(method_declaration
+  receiver: (parameter_list
+    (parameter_declaration
+      type: (_) @method.receiver_type))
+  name: (field_identifier) @method.name
+  parameters: (parameter_list) @method.params
+  result: (_)? @method.return_type) @method.def
+
+;; Imports
+(import_declaration
+  (import_spec_list
+    (import_spec
+      path: (interpreted_string_literal) @import.path))) @import.def
+```
+
+#### 1.3 Deterministic Node IDs
+
+**Critical:** Node IDs must be deterministic to allow re-running the extractor without duplicates.
+
+```python
+import hashlib
+
+def generate_entity_id(repo: str, filepath: str, name: str, signature: str = "") -> str:
+    """Generate deterministic ID for idempotent extraction."""
+    key = f"{repo}:{filepath}:{name}:{signature}"
+    return hashlib.sha256(key.encode()).hexdigest()[:16]
+```
+
+This allows:
+- Re-running extractor without wiping DB
+- Incremental updates (only changed files)
+- Stable references across extractions
+
+#### 1.4 Relationship Extraction
+
+| Edge Type | Extraction Method |
+|-----------|-------------------|
+| CALLS | Parse function bodies for call expressions |
+| IMPORTS | Parse import statements, resolve to target files |
+| IMPLEMENTS | Match struct/class to interface (critical for Go) |
+| OVERRIDES | Method overrides interface method (Go-specific) |
+| CONTAINS | Module/package contains functions/types |
+| TESTS | Heuristics: `*_test.go`, `Test*` function names |
+| HANDLES | Cosmos-specific: match Keeper methods to Msg types |
+
+#### 1.5 Cosmos SDK Specific Patterns
+
+```go
+// Keeper detection
+type (\w*Keeper) struct
+
+// Message detection
+type (Msg\w+) struct
+
+// Handler detection
+func (k Keeper) (\w+)\(.*Msg(\w+).*\)
+
+// Event emission
+sdk\.NewEvent\("(\w+)"
+```
+
+#### 1.6 Implementation Tasks
+
+- [ ] **P1-1:** Set up py-tree-sitter in Python extractor (koi-processor)
+- [ ] **P1-2:** Write Go entity extraction queries
+- [ ] **P1-3:** Extract entities from regen-ledger (validation set)
+- [ ] **P1-4:** Compare tree-sitter vs regex extraction (what did regex miss?)
+- [ ] **P1-5:** Add relationship extraction (CALLS, IMPORTS)
+- [ ] **P1-6:** Repeat for TypeScript/TSX
+- [ ] **P1-7:** Implement incremental parsing (only re-parse changed files)
+- [ ] **P1-8:** Add docstring extraction (see synergy note below)
+
+**Phase 1 & 5 Synergy: Extract Docstrings Now**
+
+When implementing tree-sitter, add a docstring extractor immediately:
+- Go: Extract comments above functions (`// Comment` or `/* Comment */`)
+- TypeScript: Extract JSDoc comments (`/** @description ... */`)
+- Python: Extract triple-quoted docstrings
+
+**Why now?** Phase 3 (if we un-defer it) needs docstrings to generate summaries. Extracting them during AST parsing is "free" - the AST already has the comment nodes.
+
+```python
+# Example: Extract Go docstring
+def extract_go_docstring(node, source_code):
+    """Get comment immediately preceding a function."""
+    prev_sibling = node.prev_sibling
+    if prev_sibling and prev_sibling.type == 'comment':
+        return source_code[prev_sibling.start_byte:prev_sibling.end_byte]
+    return None
+```
+
+**Acceptance Criteria:**
+- Tree-sitter extracts >= 90% of entities that regex found
+- Relationship edges (CALLS, IMPORTS, IMPLEMENTS) exist in graph
+- Can query "What functions call X?" and get results
+- Docstrings stored with entities (prepares for Phase 3/5)
+
+---
+
+### Checkpoint: Data Migration Verification
+**Goal:** Ensure tree-sitter extraction is correct before switching production
+**Effort:** 2 days
+
+**Process:**
+1. Extract tree-sitter entities to **staging** tables/labels (not production graph)
+2. Run integrity checks:
+   - Entity counts: tree-sitter >= 90% of regex counts
+   - Edge counts: CALLS, IMPORTS edges exist
+   - Spot checks: sample 10 functions, verify signatures match code
+3. If checks pass: switch application to new ontology
+4. Archive (don't delete yet) old regex-extracted data
+5. After 1 week stable: drop old data
+
+**Why This Matters:**
+- Prevents "ghost nodes" from mixing regex and tree-sitter extractions
+- Allows rollback if tree-sitter extraction has bugs
+- Clean separation between old and new data
+
+**Tasks:**
+- [ ] **CP-1:** Create staging graph labels (e.g., `Function_v2`, `Entity_v2`)
+- [ ] **CP-2:** Write integrity check script
+- [ ] **CP-3:** Run extraction to staging
+- [ ] **CP-4:** Verify integrity checks pass
+- [ ] **CP-5:** Switch application queries to new labels
+- [ ] **CP-6:** Archive old data
+
+---
+
+### Phase 2: Ontology Cleanup
+**Goal:** Generic, extensible schema that works for any codebase
+**Effort:** Medium (1 week)
+
+#### 2.1 Current Ontology Problems
+
+| Problem | Current State | Impact |
+|---------|---------------|--------|
+| Domain-specific labels | `Keeper`, `Message`, `Query` (Cosmos-only) | Doesn't work for other codebases |
+| Mixed abstraction | Generic `Entity` (17,450) + specific `Keeper` (4) | Confusing, inconsistent |
+| No relationships | Only `_ag_label_edge` internal type | Can't traverse code structure |
+| Flat hierarchy | No module/package structure | Can't navigate by organization |
+
+#### 2.2 Target Entity Model
+
+```yaml
+Entity:
+  id: string (unique)
+  name: string
+  type: enum [function, class, struct, interface, type, module, file]
+  language: enum [go, typescript, python, rust, solidity, protobuf]
+
+  # Location
+  repo: string
+  file_path: string
+  line_start: int
+  line_end: int
+
+  # Code details
+  signature: string (for functions)
+  fields: json (for structs/classes)
+  docstring: string
+
+  # Provenance
+  commit_sha: string
+  github_url: string
+  cat_receipt_id: string
+
+  # Domain tags (optional, query-time)
+  domain_type: string | null  # "keeper", "message", "handler"
+  cosmos_module: string | null  # "ecocredit", "basket"
+```
+
+#### 2.3 Target Edge Types
+
+```yaml
+Edges:
+  DEFINES: File -> Entity
+  CALLS: Function -> Function (with call_site line number)
+  IMPORTS: File -> File (with alias)
+  IMPLEMENTS: Class -> Interface
+  EXTENDS: Class -> Class
+  CONTAINS: Module -> Entity
+  BELONGS_TO: Entity -> Repository
+  TESTS: TestFunction -> Entity
+  MENTIONS: Document -> Entity (from doc text)
+```
+
+#### 2.4 Migration Strategy
+
+- [ ] **P2-1:** Design migration script (in-place vs full re-extraction)
+- [ ] **P2-2:** Create new schema with generic entity types
+- [ ] **P2-3:** Map existing data: `Keeper` -> `Entity(type=struct, domain_type=keeper)`
+- [ ] **P2-4:** Validate entity counts match before/after
+- [ ] **P2-5:** Add relationship edges from Phase 1 extraction
+- [ ] **P2-6:** Update MCP tools to use generic queries
+
+**Acceptance Criteria:**
+- All entity types are generic (`function`, `class`, `struct`, etc.)
+- Domain-specific info in properties, not labels
+- Relationship edges enable traversal queries
+
+#### 2.5 Apache AGE Performance Optimization
+
+**Key Insight:** In AGE/Cypher, querying by label is faster than querying by property.
+
+```cypher
+-- FASTER: Query by label
+MATCH (n:Function) RETURN n
+
+-- SLOWER: Query by property
+MATCH (n:Entity) WHERE n.type = 'function' RETURN n
+```
+
+**Options:**
+1. **Multi-labeling** (if AGE supports efficiently): `(:Entity:Function {name: "Foo"})`
+2. **Separate labels** (current approach): `(:Function)`, `(:Class)`, `(:Struct)`
+3. **Property with heavy indexing**: Index `type` and `domain_type` columns
+
+**Recommendation:** Test both approaches with production data volume before committing. Create indexes regardless:
+```sql
+CREATE INDEX idx_entity_type ON entities(type);
+CREATE INDEX idx_entity_domain_type ON entities(domain_type);
+```
+
+---
+
+### Phase 3: Hierarchical Summarization (Completion) [DEFERRED]
+**Goal:** Complete the summarization hierarchy started in Phase 2c
+**Effort:** Medium (1-2 weeks)
+
+**What Phase 2c Built:** 66 module-level summaries with GPT-4.1-mini, stored with embeddings
+**What's Left:**
+- Function-level summaries (from docstrings)
+- File-level summaries (LLM-generated)
+- Staleness detection (re-generate when code changes)
+- Proper caching infrastructure
+- Integration into MCP tools
+
+#### 3.1 Approach Evaluation
+
+| Approach | Pros | Cons | Recommendation |
+|----------|------|------|----------------|
+| **RAPTOR** | Well-documented, good for docs | May not map to code structure | Use for documentation |
+| **Code-Native** | Natural boundaries, respects real structure | Requires understanding code org | Use for code |
+| **Hybrid** | Best of both | More complex | **Recommended** |
+
+#### 3.2 Code-Native Hierarchy
+
+```
+Repository Summary
+└── Module/Package Summaries
+    └── File Summaries
+        └── Function/Class Summaries (from docstrings + signatures)
+```
+
+**Example for regen-ledger:**
+```
+regen-ledger (Repository)
+├── x/ecocredit (Module) - "Eco-credit issuance and retirement"
+│   ├── keeper.go - "State management for eco-credits"
+│   │   ├── Keeper struct
+│   │   ├── CreateBatch() - "Creates new credit batch"
+│   │   └── Retire() - "Retires credits from supply"
+│   └── msg.go - "Transaction message types"
+│       ├── MsgCreateBatch
+│       └── MsgRetire
+└── x/basket (Module) - "Credit basket management"
+```
+
+#### 3.3 Summary Generation Pipeline
+
+- [ ] **P3-1:** Design prompt templates for each summary level
+- [ ] **P3-2:** Implement function-level summary extraction (from docstrings)
+- [ ] **P3-3:** Implement file-level summary generation (LLM)
+- [ ] **P3-4:** Implement module-level summary generation (LLM)
+- [ ] **P3-5:** Implement caching (summaries are expensive)
+- [ ] **P3-6:** Implement staleness detection (re-generate when code changes)
+
+#### 3.4 Summary Storage Schema
+
+```sql
+CREATE TABLE code_summaries (
+  id TEXT PRIMARY KEY,
+  level TEXT CHECK (level IN ('function', 'file', 'module', 'repo', 'concept')),
+  target_id TEXT REFERENCES entities(id),
+  content TEXT,
+  embedding vector(1024),
+  generated_at TIMESTAMP,
+  source_hash TEXT,  -- Hash of inputs for staleness detection
+  UNIQUE(target_id, level)
+);
+```
+
+**Acceptance Criteria:**
+- Can query "Explain module X" and get hierarchical summary
+- Summaries are cached and only regenerated when code changes
+- Can search summaries semantically
+
+---
+
+### Phase 4: Code Embeddings and Semantic Search [DEFERRED]
+**Goal:** Search code by meaning, not just keywords
+**Effort:** Medium (1 week)
+**Status:** Deferred - existing text embeddings (34k docs) cover most use cases
+
+#### 4.1 Embedding Model Evaluation
+
+| Model | Dimensions | Code-Specific | Cost | Notes |
+|-------|------------|---------------|------|-------|
+| BGE (current) | 1024 | No | Free (local) | General-purpose |
+| CodeBERT | 768 | Yes | Free (local) | Microsoft, older |
+| StarCoder | 1024 | Yes | Free (local) | Code-focused |
+| Voyage Code | 1536 | Yes | API ($) | +38% better on code |
+| OpenAI ada-002 | 1536 | Partial | API ($) | General but good |
+
+**Recommendation:** Start with BGE (already have), evaluate Voyage Code for code-specific queries.
+
+#### 4.2 What to Embed
+
+| Entity Type | Embedding Input |
+|-------------|-----------------|
+| Function | signature + docstring + first 50 lines of body |
+| Class/Struct | name + fields + docstring |
+| Interface | name + method signatures |
+| Module | summary text (from Phase 3) |
+| File | file-level summary |
+
+#### 4.3 Implementation Tasks
+
+- [ ] **P4-1:** Add embedding column to entities table
+- [ ] **P4-2:** Generate embeddings for existing entities
+- [ ] **P4-3:** Update search to query entity embeddings
+- [ ] **P4-4:** Implement hybrid search (entity embeddings + document embeddings)
+- [ ] **P4-5:** Evaluate code-specific model (Voyage Code)
+
+**Acceptance Criteria:**
+- Can search "function that handles credit retirement" and find `Keeper.Retire()`
+- Semantic search works across both code entities and documentation
+
+---
+
+### Phase 5: Concept Layer
+**Goal:** Enable non-technical users to navigate by business concepts
+**Effort:** Medium (1-2 weeks)
+
+#### 5.1 Concept Schema
+
+```yaml
+Concept:
+  id: string
+  name: string  # "Eco-credit Issuance", "Basket Creation"
+  description: string  # Plain English explanation
+  technical_summary: string  # More detailed
+  keywords: [string]  # For search
+  embedding: vector(1024)
+
+Edges:
+  IMPLEMENTED_BY: Concept -> Entity[]
+  DOCUMENTED_IN: Concept -> Document[]
+  RELATES_TO: Concept -> Concept
+```
+
+#### 5.2 Concept Extraction Options
+
+| Method | Quality | Effort | Scalability |
+|--------|---------|--------|-------------|
+| Manual curation | Highest | High | Low |
+| LLM from docs | Medium | Low | High |
+| Clustering + LLM naming | Medium | Medium | High |
+| Hybrid (seed + expand) | High | Medium | Medium |
+
+**Recommendation:** Manual curation for core concepts (10-20), LLM expansion for completeness.
+
+#### 5.3 Bootstrapping Strategy (From Existing Docs)
+
+**Key Insight:** Don't start from scratch. The `regen-ledger/x/*/spec/*.md` files already contain domain concepts.
+
+**Bootstrap Process:**
+```bash
+# 1. Extract headers from spec files
+find regen-ledger/x/*/spec -name "*.md" -exec grep "^#" {} \;
+
+# 2. Parse README.md files for domain terms
+grep -r "## " regen-ledger/x/*/README.md
+
+# 3. Common concepts found:
+# - Eco-credit Issuance
+# - Credit Retirement
+# - Basket Creation
+# - Credit Class
+# - Project Registration
+# - Batch Creation
+# - Marketplace
+# - Governance/Voting
+```
+
+**Seed ~20 Core Concepts:**
+| Concept | Source | Module |
+|---------|--------|--------|
+| Eco-credit Issuance | x/ecocredit/spec/01_concepts.md | ecocredit |
+| Credit Retirement | x/ecocredit/spec/02_state.md | ecocredit |
+| Basket Creation | x/basket/spec/01_concepts.md | basket |
+| Credit Class | x/ecocredit/spec/01_concepts.md | ecocredit |
+| ... | ... | ... |
+
+**LLM Role:** Link entities to concepts, NOT discover concepts.
+
+#### 5.4 Concept-Grounded Responses
+
+When user asks "How does eco-credit issuance work?":
+1. Find matching Concept(s) via semantic search
+2. Pull related code entities via IMPLEMENTED_BY edges
+3. Pull related documentation via DOCUMENTED_IN edges
+4. Generate response grounded in specific code references
+
+#### 5.5 Implementation Tasks
+
+- [ ] **P5-1:** Define initial concept list (manual, ~20 concepts)
+- [ ] **P5-2:** Create concept table and edges
+- [ ] **P5-3:** Link concepts to entities (manual + automated)
+- [ ] **P5-4:** Implement `search_concepts` MCP tool
+- [ ] **P5-5:** Implement `explain_concept` MCP tool
+- [ ] **P5-6:** Generate concept descriptions with LLM
+
+**Acceptance Criteria:**
+- Non-technical user can ask "What is eco-credit retirement?" and get plain English explanation with code references
+- Can browse concepts to discover system capabilities
+
+---
+
+### Phase 6: MCP Tool Design
+**Goal:** Well-designed tools that expose graph capabilities
+**Effort:** Small (days per tool)
+
+#### 6.1 Core Tools
+
+```typescript
+// Search
+search_code: {
+  query: string,           // Semantic search
+  filters: {language?, repo?, type?, module?},
+  returns: entities with metadata + code snippets
+}
+
+get_entity: {
+  id: string,
+  returns: full entity details + relationships
+}
+
+// Graph Traversal
+trace_calls: {
+  entity_id: string,
+  direction: "callers" | "callees" | "both",
+  depth: int,
+  returns: call graph
+}
+
+find_tests: {
+  entity_id: string,
+  returns: test functions that test this entity
+}
+
+find_implementations: {
+  interface_id: string,
+  returns: classes/structs implementing interface
+}
+
+// Understanding
+explain_module: {
+  module: string,
+  audience: "engineer" | "technical" | "general",
+  returns: summary at appropriate level
+}
+
+search_concepts: {
+  query: string,
+  returns: matching concepts with related entities
+}
+
+ask_codebase: {
+  question: string,
+  returns: answer grounded in code references
+}
+```
+
+#### 6.2 Discovery Tools
+
+```typescript
+list_repos: returns indexed repositories with stats
+list_modules: {repo: string} -> modules in repo
+list_entity_types: returns available types with counts
+get_stats: returns overall index statistics
+```
+
+#### 6.3 Implementation Tasks
+
+- [ ] **P6-1:** Update `query_code_graph` to return full metadata
+- [ ] **P6-2:** Implement `trace_calls`
+- [ ] **P6-3:** Implement `find_tests`
+- [ ] **P6-4:** Implement `explain_module`
+- [ ] **P6-5:** Implement `search_concepts`
+- [ ] **P6-6:** Implement `ask_codebase` (RAG over code)
+
+---
+
+### Deployment Architecture
+
+**Goal:** Support both remote and local deployment modes
+
+#### Option 1: Remote DB (Recommended for Teams)
+```
+┌─────────────────────────────────────────────────────────┐
+│  User's Machine                                         │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │  MCP Server (TypeScript)                        │   │
+│  │  - Runs locally                                 │   │
+│  │  - Connects to remote DB                        │   │
+│  └──────────────────────┬──────────────────────────┘   │
+└─────────────────────────┼───────────────────────────────┘
+                          │ HTTPS/PostgreSQL
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│  Server (EC2/DigitalOcean)                              │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │  PostgreSQL + Apache AGE + pgvector             │   │
+│  │  - 79k entities indexed                         │   │
+│  │  - 34k document embeddings                      │   │
+│  └─────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │  Indexer (Python)                               │   │
+│  │  - Tree-sitter extraction                       │   │
+│  │  - Runs on schedule or on-demand                │   │
+│  └─────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Pros:** Users don't index 80k entities locally, shared data
+**Cons:** Requires server infrastructure, network dependency
+
+#### Option 2: Fully Local (Dev/Testing)
+```
+┌─────────────────────────────────────────────────────────┐
+│  User's Machine (Docker Compose)                        │
+│  ┌─────────────────┐  ┌─────────────────────────────┐  │
+│  │  MCP Server     │  │  PostgreSQL + AGE + pgvector │  │
+│  └────────┬────────┘  └──────────────┬──────────────┘  │
+│           └──────────────────────────┘                  │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Pros:** No external dependencies, works offline
+**Cons:** Each user indexes data locally, more setup
+
+#### Configuration
+
+```bash
+# .env for remote mode
+DEPLOYMENT_MODE=remote
+KOI_DB_HOST=db.regen.gaiaai.xyz
+KOI_DB_PORT=5433
+KOI_DB_NAME=eliza
+KOI_DB_USER=readonly
+KOI_DB_PASSWORD=<secret>
+
+# .env for local mode
+DEPLOYMENT_MODE=local
+KOI_DB_HOST=localhost
+KOI_DB_PORT=5432
+KOI_DB_NAME=koi_local
+```
+
+**Recommendation:** Start with remote for team use, provide Docker Compose for local dev.
+
+#### Server Access & Development Workflow
+
+**Production Server:**
+```bash
+# SSH access
+ssh darren@202.61.196.119
+
+# Once connected, access PostgreSQL
+psql -U postgres -d eliza
+
+# Run Cypher queries against the graph
+SELECT * FROM cypher('regen_graph', $$
+  MATCH (n:Function {name: 'MsgCreateBatch'})
+  RETURN properties(n)
+$$) as (props agtype);
+```
+
+**Architecture Overview:**
+```
+┌─────────────────────────────────────┐     ┌─────────────────────────────────────┐
+│  LOCAL MACHINE                      │     │  PRODUCTION SERVER                  │
+│  (Your development environment)     │     │  (202.61.196.119)                   │
+│                                     │     │                                     │
+│  ┌─────────────────────────────┐   │     │  ┌─────────────────────────────┐   │
+│  │  Claude Code                │   │     │  │  PostgreSQL + Apache AGE    │   │
+│  │  - Development              │   │     │  │  - 79,712 code entities     │   │
+│  │  - Testing                  │   │     │  │  - 34,828 embeddings        │   │
+│  │  - Code changes             │   │     │  │  - regen_graph              │   │
+│  └──────────────┬──────────────┘   │     │  └──────────────┬──────────────┘   │
+│                 │                   │     │                 │                   │
+│  ┌──────────────▼──────────────┐   │     │  ┌──────────────▼──────────────┐   │
+│  │  MCP Server (local)         │───┼─────┼──│  KOI APIs                   │   │
+│  │  - Runs on user machines    │   │ HTTP│  │  - /api/koi/graph           │   │
+│  │  - Connects to remote APIs  │◄──┼─────┼──│  - /api/koi/search          │   │
+│  └─────────────────────────────┘   │     │  │  - /api/koi/hybrid          │   │
+│                                     │     │  └─────────────────────────────┘   │
+│  ┌─────────────────────────────┐   │     │                                     │
+│  │  regen-koi-mcp/             │   │     │  ┌─────────────────────────────┐   │
+│  │  - MCP tool code            │   │     │  │  Indexers (Python)          │   │
+│  │  - Local development        │   │     │  │  - GitHub sensor            │   │
+│  └─────────────────────────────┘   │     │  │  - Code graph processor     │   │
+└─────────────────────────────────────┘     │  │  - BGE embedding service    │   │
+                                            │  └─────────────────────────────┘   │
+                                            └─────────────────────────────────────┘
+```
+
+**Development Workflow:**
+
+1. **Code Changes:** Edit MCP server code locally in `regen-koi-mcp/`
+2. **Test Queries:** Use MCP tools to test against production data
+3. **Debug Data Issues:** SSH to server to run direct Cypher/SQL queries
+4. **Deploy API Changes:** Changes to KOI APIs need to be deployed to the server
+
+**Key Directories on Server:**
+```bash
+# After SSH to darren@202.61.196.119
+~/koi-sensors/          # Sensor code (GitHub, Discord, etc.)
+~/code-graph-service/   # Code extraction and graph storage
+~/bge-server/           # Embedding service
+```
+
+---
+
+### Phase 7: Production Hardening
+**Goal:** Reliability, observability, security
+**Effort:** Medium (1 week)
+
+#### 7.1 Reliability
+- [ ] **P7-1:** Add error handling and graceful degradation
+- [ ] **P7-2:** Implement retry logic for API calls
+- [ ] **P7-3:** Add circuit breaker for external dependencies
+- [ ] **P7-4:** Implement query timeout handling
+
+#### 7.2 Observability
+- [ ] **P7-5:** Add structured logging
+- [ ] **P7-6:** Add metrics (query latency, error rates, cache hit rates)
+- [ ] **P7-7:** Create monitoring dashboard
+- [ ] **P7-8:** Add health check endpoint
+
+#### 7.3 Performance
+- [ ] **P7-9:** Implement query result caching
+- [ ] **P7-10:** Add connection pooling
+- [ ] **P7-11:** Optimize slow queries (add indexes)
+- [ ] **P7-12:** Profile and fix bottlenecks
+
+#### 7.4 Security
+- [ ] **P7-13:** Review what's safe to expose publicly
+- [ ] **P7-14:** Implement rate limiting
+- [ ] **P7-15:** Add input validation
+- [ ] **P7-16:** Security audit
+
+#### 7.5 Documentation & Deployment
+- [ ] **P7-17:** Write user guide
+- [ ] **P7-18:** Document API reference
+- [ ] **P7-19:** Set up CI/CD pipeline
+- [ ] **P7-20:** Create deployment runbook
+- [ ] **P7-21:** Implement backup and recovery
+
+---
+
+## Testing Strategy
+
+### Unit Tests
+- [ ] Tree-sitter query correctness (parse known code, verify extraction)
+- [ ] Entity extraction coverage (compare to manual count)
+- [ ] Relationship extraction accuracy
+- [ ] Graph query results
+
+### Integration Tests
+- [ ] MCP tool end-to-end tests
+- [ ] API response format validation
+- [ ] Search quality tests (query -> expected results)
+
+### Validation Tests
+- [ ] Graph integrity (no orphan nodes, relationships resolve)
+- [ ] Coverage metrics (% of functions extracted, % with docstrings)
+- [ ] Comparison: regex vs tree-sitter (what did we miss before?)
+
+### Evaluation
+- [ ] Gold set with expected answers (expand from current 11 queries)
+- [ ] User testing with actual team members
+- [ ] Track: relevance, completeness, accuracy
+
+---
+
+## Technical Decisions Needed
+
+| Decision | Options | Tradeoffs | Status |
+|----------|---------|-----------|--------|
+| Tree-sitter binding | py-tree-sitter, node tree-sitter | Python keeps extractor in same codebase as DB connectors | **DECIDED: py-tree-sitter** |
+| Summarization LLM | GPT-4o-mini, Claude, local | Cost vs quality | **Pending** (deferred with Phase 3) |
+| Code embedding model | BGE, Voyage Code, StarCoder | Cost vs code-specific quality | **Pending** (deferred with Phase 4) |
+| RAPTOR vs code-native | RAPTOR, Code-native, Hybrid | Complexity vs natural structure | **DECIDED: Hybrid** |
+| Migration strategy | In-place vs full re-extraction | Risk vs clean slate | **DECIDED: Staging checkpoint** |
+| Public exposure | What's safe for public users? | Security vs utility | **Pending** |
+| Multi-repo relationships | How to handle cross-repo deps? | Complexity | **Pending** |
+
+---
+
+## Open Questions
+
+1. ~~What's the priority order if we can't do everything?~~ **RESOLVED:** 0 → 1 → Checkpoint → 2 → 5 → 6 → 7. Defer 3 & 4.
+2. ~~Are there existing module/concept docs we can bootstrap from?~~ **RESOLVED:** Yes, see Phase 5.3 - extract from `regen-ledger/x/*/spec/*.md`
+3. Who are the beta testers for each phase?
+4. ~~What's the deployment target (where does MCP server run)?~~ **RESOLVED:** Hybrid - remote DB for teams, local Docker for dev
+5. Budget for API calls (embeddings, summarization)?
+6. Should we support private repos in the future?
+
+---
+
+## Reference
+
+### Current Documentation
+- Schema: `/tmp/code_graph_schema.md`
+- Architecture: `/tmp/indexing_architecture.md`
+- MCP Server: `/Users/darrenzal/projects/RegenAI/regen-koi-mcp/`
+- Extraction Pipeline: `/opt/projects/koi-processor/src/core/code_graph_processor.py`
+
+### Database Connections
+- Apache AGE: PostgreSQL `eliza` database, graph `regen_graph`
+- pgvector: PostgreSQL `koi` database, tables `koi_memories`, `koi_embeddings`
+
+### Key Files
+| File | Purpose |
+|------|---------|
+| `regen-koi-mcp/src/index.ts` | MCP server implementation |
+| `regen-koi-mcp/src/graph_tool.ts` | Graph query tool |
+| `koi-processor/src/core/code_graph_processor.py` | Entity extraction (regex-based) |
+| `koi-sensors/sensors/github/github_sensor.py` | GitHub file collection |
+| `koi-processor/koi-query-api.ts` | Bun API server |
+
+---
+
+## Appendix: Research Links
+
+### Tree-sitter
+- [Tree-sitter documentation](https://tree-sitter.github.io/tree-sitter/)
+- [tree-sitter-go](https://github.com/tree-sitter/tree-sitter-go)
+- [tree-sitter-typescript](https://github.com/tree-sitter/tree-sitter-typescript)
+- [py-tree-sitter](https://github.com/tree-sitter/py-tree-sitter)
+
+### Code Search
+- [RAPTOR paper](https://arxiv.org/abs/2401.18059)
+- [Voyage Code embeddings](https://docs.voyageai.com/docs/embeddings)
+- [CodeBERT](https://github.com/microsoft/CodeBERT)
+
+### Graph Databases
+- [Apache AGE documentation](https://age.apache.org/age-manual/master/index.html)
+- [pgvector](https://github.com/pgvector/pgvector)
+
+---
+
+## Historical Record: Completed Phases
+
+<details>
+<summary>Phase 1 Validation (2025-11-25)</summary>
 
 ### Executive Summary
 
-**Status:** ✅ VALIDATED (Not Deployed - See Strategic Pivot below)
+**Status:** VALIDATED (Not Deployed - See Strategic Pivot)
 
 Successfully validated Phase 1 objective: OpenAI text-embedding-3-large works excellently for documentation and code search. Achieved 5/6 test pass rate (83%) with real semantic search and hybrid RAG.
-
-**Key Outcome:** Phase 1 proved the embedding model works. However, we decided NOT to deploy Phase 1 to production. Instead, we're building a unified Phase 2 pipeline that processes code structure first, then links documentation to code entities. See "Strategic Pivot" section below.
-
-### Critical Breakthrough: Bun Hybrid RAG Server
-
-**Problem Identified:** Local system was running Python MCP server (text-only fallback) instead of Bun Hybrid RAG server.
-
-**Solution:** Switched to production-ready Bun server already in GitHub repo:
-- File: `/Users/darrenzal/projects/RegenAI/koi-processor/koi-query-api.ts`
-- Port: 8301
-- Features: RRF (Reciprocal Rank Fusion), Vector search (HNSW), Keyword search (PostgreSQL FTS)
-- Result: Real semantic search with OpenAI text-embedding-3-large
 
 ### Final Test Results: 5/6 Passing (83%)
 
 | Test | Status | Score | Notes |
 |------|--------|-------|-------|
-| 1. search_github_docs ("cosmos sdk module") | ✅ PASS | 0.40-0.32 | Real semantic similarity! |
-| 2. search_github_docs ("data module") | ✅ PASS | 0.43-0.30 | Found x/data spec, CHANGELOG |
-| 3. search_github_docs (proto files) | ⚠️ PARTIAL | - | 296 proto chunks indexed, HNSW not returning results |
-| 4. get_repo_overview | ✅ PASS | 0.57-0.52 | Found 12 docs (README, CONTRIBUTING) |
-| 5. get_tech_stack | ✅ PASS | - | Detected Go ✓, Markdown ✓ |
-| 6. Edge cases | ✅ PASS | - | Error handling robust |
+| 1. search_github_docs ("cosmos sdk module") | PASS | 0.40-0.32 | Real semantic similarity |
+| 2. search_github_docs ("data module") | PASS | 0.43-0.30 | Found x/data spec, CHANGELOG |
+| 3. search_github_docs (proto files) | PARTIAL | - | 296 proto chunks indexed |
+| 4. get_repo_overview | PASS | 0.57-0.52 | Found 12 docs |
+| 5. get_tech_stack | PASS | - | Detected Go, Markdown |
+| 6. Edge cases | PASS | - | Error handling robust |
 
-**Duration:** 0.87s
-**Search Method:** "hybrid_rag" ✅
-**Embedding Generation:** true ✅
+### Decision: Skip Phase 1 Deployment -> Build Unified Phase 2
 
-### Performance Metrics
+**Rationale:** Deploying text-chunked code embeddings would create technical debt. Better to build graph-based system first, then link documentation.
 
-| Metric | Before (Fallback) | After (Hybrid RAG) | Status |
-|--------|-------------------|-------------------|--------|
-| Search Method | "fallback" | "hybrid_rag" | ✅ Semantic |
-| Embedding Gen | false | true | ✅ Real embeddings |
-| Similarity Scores | Fixed 0.5 | 0.30-0.57 range | ✅ Real similarity |
-| Execution Time | N/A | 21ms | ✅ Fast |
-| Confidence | None | 0.52 average | ✅ Quality signal |
-| Test Pass Rate | 3/6 (50%) | 5/6 (83%) | +33% improvement |
+</details>
 
-### Database Final State
-
-```
-Total Memories: 3,000+
-File Types:
-  - 1,999 .go files ✅
-  - 537 .md files ✅
-  - 296 .proto chunks (36 files) ✅ Indexed with embeddings
-  - 15 other files ✅
-Embedding Coverage: 100%
-```
-
-### System Architecture (Current - Production Ready)
-
-```
-┌─────────────────────────────────────────┐
-│  TypeScript MCP Tools (3 tools)         │
-│  - search_github_docs                   │
-│  - get_repo_overview                    │
-│  - get_tech_stack                       │
-└──────────────┬──────────────────────────┘
-               │ HTTP POST /query
-               ▼
-┌─────────────────────────────────────────┐
-│  Bun Hybrid RAG Server (port 8301)      │
-│  - RRF (Reciprocal Rank Fusion)         │
-│  - Keyword search (PostgreSQL FTS)      │
-│  - Vector search (HNSW index)           │
-└──────────────┬──────────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────────┐
-│  BGE Embedding Server (port 8090)       │
-│  - OpenAI text-embedding-3-large        │
-│  - 1024-dim vectors                     │
-│  - 1,288 cached embeddings              │
-└──────────────┬──────────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────────┐
-│  PostgreSQL Database (port 5432)        │
-│  - koi_memories (3,000+ docs)           │
-│  - koi_embeddings (1024-dim)            │
-│  - HNSW index for fast similarity       │
-└─────────────────────────────────────────┘
-```
-
-### Key Files Modified
-
-**Configuration:**
-- `regen-koi-mcp/.env` - Points to Bun server
-- `regen-koi-mcp/src/index.ts` - Updated to use /query endpoint with "question" parameter
-- `regen-koi-mcp/test_mcp_tools.ts` - Comprehensive test suite
-
-**Bug Fixes (by other agents):**
-- `koi-processor/src/core/koi_event_filter.py` - Removed "test" from blacklist (proto files with "test" in name)
-- `koi-sensors/sensors/github/github_sensor.py` - Enhanced indexing, debug logging
-
-**Services Running:**
-- ✅ Bun Hybrid RAG (port 8301) - The key component!
-- ✅ BGE OpenAI Embeddings (port 8090)
-- ✅ Event Bridge (port 8100)
-- ✅ Coordinator (port 8200)
-- ✅ PostgreSQL (port 5432)
-
-### What This Proves
-
-**Phase 1 Objective:** Validate OpenAI text-embedding-3-large for documentation and code search
-
-**Result:** ✅ VALIDATED
-
-**Evidence:**
-1. Real similarity scores (0.30-0.57) show semantic understanding, not keyword matching
-2. Relevant results for natural language queries ("cosmos sdk module" → architecture.md)
-3. Good code understanding (finds modules, specs, technical docs)
-4. Fast performance (21ms execution)
-5. Robust error handling (edge cases pass)
-6. Confidence scores indicate result quality
-
-**Conclusion:** OpenAI text-embedding-3-large is excellent for Phase 1 use cases (documentation search, code context). No need for Phase 2 (voyage-code-3, AST chunking) at this time.
-
-### Known Limitations
-
-**Test 3 - Proto File Search (Partial Pass):**
-- Status: 296 proto chunks indexed with embeddings (36 files)
-- Issue: HNSW vector search not returning proto files in results
-- Root Cause: Query embeddings may not match proto syntax semantically
-- Impact: Low - proto files are generated code documentation
-- Workaround: Search for .pb.go generated files (works perfectly)
-
-**Config Files (Not Yet Indexed):**
-- go.mod, Makefile not indexed (GitHub sensor limitation)
-- Impact: Low - most queries don't need build config files
-- Fix: Update sensor to include these files (future enhancement)
-
-### Decision: ❌ Skip Phase 1 Deployment → Build Unified Phase 2
-
-**Original Plan:** Deploy Phase 1 (docs + code with text embeddings) to production.
-
-**Revised Decision:** Do NOT deploy Phase 1. Build unified Phase 2 pipeline instead.
-
-**Why the Change?** See "Strategic Pivot" section below for full rationale.
-
-**What We Keep from Phase 1:**
-- ✅ MCP tools code (`search_github_docs`, `get_repo_overview`, `get_tech_stack`)
-- ✅ Text chunking logic for documentation
-- ✅ OpenAI text-embedding-3-large (validated, works great)
-- ✅ Bun Hybrid RAG server infrastructure
-- ✅ PostgreSQL + pgvector setup
-
-**What We Don't Deploy:**
-- ❌ Text-chunked code embeddings (will be replaced by structural extraction)
-- ❌ Current GitHub sensor config (will be replaced by unified sensor)
-
----
-
-## 🎯 STRATEGIC PIVOT: Unified Phase 2 Pipeline (2025-11-25)
-
-### Why Skip Phase 1 Deployment?
-
-After validating Phase 1 works, we realized deploying it would create technical debt. The unified Phase 2 approach is cleaner and delivers a better product.
-
-### The Order of Operations Problem
-
-**Scenario A: Deploy Phase 1 First (❌ Rejected)**
-```
-1. Ingest README.md (Phase 1) → saves generic text chunks
-2. Wait...
-3. Ingest keeper.go (Phase 2) → creates Keeper nodes in graph
-4. THE MESS: Write migration script to re-scan all Phase 1 chunks,
-   regex for "Keeper" names, retroactively draw MENTIONS edges
-```
-
-**Scenario B: Wait & Build Phase 2 (✅ Chosen)**
-```
-1. Sensor runs on repository
-2. Pass 1: Process Code → builds Keeper/Msg/Event nodes in Graph
-3. Pass 2: Process Docs → reads README.md, sees "MsgCreateBatch"
-4. THE MAGIC: Queries graph "Do I have a node named MsgCreateBatch?"
-   → Yes! Creates (:Document)-[:MENTIONS]->(:Msg) edge instantly
-5. Result: Perfect linking on Day 1. No migration scripts.
-```
-
-### One Sensor to Rule Them All
-
-Instead of two separate pipelines:
-- ❌ Old System: "The thing that scrapes Markdown"
-- ❌ New System: "The thing that parses Go"
-
-We build ONE unified sensor with two-pass processing (code first, docs second).
-
-→ *See [CODE_EXAMPLES.md#unified-sensor-pipeline](CODE_EXAMPLES.md#unified-sensor-pipeline) for implementation*
-
-### First Impressions Matter
-
-| Release Strategy | User Query: "How does Ecocredit Keeper work?" | User Reaction |
-|------------------|-----------------------------------------------|---------------|
-| Phase 1 First | Returns README paragraph | "It's basically grep" |
-| Phase 2 Only | Returns README + Keeper functions + Proto definitions, all linked | "It understands the codebase!" |
-
-### What This Means for Development
-
-| Item | Status |
-|------|--------|
-| Phase 1 code | ✅ Keep - reusable in Phase 2 |
-| Phase 1 deployment | ❌ Skip - don't push to production |
-| Phase 2 sensor | 🎯 Build this next |
-
----
-
-## 🎉 PHASE 2a COMPLETE (2025-11-25)
+<details>
+<summary>Phase 2a (2025-11-25)</summary>
 
 ### Executive Summary
 
-**Status:** ✅ VALIDATED - Graph infrastructure built and proven effective
+**Status:** VALIDATED - Graph infrastructure built and proven effective
 
-Successfully built the complete graph-based code search infrastructure. Evaluation shows **graph search is 3x better** than vector search overall, with **100% recall on entity-specific queries**.
+Graph search is **3x better** than vector search overall, with **100% recall** on entity-specific queries.
 
 ### Components Built
 
-| Component | Deliverable | Status |
-|-----------|-------------|--------|
-| Tree-sitter Extractor | `tree_sitter_spike.py` | ✅ 63 entities extracted |
-| Apache AGE Graph DB | `graph_schema.sql`, `AGE_SETUP_REPORT.md` | ✅ Installed & configured |
-| Entity Bulk Loader | `load_entities.py`, `verify_graph.sql` | ✅ 60 HANDLES edges created |
-| Entity Linker | `entity_linker.py`, `test_entity_linker.py` | ✅ 21 tests passing |
-| MENTIONS Edges | `create_mentions.py`, `mention_results.json` | ✅ 37 edges linking 100 docs |
-| Graph MCP Tool | `graph_client.ts`, `graph_tool.ts` | ✅ 5 query types working |
-| Evaluation Harness | `evals/gold_set.json`, `evals/run_eval.ts` | ✅ 11 queries, 4 journeys |
+| Component | Status |
+|-----------|--------|
+| Tree-sitter Extractor | **POC only** - 63 entities (production still uses regex for 79,712) |
+| Apache AGE Graph DB | Installed & configured |
+| Entity Bulk Loader | 60 HANDLES edges |
+| Entity Linker | 21 tests passing |
+| MENTIONS Edges | 37 edges linking 100 docs |
+| Graph MCP Tool | 5 query types |
+| Evaluation Harness | 11 queries, 4 journeys |
+
+### Evaluation Results
+
+| Metric | Graph Search | Vector Search |
+|--------|--------------|---------------|
+| Recall@5 | 9.1% | 2.3% |
+| Recall@10 | 9.1% | 6.8% |
+
+</details>
+
+<details>
+<summary>Phase 2b (2025-11-25)</summary>
+
+### Executive Summary
+
+**Status:** VALIDATED - All 8 MCP tools working end-to-end
+
+### All 8 MCP Tools Working
+
+| Tool | Status |
+|------|--------|
+| `query_code_graph` | Found Keeper handles MsgCreateBatch |
+| `hybrid_search` | Routed to vector, returned 5 results |
+| `search_knowledge` | Found credit class docs |
+| `get_stats` | Available |
+| `generate_weekly_digest` | Available |
+| `search_github_docs` | Available |
+| `get_repo_overview` | Available |
+| `get_tech_stack` | Available |
+
+### Bug Fixes Applied
+
+1. MCP Response Format: `type: 'json'` -> `type: 'text'`
+2. KOI API Field Name: `query` -> `question`
+3. Claude Code MCP Configuration updated
+
+</details>
+
+<details>
+<summary>Phase 2c (2025-11-25)</summary>
+
+### Executive Summary
+
+**Status:** VALIDATED - RAPTOR module summaries and CONTAINS edges
+
+### Components Built
+
+| Component | Status |
+|-----------|--------|
+| Multi-Repo Extractor | 4 repos, 1,461 entities |
+| Module Discovery | 66 unique modules |
+| LLM Summarizer | GPT-4.1-mini summaries |
+| Embeddings | 1024-dim vectors stored |
+| CONTAINS Edges | 3,625 edges |
 
 ### Graph Data Summary
 
 ```
 Nodes:
-  - Keepers: 3
-  - Messages: 60
-  - Documents: 100
-
-Edges:
-  - HANDLES (Keeper → Msg): 60
-  - MENTIONS (Document → Entity): 37
-```
-
-### Evaluation Results
-
-| Metric | Graph Search | Vector Search | Improvement |
-|--------|--------------|---------------|-------------|
-| Recall@5 | 9.1% | 2.3% | **+6.8pp (3x)** |
-| Recall@10 | 9.1% | 6.8% | **+2.3pp** |
-
-**Perfect Precision Case:** Query "What parameters does MsgSend require?"
-- Graph: ✅ 100% Recall (found MsgSend entity with fields)
-- Vector: ❌ 0% Recall (couldn't find it)
-
-### Key Insight: Complementary Strengths
-
-Graph and vector search excel at different query types:
-
-| Query Type | Best Method | Why |
-|------------|-------------|-----|
-| Entity-specific ("MsgSend params") | **Graph** | Direct entity lookup via structure |
-| Natural language ("how does X work") | **Vector** | Semantic similarity to docs |
-| Relationship traversal ("what Keeper handles Y") | **Graph** | Edge traversal |
-| Conceptual search ("carbon credit retirement") | **Vector** | Semantic matching |
-
-### Files Created
-
-**Core Infrastructure:**
-- `tree_sitter_spike.py` - Entity extraction from Go/Proto
-- `extracted_entities.json` - 63 entities (3 Keepers, 60 Msgs)
-- `graph_schema.sql` - AGE schema definition
-- `load_entities.py` - Bulk entity loader
-- `entity_linker.py` - Doc → Code mention extraction
-- `create_mentions.py` - MENTIONS edge creator
-
-**MCP Integration:**
-- `graph_client.ts` - Graph query abstraction layer
-- `graph_tool.ts` - `query_code_graph` MCP tool
-
-**Evaluation:**
-- `evals/gold_set.json` - 11 curated test queries
-- `evals/baseline_vector.ts` - KOI API wrapper
-- `evals/run_eval.ts` - Evaluation harness
-- `EVAL_REPORT.md` - Comprehensive analysis
-
-**Documentation:**
-- `AGE_SETUP_REPORT.md` - AGE installation guide
-- `GRAPH_LOAD_REPORT.md` - Entity loading results
-- `ENTITY_LINKER_REPORT.md` - Linker documentation
-- `MENTIONS_REPORT.md` - MENTIONS edge results
-- `GRAPH_TOOL_REPORT.md` - MCP tool documentation
-
-### Phase 2b Priorities (Based on Eval Data)
-
-1. **Hybrid Query Router** - Detect query intent, route to graph vs vector
-2. **Better Entity Extraction** - Improve pattern matching for natural language
-3. **Scale MENTIONS** - Process all 5,875 docs (currently 100)
-4. **Fuzzy Matching** - Handle "batch" → "MsgCreateBatch" variants
-
----
-
-## 🎉 PHASE 2b COMPLETE (2025-11-25)
-
-### Executive Summary
-
-**Status:** ✅ VALIDATED - All 8 MCP tools working end-to-end in Claude Code
-
-Successfully integrated hybrid search (graph + vector) into the MCP server and validated with live testing. The system now intelligently routes queries to graph search (entity lookups) or vector search (conceptual queries).
-
-### Components Integrated
-
-| Component | Status | Notes |
-|-----------|--------|-------|
-| `query_router.ts` | ✅ Working | 1.5ms latency, 81.8% accuracy |
-| `unified_search.ts` | ✅ Working | RRF fusion of graph + vector |
-| `graph_client.ts` | ✅ Working | Apache AGE Cypher queries |
-| `graph_tool.ts` | ✅ Working | 5 graph query types |
-| `hybrid-client.ts` | ✅ Fixed | Changed `query` → `question` for KOI API |
-| `index.ts` | ✅ Fixed | MCP response format + API field names |
-
-### All 8 MCP Tools Working
-
-| Tool | Status | Test Result |
-|------|--------|-------------|
-| `query_code_graph` | ✅ | Found Keeper at `x/ecocredit/base/keeper/keeper.go:19` handles MsgCreateBatch |
-| `hybrid_search` | ✅ | Routed to vector search, returned 5 results about batch creation |
-| `search_knowledge` | ✅ | Found docs on credit class/project/batch management |
-| `get_stats` | ✅ | Available |
-| `generate_weekly_digest` | ✅ | Available |
-| `search_github_docs` | ✅ | Available |
-| `get_repo_overview` | ✅ | Available |
-| `get_tech_stack` | ✅ | Available |
-
-### Critical Bug Fixes Applied
-
-**1. MCP Response Format (type: 'json' → 'text')**
-
-MCP protocol only supports `type: 'text'` responses. Both `graph_tool.ts` and `index.ts` were returning `type: 'json'` which caused "unsupported format" errors.
-
-```typescript
-// BEFORE (broken):
-return {
-  content: [
-    { type: 'text', text: markdownSummary },
-    { type: 'json', data: { hits, metadata } }  // NOT SUPPORTED
-  ]
-};
-
-// AFTER (fixed):
-const jsonData = JSON.stringify({ hits, metadata }, null, 2);
-return {
-  content: [{
-    type: 'text',
-    text: markdownSummary + '\n\n<details>\n<summary>Raw JSON</summary>\n\n```json\n' + jsonData + '\n```\n</details>'
-  }]
-};
-```
-
-**Files Fixed:**
-- `src/graph_tool.ts` - Line 218-225
-- `src/index.ts` - Lines 1723-1743
-
-**2. KOI API Field Name (query → question)**
-
-The KOI API expects `question` field, not `query`. This caused vector search to return empty results.
-
-```typescript
-// BEFORE (broken):
-const body = { query: query, limit };
-
-// AFTER (fixed):
-const body = { question: query, limit };
-```
-
-**Files Fixed:**
-- `src/hybrid-client.ts` - Line 84
-- `src/index.ts` - Lines 1674, 1697
-
-**3. Claude Code MCP Configuration**
-
-Claude Code uses `~/.claude.json` with per-project `mcpServers` settings. The configuration needed:
-- Correct path: `/Users/darrenzal/projects/RegenAI/regen-koi-mcp/dist/index.js`
-- All environment variables (GRAPH_DB_*, KOI_DB_*)
-
-**File Fixed:** `/Users/darrenzal/.claude.json` - Added regen-koi config to `/Users/darrenzal/projects/RegenAI` project
-
-### Test Results
-
-**Graph Query Test:**
-```
-Query: "What Keeper handles MsgCreateBatch?"
-Result: Keeper at x/ecocredit/base/keeper/keeper.go:19
-Duration: 21ms
-```
-
-**Hybrid Search Test:**
-```
-Query: "How does credit batch creation work in Regen?"
-Route: vector (conceptual query)
-Results: 5 documents from regen-ledger
-Duration: 76ms
-```
-
-**Vector Search Test (via search_knowledge):**
-```
-Query: "carbon credits ecocredit"
-Results: 3 documents including credit-class-project-batch-management.md
-Source: Published 2025-08-07
-```
-
-### Architecture (Current - Production Ready)
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  MCP Tools (8 tools)                                    │
-│  - query_code_graph (graph)                             │
-│  - hybrid_search (auto-routing)                         │
-│  - search_knowledge, get_stats, generate_weekly_digest  │
-│  - search_github_docs, get_repo_overview, get_tech_stack│
-└──────────────────────┬──────────────────────────────────┘
-                       │
-        ┌──────────────┴──────────────┐
-        ▼                             ▼
-┌───────────────────┐    ┌────────────────────────┐
-│  Graph Client     │    │  KOI API (port 8301)   │
-│  (Apache AGE)     │    │  - Vector search       │
-│  - Cypher queries │    │  - Keyword search      │
-│  - Entity lookup  │    │  - Hybrid RAG          │
-└────────┬──────────┘    └───────────┬────────────┘
-         │                           │
-         ▼                           ▼
-┌─────────────────────────────────────────────────────────┐
-│  PostgreSQL                                             │
-│  - eliza DB: Apache AGE graph (regen_graph)             │
-│  - koi DB: pgvector embeddings (5,875 memories)         │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Next Steps
-
-1. **Scale MENTIONS Edges** - Process all 5,875 docs (currently 100)
-2. **Production Release** - Deploy to production environment
-3. **User Testing** - Gather feedback from real users
-4. **Iterate** - Improve based on usage patterns
-
----
-
-## 🎉 PHASE 2c COMPLETE (2025-11-25)
-
-### Executive Summary
-
-**Status:** ✅ VALIDATED - RAPTOR module summaries and CONTAINS edges implemented
-
-Successfully implemented RAPTOR (Recursive Abstractive Processing for Tree-Organized Retrieval) to generate module-level summaries with LLM and store embeddings. Graph now has hierarchical structure with Module nodes linked to Entities via CONTAINS edges.
-
-### Components Built
-
-| Component | Deliverable | Status |
-|-----------|-------------|--------|
-| Multi-Repo Extractor | `multi_lang_extractor.py` | ✅ 4 repos, 1,461 entities |
-| Module Discovery | RAPTOR module detection | ✅ 66 unique modules |
-| LLM Summarizer | `raptor_summarizer.py` with GPT-4.1-mini | ✅ 66 summaries generated |
-| Embeddings | BGE Server integration | ✅ 1024-dim vectors stored |
-| CONTAINS Edges | Module → Entity relationships | ✅ 3,625 edges created |
-| Checkpointing | Crash recovery every 10 modules | ✅ Implemented |
-| Parallel Processing | ThreadPoolExecutor (5 workers) | ✅ Implemented |
-
-### Graph Data Summary (Post-RAPTOR)
-
-```
-Nodes:
-  - Modules: 66 (deduplicated from 660)
+  - Modules: 66
   - Keepers: 3
   - Messages: 60+
   - Documents: 100+
-  - Entities: 1,461 total across 4 repos
+  - Entities: 1,461
 
 Edges:
-  - HANDLES (Keeper → Msg): 60
-  - MENTIONS (Document → Entity): 37
-  - CONTAINS (Module → Entity): 3,625 (NEW)
+  - HANDLES: 60
+  - MENTIONS: 37
+  - CONTAINS: 3,625
 ```
 
-### Key Technical Achievements
-
-**1. RAPTOR Summarizer (`raptor_summarizer.py`)**
-- Uses GPT-4.1-mini for generating module summaries
-- Parallel processing with ThreadPoolExecutor (5 workers)
-- Checkpointing every 10 modules for crash recovery
-- Stores summaries in `koi_memories` table as JSONB
-- Stores embeddings in `koi_embeddings` table (1024-dim vectors)
-
-**2. CONTAINS Edge Creation**
-- Links Module nodes to Entity nodes they contain
-- Enables queries like "What entities are in module x/ecocredit?"
-- 3,625 edges linking modules to their entities
-
-**3. Data Pipeline Fixes**
-- Fixed BGE endpoint: `/encode` not `/embed`
-- Fixed event_type: Must be 'NEW', 'UPDATE', or 'FORGET'
-- Fixed embedding column: `dim_1024` not `dim_1536`
-- Fixed content column: JSONB format required
-
-### Files Created/Modified
-
-**Core Infrastructure:**
-- `tools/python/raptor_summarizer.py` - Main RAPTOR implementation
-- `tools/python/multi_lang_extractor.py` - Multi-repo entity extraction
-- `tools/data/multi_repo_entities.json` - 1,461 entities from 4 repos
-- `create_contains_edges.py` - CONTAINS edge creator
-- `load_entities_and_link.py` - Entity loader with linking
-
-### Module Coverage by Repository
-
-| Repository | Modules | Entities |
-|------------|---------|----------|
-| regen-ledger | 42 | 1,100+ |
-| regen-web | 15 | 200+ |
-| regen-data-standards | 6 | 100+ |
-| regenie-corpus | 3 | 50+ |
-
-### What This Enables
-
-1. **Module-Level Semantic Search** - "Find modules related to carbon credits"
-2. **Hierarchical Navigation** - Module → Entities → Documentation
-3. **Context-Aware Queries** - Combine module summaries with entity details
-4. **Better Onboarding** - High-level module summaries for new developers
-
-### Next Steps (Post-RAPTOR)
-
-1. **Integrate RAPTOR into MCP tools** - Add module search capability
-2. **Scale to production** - Deploy with all data
-3. **User testing** - Validate module summaries help understanding
+</details>
 
 ---
 
-## Phase 2: Vertical Slice Approach
-
-### ❌ Old Plan: Big Bang (Rejected)
-
-```
-Ingest ALL repos + ALL entity types at once
-→ Too risky, too long before we can validate
-```
-
-### ✅ New Plan: Vertical Slice
-
-```
-Phase 2a: regen-ledger only + Keeper/Msg only
-→ Prove the architecture works end-to-end
-→ Validate with gold set before expanding
-```
-
-### Phase 2a Success Criteria
-
-| Criterion | Target | Validation |
-|-----------|--------|------------|
-| Tree-sitter extracts Keeper/Msg | 100% of `regen-ledger` entities | Manual review of extraction output |
-| Docs linked via MENTIONS | ≥1 module fully linked (ecocredit) | Query: "docs mentioning MsgCreateBatch" returns results |
-| Graph-aware MCP tool works | `get_keeper_for_msg` or `get_related_documentation` | Passes gold set for impact/audit queries |
-| Recall@5 on gold set | ≥ 70% for vertical slice queries | Automated eval harness |
-
-### Phase 2a Scope (Vertical Slice)
-
-| In Scope | Out of Scope (Phase 2b+) |
-|----------|--------------------------|
-| `regen-ledger` repo only | Other repos (regen-web, etc.) |
-| Keeper, Msg entities | Event, Interface, Function |
-| `x/ecocredit` module focus | All modules |
-| HANDLES, MENTIONS edges | EMITS, CALLS, IMPLEMENTS |
-| 1-2 graph-aware tools | Full tool suite |
-
-### Why Vertical Slice?
-
-1. **Faster validation** - Prove architecture in days, not weeks
-2. **Lower risk** - If it doesn't work, we learn early
-3. **Clearer scope** - Easier to debug when scope is small
-4. **Measurable** - Can run gold set eval on subset
-
----
-
-### Session Fix ✅ COMPLETE (2025-11-25)
-**Problem:** All 810 document broadcasts failed with `No active session for broadcasting`
-- Root cause: KOI node HTTP session not maintained during send operation
-- Only 240/810 files made it to database from earlier partial run
-
-**Solution Implemented:**
-- Added session validation and auto-reinitialization in `send_to_koi()` (github_sensor.py:536-543)
-- Added session verification after node startup (test_config.py:28-29)
-- Session recreated automatically if missing or closed
-
-**Files Modified:**
-- `/Users/darrenzal/projects/RegenAI/koi-sensors/sensors/github/github_sensor.py`
-- `/Users/darrenzal/projects/RegenAI/koi-sensors/sensors/github/test_config.py`
-- Created: `/Users/darrenzal/projects/RegenAI/koi-sensors/sensors/github/SESSION_FIX.md`
-
-**Expected Impact:**
-- 643 Go files will be indexed (vs 173 before)
-- 43 Proto files will be indexed (vs 0 before)
-- ~810 total unique files (vs 240 before)
-
-**Next:** Re-run sensor to index all 810 files with session fix
-
-### RID Generation Fix ✅ COMPLETE (2025-11-25)
-**Problem:** RIDs included temporary directory path, causing duplicates
-- Issue: `github_sensor_18f2y37p` temp directory in RIDs
-- Impact: Every run created new RIDs for same files
-
-**Solution Implemented:**
-- Updated `process_file()` to accept `repo_path` parameter (github_sensor.py:291)
-- Fixed relative path calculation using repo root (github_sensor.py:328)
-- Updated method call to pass repo_path (github_sensor.py:220)
-
-**Files Modified:**
-- `/Users/darrenzal/projects/RegenAI/koi-sensors/sensors/github/github_sensor.py`
-- Created: `/Users/darrenzal/projects/RegenAI/koi-sensors/sensors/github/RID_FIX.md`
-
-**Result:** Clean RIDs verified:
-```
-Before: regen.github:github_regen-ledger_github_sensor_18f2y37p_regen-ledger_CODE_OF_CONDUCT.md
-After:  regen.github:github_regen-ledger_CODE_OF_CONDUCT.md
-```
-
-### Full Re-Index Complete ✅ (2025-11-25)
-**Action:** Cleared database and re-indexed with both fixes applied
-
-**Results:**
-- Files discovered: 831 (664 .go, 69 .md, 43 .proto, 24 .sh, 31 other)
-- Successfully sent: 831/831 (100%)
-- Session errors: 0
-- Database indexed: 285 unique files, 3000 chunks
-- Processing status: **Stalled at 34% due to missing OpenAI API key**
-
-**Issue Discovered:**
-- BGE server has no OpenAI API key configured
-- All embedding requests return 500 errors
-- Documents stored WITHOUT embeddings (keyword search only)
-- Event bridge logs: `Successfully processed: N chunks, 0 embeddings`
-
-**Current Status:**
-- ✅ Documents stored in database (285/831 files)
-- ❌ No embeddings generated (semantic search unavailable)
-- ✅ Session management working perfectly
-- ✅ RID generation working perfectly
-- ⏸️ Processing paused at ~34% due to BGE errors
-
-**Next Steps for Tomorrow:**
-1. Add OPENAI_API_KEY to `/Users/darrenzal/projects/RegenAI/koi-processor/.env`
-2. Restart BGE server and Event Bridge
-3. Either wait for remaining 546 files to process OR clear & re-index all 831 with embeddings
-4. Test MCP tools with semantic search
-
----
-
-### Phase 2: Authentication Layer (DEFERRED)
-*Deferred: All repos are public, auth not needed for MVP*
-
-- [ ] Design auth system architecture
-- [ ] Implement user authentication mechanism
-- [ ] Integrate with KOI permission system
-- [ ] Add dynamic tool exposure based on permissions
-- [ ] Test auth flows
-
-### Phase 4: Partner/Collaborator Tools
-- [ ] Implement `get_architecture_overview`
-- [ ] Implement `search_integration_guides`
-- [ ] Implement `get_tech_stack_deep`
-- [ ] Test partner tools with auth
-
-### Phase 5: Developer Tools
-- [ ] Implement `analyze_dependencies`
-- [ ] Implement `get_implementation_details`
-- [ ] Implement `search_internal_docs`
-- [ ] Test developer tools with auth
-
-### Phase 6: Testing & Documentation
-- [ ] Create comprehensive test suite
-- [ ] Write manual test script
-- [ ] Test all access tiers
-- [ ] Update README with setup instructions
-- [ ] Document authentication configuration
-- [ ] Document new capabilities
-
----
-
-## Architecture Context
-
-### System Overview
-```
-koi-sensors (scraping) → koi-processor (processing/indexing) → Production API
-                                                                      ↓
-                                                              regen-koi-mcp (MCP server)
-                                                                      ↓
-                                                                Claude Desktop
-```
-
-### Key Principles
-1. **Server API Pattern:** All data access goes through production server API
-2. **No Direct Database Access:** MCP server queries API, not database
-3. **Leverage Existing Sensors:** Use what's already scraped (GitHub metadata, code, etc.)
-4. **Tiered Access:** Auth controls access to internal docs/context, NOT GitHub
-5. **Dynamic Tool Exposure:** Tools appear/disappear based on user permissions
-
-### Related Repositories
-- **`regen-koi-mcp`** - This MCP server (our main focus)
-- **`koi-sensors`** - Data scraping (forums, websites, GitHub, Notion, etc.)
-  - `sensors/github_activity` - Existing GitHub metadata sensor
-  - `sensors/github` - More complete GitHub sensor (in progress)
-  - `sensors/gitlab` - GitLab sensor (useful patterns)
-- **`koi-processor`** - Data processing pipeline
-- **`koi-research`** - Research and documentation
-
----
-
-## Design Decisions & Rationale
-
-### Decision Log
-
-#### 2025-11-24: Project Initiation
-- **Decision:** Start with research phase before any implementation
-- **Rationale:** Need to understand existing capabilities before proposing changes
-- **Status:** In progress
-
----
-
-## Technical Questions & Blockers
-
-### Open Questions
-
-1. **GitHub Data Readiness** ✅ RESOLVED
-   - **Finding:** Two GitHub sensors exist:
-     - `github_activity`: Scrapes commit messages, issues, PRs (metadata only, no code diffs)
-     - `github`: Scrapes documentation files (.md, .yaml, .json) - NOT source code by default
-   - **Code Content:** Currently NOT scraped, but can be easily added by:
-     - Extending `github` sensor to include source file extensions (.py, .ts, .rs, etc.)
-     - Adding full commit diff fetching in `github_activity`
-   - **Can we use existing data?** YES - for documentation search, repo context, activity monitoring
-   - **For code search:** Need to extend sensors (simple change) or work with docs-only for MVP
-   - **Recommendation:** Start with documentation/config files (already available), add code scraping later
-   - **Status:** ✅ Resolved
-
-2. **Authentication Scope** ⏳ DECISION NEEDED
-   - **Confirmed:** GitHub repos are public → auth is ONLY for internal docs/context
-   - **Current System:** MCP has optional `KOI_API_KEY` for rate limiting only (no permission checks)
-   - **Options for MVP:**
-     - **Option A (Simplest):** Environment variable `ACCESS_TIER=public|partner|developer`
-     - **Option B (Better):** Extend existing KOI_API_KEY to include tier info via API endpoint `/auth/verify`
-     - **Option C (Future):** Full user auth with email verification
-   - **Recommendation:** Start with Option A for MVP, migrate to Option B later
-   - **Status:** ⏳ Awaiting user decision
-
-3. **Tool Namespace** ⏳ DECISION NEEDED
-   - **Option A:** Flat namespace (e.g., `search_code`, `get_architecture_overview`) with internal access control
-   - **Option B:** Prefixed (e.g., `collab:get_architecture`, `dev:analyze_dependencies`)
-   - **Recommendation:** Flat namespace - cleaner UX, matches existing tools pattern
-   - **Implementation:** Use internal permission checks in `CallToolRequestSchema` handler
-   - **Status:** ⏳ Awaiting user decision
-
-4. **Data Availability** ✅ RESOLVED
-   - **Database:** PostgreSQL with ~50,000+ documents across sources
-   - **GitHub Data Available:**
-     - Commit messages, authors, timestamps
-     - Issue/PR titles, bodies, comments
-     - Documentation files (README, CHANGELOG, .md files)
-     - Configuration files (.yaml, .json, .toml)
-     - File paths, repo names, branch info
-   - **NOT Available:** Source code files, code diffs (yet)
-   - **API Endpoints:** Hybrid RAG at port 8301 supports:
-     - Semantic search with BGE 1024-dim embeddings
-     - Filtering by `source_sensor` (e.g., `github:regen-ledger`)
-     - Date range filtering
-     - Reciprocal Rank Fusion (vector + keyword + SPARQL)
-   - **Status:** ✅ Resolved
-
-### Blockers
-- None currently
-
----
-
-## References to Code/Docs
-
-### Key Files - regen-koi-mcp
-- ✅ `src/index.ts:1-1070` - Main MCP server, tool registration, handlers
-- ✅ `src/tools.ts:1-91` - Tool schema definitions (search_knowledge, get_stats, generate_weekly_digest)
-- ✅ `src/hybrid-client.ts` - Hybrid search (vector + SPARQL with RRF fusion)
-- ✅ `src/sparql-client-enhanced.ts` - NL→SPARQL conversion with GPT-4o-mini
-- ✅ `server/src/koi_api_server.py` - FastAPI server (optional local deployment)
-- ✅ `.env.example` - Configuration template
-
-### Key Files - koi-sensors
-- ✅ `sensors/github_activity/github_activity_sensor.py` - GitHub activity tracking (commits, issues, PRs)
-- ✅ `sensors/github/github_sensor.py` - GitHub file content scraping (docs, configs)
-- ✅ `sensors/gitlab/gitlab_sensor.py` - GitLab sensor (useful patterns)
-- ✅ `koi_protocol/nodes/koi_node.py` - KOI protocol implementation
-- ✅ `shared/persistent_state.py` - Sensor state management
-
-### Key Files - koi-processor
-- ✅ `src/api/koi-query-api.ts` - Hybrid RAG query endpoint (port 8301)
-- ✅ `src/database/migrations/` - Database schema (koi_memories, koi_embeddings, koi_kg_extractions)
-- ✅ `src/knowledge_graph/graph_integration.py` - RDF graph integration
-
----
-
-## Testing Plan
-
-### Testing Strategy: Continuous Testing (Integrated with Development)
-
-**Principle:** Test as you build, not after. Each phase includes its own testing.
-
-#### Phase 0: API Validation Tests
-```bash
-# Test script: scripts/validate-api.sh
-# Verify API filtering works before building tools
-curl -X POST https://regen.gaiaai.xyz/api/koi/query \
-  -H "Content-Type: application/json" \
-  -d '{"question": "README", "limit": 5, "filters": {"source_sensor": "github:regen-ledger"}}'
-```
-- [ ] Document actual `source_sensor` values in production
-- [ ] Verify filter syntax and behavior
-- [ ] Sample response structure and content quality
-
-#### Phase 1: Tool-Level Tests
-```typescript
-// Test script: scripts/test-tools.ts
-// Run after each tool implementation
-async function testSearchGithubDocs() {
-  const result = await tool.searchGithubDocs({ query: "governance", limit: 5 });
-  assert(result.content[0].text.length > 0, "Should return results");
-  assert(!result.content[0].text.includes("Error:"), "Should not error");
-}
-```
-- [ ] Create test harness for invoking tools directly
-- [ ] Test each tool as it's implemented
-- [ ] Document expected vs actual responses
-
-#### Phase 2: Permission Tests
-- [ ] Test tools appear/disappear based on `ACCESS_TIER`
-- [ ] Test access denied messages
-- [ ] Test tier hierarchy (developer > partner > public)
-
-#### Integration Tests
-- [ ] End-to-end MCP client simulation
-- [ ] Test with Claude Desktop (manual)
-- [ ] Test API timeout/error handling
-
-#### Manual Testing Checklist
-| Tool | Happy Path | No Results | Error Case | Edge Cases |
-|------|------------|------------|------------|------------|
-| `search_github_docs` | [ ] | [ ] | [ ] | [ ] |
-| `get_repo_overview` | [ ] | [ ] | [ ] | [ ] |
-| `get_tech_stack` | [ ] | [ ] | [ ] | [ ] |
-
-### Test Results
-*To be documented during implementation*
-
----
-
-## Progress Notes
-
-### 2025-11-24
-
-**Completed:**
-- ✅ Pulled latest from all repos (all up to date)
-- ✅ Created project tracking document
-- ✅ Comprehensively explored `regen-koi-mcp` codebase
-- ✅ Reviewed GitHub sensors (`github_activity`, `github`, `gitlab`)
-- ✅ Assessed production data availability and API capabilities
-- ✅ Documented all findings in tracking document
-- Noticed new branches in related repos:
-  - `koi-sensors`: `kg-rid-integration-v2`
-  - `koi-processor`: `kg-rid-integration-v2`, `BGE_Embeddings`
-
-**Key Findings:**
-1. **Existing Tools:** 3 tools (search_knowledge, get_stats, generate_weekly_digest) with well-defined patterns
-2. **GitHub Data:** Documentation and configs available; source code NOT scraped yet (easy to add)
-3. **API Support:** Robust Hybrid RAG at port 8301 with filtering by source_sensor and date ranges
-4. **Auth:** Currently only optional API key for rate limiting; no permission system yet
-5. **Tool Pattern:** Private methods + switch statement dispatch + error handling
-
-**Next Steps:**
-- ⏳ Awaiting user approval on auth approach (env var vs API endpoint)
-- ⏳ Awaiting user approval on tool naming (flat vs prefixed)
-- Ready to implement once approved
-
-**Questions Raised:**
-- Should we use env var `ACCESS_TIER` (simpler) or extend API for permission checks?
-- Should we use flat tool names or prefixed (collab:, dev:)?
-- Should we start with docs-only code search or extend sensors first?
-
-**Decisions Made:**
-- Start with documentation search (data already available)
-- Use existing Hybrid RAG API pattern for all queries
-- Maintain existing tool architecture patterns
-
-### 2025-11-24 (Continued) - Proposal Review & Improvements
-
-**Completed:**
-- ✅ Self-review of implementation proposal
-- ✅ Identified 9 areas for improvement
-- ✅ Updated tracking document with all improvements
-
-**Key Improvements Made:**
-
-1. **Renamed tools for honesty:**
-   - `search_code` → `search_github_docs` (we're not searching code yet)
-   - `get_repo_context` → `get_repo_overview` (clearer intent)
-
-2. **Added Phase 0: Validate Data & API**
-   - Test API filtering before building anything
-   - Document actual `source_sensor` values
-   - Verify our assumptions with real requests
-
-3. **Split Phase 1 into 1a (MVP) and 1b:**
-   - Phase 1a: Build ONE tool to validate approach
-   - Phase 1b: Add remaining tools after feedback
-   - Faster time to value (~1 day instead of 2)
-
-4. **Added Error Handling Strategy:**
-   - Centralized error handler
-   - Explicit responses for each error type
-   - User-friendly error messages with suggestions
-
-5. **Added Caching Strategy:**
-   - Defined cache durations per tool
-   - MVP: No cache (keep simple)
-   - Future: Add if performance issues arise
-
-6. **Added Observability & Logging:**
-   - Structured logging pattern
-   - Tool name, event type, duration, results
-   - Console.error for MCP capture
-
-7. **Added Auth Security Note:**
-   - Documented that env var is for config, not security
-   - Listed limitations and acceptable use cases
-   - Outlined future security enhancements
-
-8. **Made testing continuous:**
-   - Test as you build, not after
-   - Phase 0 has validation tests
-   - Each phase includes its own tests
-
-9. **Added validation questions:**
-   - 5 questions to answer in Phase 0
-   - Ensures we don't build on wrong assumptions
-
-**Decisions Finalized:**
-| Decision | Choice |
-|----------|--------|
-| Auth approach | Env var (Option A) |
-| Tool naming | Flat namespace |
-| MVP scope | Single tool first |
-| Code scraping | Defer |
-| Testing | Continuous |
-
-**Next Steps:**
-- Begin Phase 0: API validation
-- No further approval needed for Phase 0
-
-### 2025-11-24 (Continued) - Phase 0 Validation Complete
-
-**Completed:**
-- ✅ Validated production API with curl commands
-- ✅ Documented exact `source_sensor` values
-- ✅ Identified client-side filtering requirements
-- ✅ Reviewed deep research on code search architecture
-
-**Phase 0 Key Findings:**
-
-| Finding | Details |
-|---------|---------|
-| **API Parameter** | Use `query` (NOT `question` - Phase 1a discovery) |
-| **Response Field** | Use `memories` array (NOT `results`) |
-| **Server Filters** | ❌ **BROKEN** - `source_sensor` filter returns incorrect results |
-| **Available Repos** | regen-ledger, regen-web, regen-data-standards, regenie-corpus |
-| **RID Format** | `regen.github:github_{repo}_github_sensor_{id}_{repo}_{filepath}#chunk{n}` |
-| **Content Quality** | 8/10 for docs, 6/10 for code (limited source code scraped) |
-
-**Client-Side Filtering Required (Server filters broken - confirmed Phase 1a):**
-1. **NO server-side filters** - Don't use `filters.source_sensor` (completely broken)
-2. Filter by RID prefix: `rid.startsWith('regen.github:')` (handles 10-20% non-GitHub leakage)
-3. Parse RID to extract repository name (API doesn't support per-repo filtering)
-4. Deduplicate by filepath (same file appears with different sensor IDs)
-5. Request 3x limit to account for client-side filtering
-
-**Recommendation:** ✅ Ready to proceed to Phase 1a
-
-### 2025-11-24 (Continued) - Phase 1a Implementation Complete
-
-**Implementation Summary:**
-- ✅ Build successful with zero TypeScript errors
-- ✅ Test results: 3/5 passed (60%) - failures are API content gaps, not bugs
-- ✅ Manual verification: GitHub content IS accessible and correctly filtered
-
-**Files Modified:**
-- `src/tools.ts`: Added tool schema with repository enum (27 lines)
-- `src/index.ts`: Added helper methods + main implementation (166 lines)
-
-**Helper Methods Implemented:**
-- `extractRepoFromRid()` - Parses repository name from RID patterns
-- `extractFilepathFromRid()` - Extracts filepath for deduplication
-- `formatGithubDocsResults()` - Formats results as markdown
-
-**Key Implementation Decisions:**
-- Uses `query` parameter (Phase 0 discovery: `question` causes "Field required" error)
-- Reads `memories` field (Phase 0 discovery: `results` doesn't exist)
-- NO server-side filters (Phase 1a discovery: they're completely broken)
-- 100% client-side filtering by RID prefix
-- Requests 3x limit to account for filtering losses
-- Comprehensive error handling with specific messages for ECONNREFUSED, ETIMEDOUT
-
-**Next Step:** Phase 1b - Implement `get_repo_overview` and `get_tech_stack` tools
-
-### 2025-11-24 (Continued) - Deep Research Review
-
-**Completed:**
-- ✅ Reviewed research document: "Building an agentic codebase interface for GitHub organizations"
-- ✅ Identified gaps between current architecture and state-of-the-art
-- ✅ Created future architecture roadmap
-- ✅ Documented as "Future Architecture" section below
-
-**Key Insight from Research:**
-> "Treating code like natural language text is a fundamental mistake"
-
-**Current State vs Research Recommendations:**
-| Aspect | Current (MVP) | Research Recommendation |
-|--------|---------------|------------------------|
-| Embeddings | BGE (general-purpose) | voyage-code-3 (code-specific, +38% better) |
-| Chunking | Character-based text | Tree-sitter AST-based |
-| Search | Vector + SPARQL | Vector + BM25 + Graph + Cross-encoder |
-| Code Parsing | None | Tree-sitter with language grammars |
-| Knowledge Graph | Basic SPARQL | FalkorDB with code schema |
-
-**Decision:** MVP approach is correct. Add sophistication based on observed gaps after deployment.
-
----
-
-## Configuration Requirements
-
-### Environment Variables (TBD)
-- [ ] `AUTH_ENDPOINT` - Production server auth endpoint
-- [ ] `ALLOWED_EMAILS` - List of authorized emails (if using config approach)
-- [ ] `DEVELOPER_ROLES` - Roles with developer access
-- [ ] Other auth-related config...
-
-### API Requirements (TBD)
-- [ ] Existing API endpoints we'll use
-- [ ] New API endpoints needed (if any)
-
----
-
-## Success Criteria
-
-- [ ] All planned tools implemented and functional
-- [ ] Tiered access system working correctly
-- [ ] Existing tools continue to work without issues
-- [ ] Comprehensive test coverage
-- [ ] Clear documentation for setup and usage
-- [ ] Successfully deployed to production
-- [ ] User feedback incorporated
-
----
-
-## Timeline & Milestones
-
-*Note: Per project constraints, no time estimates. Focus on what needs to be done.*
-
-**Milestones (Revised 2025-11-25 - Phase 2c Complete):**
-
-| # | Milestone | Status |
-|---|-----------|--------|
-| 1 | Research & Planning | ✅ Complete |
-| 2 | Proposal Review & Improvements | ✅ Complete |
-| 3 | Phase 0: API Validation | ✅ Complete |
-| 4 | Phase 1: Tool Development & Validation | ✅ Complete (not deployed) |
-| 5 | Strategic Pivot: Skip Phase 1 Deployment | ✅ Decision Made |
-| 6 | Phase 2a: Tree-sitter Extractor | ✅ Complete (63 entities) |
-| 7 | Phase 2a: Apache AGE Graph Setup | ✅ Complete |
-| 8 | Phase 2a: Entity Linker + MENTIONS Edges | ✅ Complete (37 edges) |
-| 9 | Phase 2a: Graph-aware MCP Tool | ✅ Complete (5 query types) |
-| 10 | Phase 2a: Gold Set Evaluation | ✅ Complete (Graph 3x better) |
-| 11 | Phase 2b: Hybrid Query Router | ✅ Complete (1.5ms, 81.8% accuracy) |
-| 12 | Phase 2b: MCP Server Integration | ✅ Complete (build passes) |
-| 13 | Phase 2b: End-to-End Testing | ✅ Complete (all 8 tools working) |
-| 14 | Phase 2c: RAPTOR Module Summaries | ✅ Complete (66 modules, GPT-4.1-mini) |
-| 15 | Phase 2c: CONTAINS Edges | ✅ Complete (3,625 edges) |
-| 16 | Phase 2c: Embeddings in koi_embeddings | ✅ Complete (1024-dim vectors) |
-| 17 | Phase 2b: Scale to Full Dataset | 🔲 Pending |
-| 18 | **Production Release** | 🎯 **NEXT** |
-
-**Phase 2b Development Order (Data-Driven Priorities):**
-1. **Hybrid Query Router** - Detect intent, route to graph vs vector
-2. **Better Entity Extraction** - Improve natural language → entity matching
-3. **Scale MENTIONS** - Process all 5,875 docs (currently 100)
-4. **Fuzzy Matching** - Handle partial entity name matches
-
----
-
-## Notes & Observations
-
-### Architecture Observations
-
-1. **MCP Server Architecture:**
-   - Uses `@modelcontextprotocol/sdk` v1.20.0
-   - StdioServerTransport for communication with MCP clients
-   - Switch-based tool dispatch pattern
-   - All tools return `{ content: [{ type: 'text', text: string }] }`
-
-2. **API Integration Pattern:**
-   - Uses axios HTTP client with 30s timeout
-   - Connects to `https://regen.gaiaai.xyz/api/koi` (configurable)
-   - Optional Bearer token auth via `KOI_API_KEY`
-   - Fallback strategies for search (hybrid → vector-only)
-
-3. **Data Flow:**
-   ```
-   Sensors → KOI Coordinator (8005) → Event Bridge (8100) → Processor
-                                                                  ↓
-   PostgreSQL (koi_memories + koi_embeddings) ← BGE Server (8090)
-                                                                  ↓
-   Hybrid RAG API (8301) ← MCP Server ← Claude Desktop/Cline
-   ```
-
-4. **Search Capabilities:**
-   - **Hybrid RAG:** Vector (BGE 1024-dim) + Keyword (PostgreSQL FTS) + SPARQL
-   - **RRF Fusion:** Reciprocal Rank Fusion combines results from all branches
-   - **Filtering:** By source_sensor, date ranges, include_undated flag
-   - **Default Limit:** 5 results (max 20)
-
-5. **GitHub Sensor Coverage:**
-   - **Repos Monitored:** regen-ledger, regen-web, regen-data-standards, regenie-corpus, mcp
-   - **Activity Sensor:** Polls every 30 min, 24-hour lookback, captures commit messages/issues/PRs
-   - **File Sensor:** Runs hourly, clones repos, extracts .md/.yaml/.json files only
-   - **Missing:** Source code files (.py, .ts, .rs, .go), code diffs
-
-### Code Patterns
-
-1. **Tool Implementation Pattern:**
-   ```typescript
-   private async myTool(args: any) {
-     try {
-       // 1. Parse and validate args
-       // 2. Call API or perform operation
-       // 3. Format results as markdown
-       return { content: [{ type: 'text', text: formattedResult }] };
-     } catch (error) {
-       // Return error as text, don't throw
-       return { content: [{ type: 'text', text: `Error: ${error.message}` }] };
-     }
-   }
-   ```
-
-2. **Error Handling:**
-   - All errors caught and returned as text responses
-   - Console.error logging for debugging
-   - Fallback strategies (e.g., hybrid → vector search)
-
-3. **Date Parsing:**
-   - Natural language date inference ("past week" → date range)
-   - ISO8601 format for API communication
-   - Defaults to 7 days for weekly digest
-
-4. **Markdown Formatting:**
-   - All results formatted as markdown for readability
-   - Uses headers, bullet points, code blocks
-   - Includes metadata (source, URL, author, date)
-
-### Potential Challenges
-
-1. **Code Search Without Source Code:**
-   - Current sensors only scrape docs/configs, not source code
-   - **Mitigation:** Start with doc search, extend sensors later OR scope to "documentation search" initially
-
-2. **Authentication Complexity:**
-   - No existing permission system in MCP or API
-   - **Mitigation:** Start simple with env var, enhance later
-
-3. **Tool Discovery:**
-   - All tools visible in ListTools response regardless of access
-   - **Mitigation:** Filter tools in ListTools handler based on access tier
-
-4. **API Rate Limiting:**
-   - Current API has no explicit rate limiting
-   - **Mitigation:** Use existing KOI_API_KEY for future rate limit enforcement
-
-5. **Testing Without Production Data:**
-   - Testing requires production database connection
-   - **Mitigation:** Create test script that mocks API responses OR test against prod (carefully)
-
-6. **Backward Compatibility:**
-   - Must not break existing tools or clients
-   - **Mitigation:** Only add new tools, don't modify existing ones
-
----
-
-## Error Handling Strategy
-
-### Standard Error Response Pattern
-```typescript
-private async toolName(args: any) {
-  try {
-    const response = await apiClient.post('/query', {...});
-
-    // Handle empty results
-    if (!response.data?.results?.length) {
-      return { content: [{ type: 'text',
-        text: `No results found for "${args.query}" in GitHub documentation.\n\n**Suggestions:**\n- Try broader search terms\n- Check repository name spelling\n- Use \`search_knowledge\` for non-GitHub content`
-      }]};
-    }
-
-    // Success path
-    return { content: [{ type: 'text', text: formatResults(response.data.results) }]};
-
-  } catch (error) {
-    return this.handleError(error, 'search_github_docs');
-  }
-}
-
-// Centralized error handler
-private handleError(error: any, toolName: string) {
-  console.error(`[regen-koi] ${toolName} error:`, error);
-
-  if (error.code === 'ECONNREFUSED') {
-    return { content: [{ type: 'text',
-      text: 'KOI API is currently unavailable. Please try again later or check your network connection.'
-    }]};
-  }
-
-  if (error.code === 'ETIMEDOUT' || error.message?.includes('timeout')) {
-    return { content: [{ type: 'text',
-      text: 'Request timed out. The server may be busy. Please try again with a smaller limit.'
-    }]};
-  }
-
-  if (error.response?.status === 429) {
-    return { content: [{ type: 'text',
-      text: 'Rate limit exceeded. Please wait a moment before trying again.'
-    }]};
-  }
-
-  // Generic error fallback
-  return { content: [{ type: 'text',
-    text: `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`
-  }]};
-}
-```
-
-### Error Scenarios to Handle
-| Scenario | Response | User Action |
-|----------|----------|-------------|
-| API unavailable | "KOI API is currently unavailable..." | Retry later |
-| No results | "No results found for..." + suggestions | Broaden query |
-| Rate limited | "Rate limit exceeded..." | Wait and retry |
-| Timeout | "Request timed out..." | Reduce limit |
-| Invalid repo | "Repository not found..." | Check name |
-| Malformed response | Log + generic error | Report issue |
-
----
-
-## Caching Strategy
-
-### Cache Recommendations
-| Tool | Cache Duration | Rationale |
-|------|----------------|-----------|
-| `search_github_docs` | No cache | Results should be fresh |
-| `get_repo_overview` | 1 hour | Repo overview changes slowly |
-| `get_tech_stack` | 24 hours | Dependencies rarely change |
-
-### Implementation (Future Enhancement)
-```typescript
-// Simple in-memory cache for MVP
-class SimpleCache {
-  private cache = new Map<string, { data: any; expiry: number }>();
-
-  get(key: string): any | null {
-    const entry = this.cache.get(key);
-    if (!entry) return null;
-    if (Date.now() > entry.expiry) {
-      this.cache.delete(key);
-      return null;
-    }
-    return entry.data;
-  }
-
-  set(key: string, data: any, ttlMs: number): void {
-    this.cache.set(key, { data, expiry: Date.now() + ttlMs });
-  }
-}
-
-// Usage in get_repo_overview
-private async getRepoOverview(args: any) {
-  const cacheKey = `repo_overview:${args.repository}`;
-  const cached = this.cache.get(cacheKey);
-  if (cached) return cached;
-
-  const result = await this.fetchRepoOverview(args);
-  this.cache.set(cacheKey, result, 60 * 60 * 1000); // 1 hour
-  return result;
-}
-```
-
-### MVP Approach
-- **Phase 1:** No caching (keep it simple, validate approach first)
-- **Future:** Add caching if performance issues arise
-
----
-
-## Observability & Logging Strategy
-
-### Structured Logging Pattern
-```typescript
-// Log format: [regen-koi] Tool=name Event=type Details...
-console.error(`[regen-koi] Tool=${name} Event=start Query="${args.query?.substring(0, 50)}"`);
-console.error(`[regen-koi] Tool=${name} Event=success Results=${results.length} Duration=${ms}ms`);
-console.error(`[regen-koi] Tool=${name} Event=error Code=${error.code} Message="${error.message}"`);
-console.error(`[regen-koi] Tool=${name} Event=no_results Query="${args.query}"`);
-```
-
-### Metrics to Track (Future)
-- Tool invocation count by tool name
-- Response time percentiles (p50, p95, p99)
-- Error rate by error type
-- Cache hit/miss ratio
-- Results count distribution
-
-### MVP Approach
-- Use `console.error` for all logging (captured by MCP transport)
-- Include: tool name, event type, duration, result count
-- Log errors with stack traces for debugging
-
----
-
-## Authentication & Access Control
-
-**Important:** The environment variable approach (`ACCESS_TIER`) is for **configuration**, not **security**.
-
-### Access Control Architecture
-
-All tool access goes through a centralized `canUseTool(toolName, accessTier)` gate with a `TOOL_REGISTRY` mapping tools to allowed tiers.
-
-### Current Limitations
-- Anyone with shell access can set `ACCESS_TIER=developer`
-- No user identity verification
-- No audit trail of who accessed what
-
-### When This Is Acceptable
-- Trusted operator deployments (e.g., internal team)
-- MVP phase where ease of setup > security
-- When data being protected isn't highly sensitive
-
-### Future-Proofing
-
-The `canUseTool()` design allows later swap to real auth (OAuth/SSO). Tool schemas and handlers don't change - only the access check implementation.
-
-→ *See [CODE_EXAMPLES.md#access-control](CODE_EXAMPLES.md#access-control) for implementation details*
-
-### Future Security Enhancements
-- API-based auth with token verification
-- User identity via OAuth/SSO
-- Audit logging of tool usage
-- Rate limiting per user
-
----
-
-## Implementation Proposal
-
-### Executive Summary
-
-Based on comprehensive exploration of the codebase and data infrastructure, I propose a **phased implementation approach**:
-
-1. **Phase 0:** Validate API and data before any coding
-2. **Phase 1a:** Build single tool MVP to validate approach
-3. **Phase 1b:** Complete remaining public tools
-4. **Phase 2+:** Add auth and advanced tools based on feedback
-
-This approach minimizes risk by validating assumptions early.
-
----
-
-### Phase 0: Validate Data & API (Before Coding)
-
-**Goal:** Verify our assumptions before writing any code
-
-**Tasks:**
-```bash
-# 1. Test that source_sensor filtering works
-curl -X POST https://regen.gaiaai.xyz/api/koi/query \
-  -H "Content-Type: application/json" \
-  -d '{"question": "README", "limit": 5, "filters": {"source_sensor": "github:regen-ledger"}}'
-
-# 2. List available source_sensors
-# Need to check what exact values exist in production
-
-# 3. Test if wildcard patterns work
-curl -X POST https://regen.gaiaai.xyz/api/koi/query \
-  -H "Content-Type: application/json" \
-  -d '{"question": "package.json", "limit": 5, "filters": {"source_sensor": "github:*"}}'
-
-# 4. Sample response quality
-# Check that results contain useful content for documentation search
-```
-
-**Deliverables:**
-- [ ] Document exact `source_sensor` values available
-- [ ] Confirm filter syntax works
-- [ ] Sample response structure documented
-- [ ] Create `scripts/validate-api.sh` test script
-
-**Effort:** 2-4 hours
-
----
-
-### Phase 1a: Single Tool MVP
-
-**Goal:** Build ONE tool to validate the entire approach before investing more
-
-#### Tool: `search_github_docs` - Documentation & Config Search
-
-**Why this tool first:**
-- Most generally useful (everyone needs search)
-- Validates API integration pattern
-- Validates filter approach
-- Easy to test and get feedback
-
-**Implementation:**
-```typescript
-private async searchGithubDocs(args: any) {
-  const startTime = Date.now();
-  const { query, repository, file_type, limit = 10 } = args;
-
-  console.error(`[regen-koi] Tool=search_github_docs Event=start Query="${query.substring(0, 50)}"`);
-
-  try {
-    // Build filters for GitHub sources
-    const filters: any = {};
-    if (repository) {
-      filters.source_sensor = `github:${repository}`;
-    }
-    // Note: Validate in Phase 0 if we need different filter approach for "all GitHub"
-
-    // Call Hybrid RAG API
-    const response = await apiClient.post('/query', {
-      question: query,
-      limit: limit,
-      filters: filters
-    });
-
-    const results = response.data?.results || [];
-    const duration = Date.now() - startTime;
-
-    // Handle no results
-    if (results.length === 0) {
-      console.error(`[regen-koi] Tool=search_github_docs Event=no_results Duration=${duration}ms`);
-      return { content: [{ type: 'text',
-        text: `No results found for "${query}" in GitHub documentation.\n\n**Suggestions:**\n- Try broader search terms\n- Check repository name spelling\n- Use \`search_knowledge\` for non-GitHub content`
-      }]};
-    }
-
-    console.error(`[regen-koi] Tool=search_github_docs Event=success Results=${results.length} Duration=${duration}ms`);
-
-    // Format results as markdown
-    return { content: [{ type: 'text', text: this.formatGithubDocsResults(results, query) }]};
-
-  } catch (error) {
-    console.error(`[regen-koi] Tool=search_github_docs Event=error`, error);
-    return this.handleError(error, 'search_github_docs');
-  }
-}
-
-private formatGithubDocsResults(results: any[], query: string): string {
-  let output = `## GitHub Documentation Search Results\n\n`;
-  output += `**Query:** "${query}"\n`;
-  output += `**Results:** ${results.length} documents found\n\n`;
-
-  results.forEach((result, index) => {
-    const title = result.metadata?.title || result.rid || 'Untitled';
-    const url = result.metadata?.url || '';
-    const source = result.metadata?.source || 'github';
-    const score = result.score ? `(relevance: ${(result.score * 100).toFixed(0)}%)` : '';
-    const content = result.content?.substring(0, 300) || '';
-
-    output += `### ${index + 1}. ${title} ${score}\n`;
-    if (url) output += `**URL:** ${url}\n`;
-    output += `**Source:** ${source}\n\n`;
-    output += `${content}${content.length >= 300 ? '...' : ''}\n\n`;
-    output += `---\n\n`;
-  });
-
-  return output;
-}
-```
-
-**Schema:**
-```typescript
-{
-  name: 'search_github_docs',
-  description: 'Search Regen Network GitHub repositories for documentation, README files, configuration files, and technical content. Note: Currently searches documentation and config files only, not source code.',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      query: {
-        type: 'string',
-        description: 'Search query (e.g., "governance voting", "ecocredit module", "validator setup")'
-      },
-      repository: {
-        type: 'string',
-        description: 'Filter by specific repo (e.g., "regen-ledger", "regen-web"). Omit to search all repos.',
-        enum: ['regen-ledger', 'regen-web', 'regen-data-standards', 'regenie-corpus', 'mcp']
-      },
-      limit: {
-        type: 'number',
-        minimum: 1,
-        maximum: 20,
-        default: 10,
-        description: 'Maximum number of results to return'
-      }
-    },
-    required: ['query']
-  }
-}
-```
-
-**Test Script:**
-```typescript
-// scripts/test-search-github-docs.ts
-async function test() {
-  const testCases = [
-    { query: "governance voting", expected: "should return governance docs" },
-    { query: "README regen-ledger", repository: "regen-ledger", expected: "should return ledger README" },
-    { query: "xyznonexistent123", expected: "should return no results gracefully" },
-  ];
-
-  for (const tc of testCases) {
-    const result = await searchGithubDocs(tc);
-    console.log(`Test: ${tc.expected}`);
-    console.log(`Result: ${result.content[0].text.substring(0, 200)}...`);
-    console.log('---');
-  }
-}
-```
-
-**Effort:** 4-6 hours (including tests)
-
----
-
-### Phase 1b: Complete Public Tools
-
-**Goal:** Add remaining public tools after MVP validation
-
-#### Tool 2: `get_repo_overview` - Repository Overview
-**What it does:** Get high-level overview of a specific repository
-
-**Implementation:**
-```typescript
-private async getRepoOverview(args: any) {
-  const { repository } = args;
-
-  // Query for README and key docs
-  const readmeResults = await apiClient.post('/query', {
-    question: `${repository} README overview architecture purpose`,
-    limit: 5,
-    filters: { source_sensor: `github:${repository}` }
-  });
-
-  // Format as repository overview
-  return { content: [{ type: 'text', text: this.formatRepoOverview(repository, readmeResults.data?.results || []) }]};
-}
-```
-
-**Schema:**
-```typescript
-{
-  name: 'get_repo_overview',
-  description: 'Get overview of a Regen Network GitHub repository including its purpose, architecture, and key documentation',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      repository: {
-        type: 'string',
-        enum: ['regen-ledger', 'regen-web', 'regen-data-standards', 'regenie-corpus', 'mcp'],
-        description: 'Repository name'
-      }
-    },
-    required: ['repository']
-  }
-}
-```
-
-**Effort:** 3-4 hours
-
----
-
-#### Tool 3: `get_tech_stack` - Technology Overview
-**What it does:** Provide overview of Regen's technical stack
-
-**Implementation:**
-```typescript
-private async getTechStack(args: any) {
-  const { detail_level = 'basic' } = args;
-
-  // Search for dependency/config files
-  const techResults = await apiClient.post('/query', {
-    question: 'package.json go.mod Cargo.toml requirements.txt dependencies technology',
-    limit: 15
-    // Note: May need to adjust filter based on Phase 0 findings
-  });
-
-  return { content: [{ type: 'text', text: this.formatTechStack(techResults.data?.results || [], detail_level) }]};
-}
-```
-
-**Schema:**
-```typescript
-{
-  name: 'get_tech_stack',
-  description: 'Get overview of Regen Network technical stack and technologies used across repositories',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      detail_level: {
-        type: 'string',
-        enum: ['basic', 'detailed'],
-        default: 'basic',
-        description: 'Level of detail: basic (summary) or detailed (with versions)'
-      }
-    }
-  }
-}
-```
-
-**Effort:** 2-3 hours
-
-**Phase 1b Total Effort:** 5-7 hours
-
----
-
-### Phase 2: Authentication Layer
-
-**Goal:** Add simple environment-based access control
-
-#### Recommended Approach: Environment Variable (MVP)
-
-**Implementation:**
-```typescript
-// In index.ts
-const ACCESS_TIER = process.env.ACCESS_TIER || 'public'; // public | partner | developer
-
-// Permission mapping (updated tool names)
-const TOOL_PERMISSIONS: Record<string, string[]> = {
-  // Existing tools (public)
-  'search_knowledge': ['public', 'partner', 'developer'],
-  'get_stats': ['public', 'partner', 'developer'],
-  'generate_weekly_digest': ['public', 'partner', 'developer'],
-  // New public tools
-  'search_github_docs': ['public', 'partner', 'developer'],
-  'get_repo_overview': ['public', 'partner', 'developer'],
-  'get_tech_stack': ['public', 'partner', 'developer'],
-  // Partner tools
-  'get_architecture_overview': ['partner', 'developer'],
-  'search_integration_guides': ['partner', 'developer'],
-  'get_tech_stack_deep': ['partner', 'developer'],
-  // Developer tools
-  'analyze_dependencies': ['developer'],
-  'get_implementation_details': ['developer'],
-  'search_internal_docs': ['developer']
-};
-
-// Filter tools in ListTools handler
-private getAvailableTools(): Tool[] {
-  return TOOLS.filter(tool => {
-    const requiredTiers = TOOL_PERMISSIONS[tool.name] || ['public'];
-    return this.hasAccess(ACCESS_TIER, requiredTiers);
-  });
-}
-
-private hasAccess(userTier: string, requiredTiers: string[]): boolean {
-  const tierHierarchy = { 'public': 0, 'partner': 1, 'developer': 2 };
-  const userLevel = tierHierarchy[userTier] || 0;
-  const requiredLevel = Math.min(...requiredTiers.map(t => tierHierarchy[t] || 0));
-  return userLevel >= requiredLevel;
-}
-
-// Update ListTools handler
-this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: this.getAvailableTools()
-}));
-
-// Update CallTool handler
-this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
-
-  // Check permission
-  const requiredTiers = TOOL_PERMISSIONS[name] || ['public'];
-  if (!this.hasAccess(ACCESS_TIER, requiredTiers)) {
-    return {
-      content: [{
-        type: 'text',
-        text: `Error: Access denied. This tool requires ${requiredTiers.join(' or ')} access.`
-      }]
-    };
-  }
-
-  // ... existing switch statement
-});
-```
-
-**Configuration:**
-```bash
-# In .env
-ACCESS_TIER=public    # For public users
-ACCESS_TIER=partner   # For partner/collaborators
-ACCESS_TIER=developer # For internal developers
-```
-
-**Phase 2 Effort:** ~4 hours
-
----
-
-### Phase 3: Partner/Collaborator Tools
-
-#### Tool 4: `get_architecture_overview`
-**What it does:** Deep dive into Regen system architecture, component relationships, data flow
-
-**Implementation:**
-- Search for architecture docs, design docs, system diagrams
-- Could use weekly digest generator as pattern (aggregate multiple sources)
-- Format as comprehensive architecture guide
-
-**Data Source:** Internal architecture documentation (would need to be added to sensors)
-**Effort:** ~4 hours
-
----
-
-#### Tool 5: `search_integration_guides`
-**What it does:** Search internal guides for integrating with Regen systems
-
-**Implementation:**
-- Similar to search_code but filtered to integration-specific docs
-- Could use tags/metadata to identify integration guides
-
-**Data Source:** Internal integration documentation
-**Effort:** ~3 hours
-
----
-
-#### Tool 6: `get_tech_stack_deep`
-**What it does:** Detailed technical stack with internal decisions, rationale, trade-offs
-
-**Implementation:**
-- Enhanced version of get_tech_stack
-- Includes ADRs (Architecture Decision Records), design rationale
-- Links to relevant discussions/proposals
-
-**Data Source:** ADRs, internal tech docs, governance proposals
-**Effort:** ~3 hours
-
-**Phase 3 Total Effort:** ~10 hours
-
----
-
-### Phase 4: Developer Tools
-
-#### Tool 7: `analyze_dependencies`
-**What it does:** Cross-repo dependency analysis, version conflicts, upgrade paths
-
-**Implementation:**
-- Parse package.json, go.mod, Cargo.toml from all repos
-- Identify shared dependencies, version mismatches
-- Suggest upgrade paths
-
-**Data Source:** Config files from GitHub
-**Effort:** ~6 hours (more complex analysis logic)
-
----
-
-#### Tool 8: `get_implementation_details`
-**What it does:** Deep implementation context for specific features/modules
-
-**Implementation:**
-- Semantic search + code structure analysis
-- Could integrate with knowledge graph for entity relationships
-- Provides implementation timeline, contributors, related issues/PRs
-
-**Data Source:** GitHub activity + code files + KG extractions
-**Effort:** ~5 hours
-
----
-
-#### Tool 9: `search_internal_docs`
-**What it does:** Search internal technical docs (Notion, Confluence, internal wikis)
-
-**Implementation:**
-- Extends search_knowledge with internal doc filtering
-- Would require sensors for internal sources (Notion sensor likely exists)
-
-**Data Source:** Internal documentation sources
-**Effort:** ~3 hours (assuming sensors exist)
-
-**Phase 4 Total Effort:** ~14 hours
-
----
-
-### Phase 5: Testing & Documentation
-
-**Testing Tasks:**
-1. Unit tests for each tool (~2 hours per tool = ~18 hours)
-2. Integration tests for API calls (~4 hours)
-3. Permission/auth tests (~3 hours)
-4. Manual test script (~2 hours)
-5. End-to-end testing (~4 hours)
-
-**Documentation Tasks:**
-1. Update README with new tools (~2 hours)
-2. Document authentication setup (~1 hour)
-3. Add usage examples (~2 hours)
-4. Update .env.example (~30 min)
-
-**Phase 5 Total Effort:** ~36 hours
-
----
-
-### Total Project Estimate (Revised)
-
-| Phase | Description | Effort |
-|-------|-------------|--------|
-| Phase 0 | Validate API & Data | 2-4 hours |
-| Phase 1a | Single Tool MVP (`search_github_docs`) | 4-6 hours |
-| Phase 1b | Complete Public Tools | 5-7 hours |
-| Phase 2 | Auth Layer | 4 hours |
-| Phase 3 | Partner Tools | 10 hours |
-| Phase 4 | Developer Tools | 14 hours |
-
-**MVP (Phases 0-1a): 6-10 hours (~1 day)**
-**Full Public Tools (Phases 0-1b): 11-17 hours (~2 days)**
-**Total (All Phases): 39-45 hours (~5-6 days)**
-
-*Note: Estimates reduced because testing is now integrated into each phase.*
-
----
-
-### Recommended Starting Point (Revised)
-
-**True MVP Approach:**
-1. ✅ Complete research & planning (DONE)
-2. ✅ Review and improve proposal (DONE)
-3. **Phase 0:** Validate API filtering with real requests (2-4 hours)
-4. **Phase 1a:** Build `search_github_docs` only (4-6 hours)
-5. Deploy, test, get feedback
-6. **Phase 1b:** Add remaining tools based on feedback
-7. Proceed with Phases 2-4 as needed
-
-**This gives you a working tool in ~1 day** instead of waiting for all 3 tools.
-
----
-
-### Decisions Made (Based on Review)
-
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| **Auth approach** | Env var (Option A) | Simplest for MVP; document security limitations |
-| **Tool naming** | Flat namespace | Cleaner UX, matches existing patterns |
-| **Tool names** | Renamed for honesty | `search_github_docs` not `search_code` (we're not searching code yet) |
-| **Code scraping** | Defer | Start with existing docs data; extend sensors later if needed |
-| **MVP scope** | Single tool first | Validate approach before building all 3 tools |
-| **Testing** | Continuous | Test each phase, not all at end |
-
----
-
-### Validation Questions (To Answer in Phase 0)
-
-1. **What `source_sensor` values exist in production?**
-   - Need exact list to configure tool filters correctly
-
-2. **Does `source_sensor` filtering work as expected?**
-   - Test with actual API calls before building tools
-
-3. **What's the response structure?**
-   - Verify `results`, `metadata`, `content` fields exist
-
-4. **Do wildcard patterns work?**
-   - Test `github:*` or need alternative approach
-
-5. **What's the content quality?**
-   - Sample responses to ensure useful for documentation search
-
----
-
-### Risk Mitigation (Updated)
-
-1. **Assumption Validation:** Phase 0 validates API behavior before coding
-2. **Single Tool MVP:** Validate approach with 1 tool before building 3
-3. **Backward Compatibility:** Only add new tools, never modify existing
-4. **Honest Naming:** Tool names accurately describe capabilities
-5. **Testing:** Continuous testing integrated into each phase
-6. **Error Handling:** Explicit strategy for all error scenarios
-7. **Observability:** Structured logging from day one
-8. **Rollback:** Git tags at each phase for easy rollback
-
----
-
-### Next Steps (Updated 2025-11-25)
-
-**✅ PHASE 2a COMPLETE:**
-1. ~~Phase 0 - Validate API~~ → Done
-2. ~~Phase 1 - Build and validate tools~~ → Done (not deployed)
-3. ~~Strategic decision - Skip Phase 1 deployment~~ → Decision made
-4. ~~Tree-sitter extractor~~ → Done (63 entities)
-5. ~~Apache AGE graph setup~~ → Done
-6. ~~Entity linker + MENTIONS edges~~ → Done (37 edges)
-7. ~~Graph-aware MCP tool~~ → Done (5 query types)
-8. ~~Gold set evaluation~~ → Done (Graph 3x better)
-
-**✅ PHASE 2b COMPLETE:**
-
-| Step | Task | Status |
-|------|------|--------|
-| 1 | Build Hybrid Query Router | ✅ Complete (1.5ms latency, 81.8% accuracy) |
-| 2 | Add fuzzy entity matching | ✅ Complete (pg_trgm) |
-| 3 | Integrate into main MCP server | ✅ Complete (build passes) |
-| 4 | Fix MCP response format (`type: 'json'` → `type: 'text'`) | ✅ Complete |
-| 5 | Fix KOI API field name (`query` → `question`) | ✅ Complete |
-| 6 | Configure Claude Code MCP settings | ✅ Complete |
-| 7 | End-to-End Testing with Claude Code | ✅ Complete (all 8 tools working) |
-
-**🎯 CURRENT FOCUS: Production Readiness**
-
-| Step | Task | Status |
-|------|------|--------|
-| 1 | Scale MENTIONS to all 5,875 docs | 🔲 Pending |
-| 2 | **Production Release** | 🎯 Next |
-| 3 | User Testing & Feedback | 🔲 Pending |
-| 4 | Iterate based on usage | 🔲 Pending |
-
-**Phase 2b Final Results (2025-11-25):**
-- All 8 MCP tools working in Claude Code
-- Graph queries: 21ms average latency
-- Vector search: 76ms average latency
-- Intelligent query routing (graph vs vector) based on detected entities
-- Bug fixes documented in Phase 2b section above
-
----
-
-## Phase 2 Architecture: Hybrid Structure (Graph + Vector)
-
-*Status: Planned*
-*Target Stack: PostgreSQL + Apache AGE + pgvector (Unified)*
-*Reference: `/Users/darrenzal/projects/RegenAI/regen-koi-mcp/full stack tech agent/updated_plan.md`*
-
-### Executive Summary
-
-**Key Insight:** We are NOT abandoning text embeddings. We are combining **Tree-sitter (Structure)** with **OpenAI Embeddings (Text)** into a unified hybrid approach. Text embeddings are attached to Graph Nodes, enabling semantic search over structured code entities.
-
-Phase 2 moves from "Text Search" to "Structural Navigation" while retaining text embeddings as a search layer on top of the graph.
-
-| Approach | Query Pattern |
-|----------|---------------|
-| **Phase 1 (Legacy)** | "Find text chunks that look like 'minting carbon'." |
-| **Phase 2 (Hybrid)** | "Find Keeper Nodes whose docstrings match 'minting carbon' AND are connected to x/ecocredit." |
-
-### The Unified Stack: PostgreSQL + AGE + pgvector
-
-**Technology Decision:** All data lives in PostgreSQL, using:
-- **pgvector** - Vector similarity search (OpenAI embeddings)
-- **Apache AGE** - Graph queries (Cypher syntax)
-- **PostgreSQL FTS** - Keyword search (BM25-equivalent)
-
-This enables **single-query hybrid search** combining Graph + Vector + FTS in one SQL statement.
-
-→ *See [CODE_EXAMPLES.md#hybrid-query-example-graph--vector](CODE_EXAMPLES.md#hybrid-query-example-graph--vector) for SQL example*
-
-### Current vs Phase 2 Architecture
-
-**Phase 1:** GitHub Sensor → Text Chunking → OpenAI Embeddings → PostgreSQL/pgvector → Hybrid Search → MCP Tools
-
-**Phase 2:** GitHub Sensor → Tree-sitter AST → OpenAI Embeddings (on nodes) → PostgreSQL + AGE Graph → Unified Query (Graph + Vector + FTS) → MCP Tools
-
-→ *See [CODE_EXAMPLES.md#architecture-diagrams](CODE_EXAMPLES.md#architecture-diagrams) for detailed diagrams*
-
-### The Bridge: Documentation ↔ Code
-
-**Critical Innovation:** READMEs and documentation are linked to Code Nodes via `MENTIONS` edges, bridging the "Manual" (README) to the "Machine" (Code).
-
-This enables queries like:
-- "Show me documentation that references MsgCreateBatch"
-- "What code entities are mentioned in the ecocredit README?"
-
-### The "Smart Sensor" Pipeline
-
-The enhanced sensor performs **simultaneous extraction**:
-
-**A. Code Processing (*.go, *.proto):** Parse → Extract Docstrings → Embed → Ingest Graph Nodes
-
-**B. Text Processing (*.md, docs):** Chunk & Embed → Scan for Entity Names → Create MENTIONS Edges
-
-→ *See [CODE_EXAMPLES.md#smart-sensor-pipeline](CODE_EXAMPLES.md#smart-sensor-pipeline) for pipeline diagrams*
-
-### Linker Library
-
-The linker is a **pure function** `extract_entity_mentions(doc_text, entity_list) → mentions[]` that can run:
-- At ingestion time (if graph exists)
-- As a repair/migration job (if docs ingested before code)
-- On-demand at query time (lazy linking)
-
-| Benefit | Explanation |
-|---------|-------------|
-| **Decoupled from ingestion** | Can run as repair/migration job if docs ingested before code |
-| **Testable in isolation** | Unit tests for tricky names, false positives, edge cases |
-| **Reusable** | Same logic for ingestion, on-demand linking, or batch repair |
-
-→ *See [CODE_EXAMPLES.md#linker-library](CODE_EXAMPLES.md#linker-library) for interface and output shape*
-
-### Graph Schema
-
-**Node Types:** Keeper, Msg, Event, Document (each with embedded vectors)
-**Edge Types:** HANDLES, EMITS, IMPLEMENTS, MENTIONS, DEFINES
-
-→ *See [CODE_EXAMPLES.md#graph-schema](CODE_EXAMPLES.md#graph-schema) for full YAML definition*
-
-### Graph Access Layer
-
-MCP tools call a **graphClient interface** instead of embedding AGE queries directly. This provides:
-
-| Benefit | Explanation |
-|---------|-------------|
-| **Escape hatch** | If AGE doesn't work, swap to relational/CTE implementation |
-| **Testable** | Mock graphClient in tool unit tests |
-| **Consistent API** | Tools don't care how graph is implemented |
-
-→ *See [CODE_EXAMPLES.md#graph-access-layer](CODE_EXAMPLES.md#graph-access-layer) for interface and implementation*
-
-### The Context Layer (RAPTOR)
-
-RAPTOR remains the "Summarizer" for high-level navigation:
-
-- **Module Summary:** Generated summary text is embedded and stored on Module nodes
-- **Enables:** Semantic search to find modules, not just files
-- **Query:** "Which module handles carbon credits?" → Returns x/ecocredit module node
-
-### Implementation Checklist
-
-1. [x] **Install Apache AGE** on the production Postgres instance ✅ Complete
-2. [x] **Create koi-graph-sensor:**
-   - ✅ Implement Tree-sitter for Go/Proto structure extraction
-   - ✅ Integrate OpenAI client to embed docstrings during parsing
-   - ✅ Scan markdown for entity name mentions
-3. [x] **Define Schema:**
-   - ✅ Nodes: Keeper, Msg, Event, Document, Module
-   - ✅ Edges: HANDLES, EMITS, MENTIONS (Text→Code), CONTAINS (Module→Entity)
-4. [x] **Run RAPTOR:** Generate summaries to enrich Module nodes ✅ 66 modules with GPT-4.1-mini summaries
-5. [x] **Update MCP Tools:** Graph-aware search capabilities ✅ 8 tools working
-
-### Phase 2 MCP Tool Categories
-
-```typescript
-// Structural Navigation (New)
-'get_keeper_for_msg'         // Find keeper that handles a message type
-'get_call_graph'             // Function call relationships
-'get_related_documentation'  // Docs that MENTION a code entity
-
-// Enhanced Search (Hybrid)
-'search_code'                // Graph + Vector + FTS
-'semantic_search'            // Pure embedding search on graph nodes
-
-// Context Tools
-'get_module_structure'       // Cosmos SDK module internals
-'get_entity_references'      // All mentions of an entity
-```
-
-### Tool Response Shape (Standardized)
-
-All tools return both human-readable and machine-parseable output:
-- `content[0]`: Markdown text for humans
-- `content[1]`: JSON `hits[]` array for eval harness
-
-**Shared Helpers:** `runKoiQuery()`, `formatSearchResults()`, `formatEntityDetails()`
-
-**Benefits:**
-- Eval harness can parse any tool's output via the `json` block
-- Consistent UX across all tools
-- New tools are thin wrappers around shared logic
-
-→ *See [CODE_EXAMPLES.md#tool-response-shape](CODE_EXAMPLES.md#tool-response-shape) for TypeScript interfaces*
-
-### Why This Approach
-
-| Benefit | Explanation |
-|---------|-------------|
-| **Single Database** | No sync issues between vector DB and graph DB |
-| **Unified Queries** | Combine graph traversal + vector similarity in one SQL |
-| **Preserved Embeddings** | OpenAI embeddings remain, just attached to structured nodes |
-| **Documentation Bridge** | MENTIONS edges connect human docs to machine code |
-| **Incremental** | Build on Phase 1 infrastructure, don't replace it |
-
-### Anti-Patterns Avoided
-
-| Anti-Pattern | Why It's Bad | Our Approach |
-|--------------|--------------|--------------|
-| Abandon text embeddings | Loses semantic search | Attach embeddings to graph nodes |
-| Separate graph + vector DBs | Sync complexity | Unified PostgreSQL + AGE + pgvector |
-| LLM-only entity extraction | Hallucination risk | AST extraction (Tree-sitter) for structure |
-| Ignore doc↔code links | Loses context | MENTIONS edges bridge documentation |
-
-### Resource Estimates
-
-| Resource | Estimate | Notes |
-|----------|----------|-------|
-| Apache AGE overhead | Minimal | PostgreSQL extension |
-| Graph storage | 200-500MB | Nodes + edges + properties |
-| Existing vectors | Retained | Already in pgvector |
-| Total migration | ~2-4 hours | Schema changes + sensor update |
-
----
-
-*This document will be updated throughout the project lifecycle.*
+*This document is a living project tracker. Updated as phases complete and priorities change.*

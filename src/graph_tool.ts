@@ -25,7 +25,7 @@ import {
 } from './graph_client.js';
 
 // Check if we should use API mode
-const KOI_API_ENDPOINT = process.env.KOI_API_ENDPOINT || '';
+const KOI_API_ENDPOINT = process.env.KOI_API_ENDPOINT || 'https://regen.gaiaai.xyz/api/koi';
 const USE_GRAPH_API = !!KOI_API_ENDPOINT;
 
 // Tool definition following the pattern from tools.ts
@@ -40,10 +40,12 @@ export const GRAPH_TOOL: Tool = {
         enum: [
           'keeper_for_msg', 'msgs_for_keeper', 'docs_mentioning', 'entities_in_doc',
           'related_entities', 'find_by_type', 'search_entities', 'list_repos',
+          // Discovery queries
+          'list_entity_types', 'get_entity_stats',
           // RAPTOR module queries
           'list_modules', 'get_module', 'search_modules', 'module_entities', 'module_for_entity'
         ],
-        description: 'Type of graph query: find_by_type (get all Sensors, Handlers, etc.), search_entities (search by name), list_repos (show indexed repositories), list_modules (show all modules), search_modules (search modules by keyword)'
+        description: 'Type of graph query: find_by_type (get all Sensors, Handlers, etc.), search_entities (search by name), list_repos (show indexed repositories), list_entity_types (show all entity types with counts), get_entity_stats (comprehensive graph statistics), list_modules (show all modules), search_modules (search modules by keyword)'
       },
       entity_name: {
         type: 'string',
@@ -71,7 +73,7 @@ export const GRAPH_TOOL: Tool = {
 };
 
 /**
- * Hit interface for structured results
+ * Hit interface for structured results with provenance
  */
 interface Hit {
   rid?: string;
@@ -82,6 +84,17 @@ interface Hit {
   line_number?: number;
   content_preview?: string;
   edges?: Array<{ type: string; target: string }>;
+  // Provenance metadata
+  provenance?: {
+    entity_rid?: string;
+    cat_receipt_id?: string;
+    commit_sha?: string;
+    commit_date?: string;
+    github_url?: string;
+    extracted_at?: string;
+    processor_version?: string;
+    extraction_method?: string;
+  };
 }
 
 /**
@@ -141,9 +154,11 @@ export async function executeGraphTool(args: any) {
           markdownSummary = `# Indexed Repositories\n\nFound **${total_results}** repositories:\n\n`;
           markdownSummary += '| Repository | Entity Count |\n|------------|-------------|\n';
           results.forEach((r: any) => {
-            const name = r.name || r.result?.name || 'unknown';
-            const count = r.entity_count || r.result?.entity_count || 0;
-            markdownSummary += `| ${name} | ${count} |\n`;
+            const repo = r.repo || r.result || r;
+            const name = repo.name || 'unknown';
+            // entity_count comes as a separate field at the top level
+            const count = parseInt(r.entity_count) || repo.entity_count || 0;
+            markdownSummary += `| ${name} | ${count.toLocaleString()} |\n`;
             hits.push({ entity_type: 'Repository', entity_name: name, content_preview: `${count} entities` });
           });
           break;
@@ -151,16 +166,28 @@ export async function executeGraphTool(args: any) {
         case 'find_by_type':
           markdownSummary = `# Entities of Type: ${args.entity_type}\n\nFound **${total_results}** ${args.entity_type}(s):\n\n`;
           results.forEach((r: any, i: number) => {
-            const entity = r.result || r;
+            const entity = r.entity || r.result || r;
             markdownSummary += `## ${i + 1}. ${entity.name}\n`;
             markdownSummary += `- **File:** \`${entity.file_path || 'N/A'}\`\n`;
             if (entity.line_number) markdownSummary += `- **Line:** ${entity.line_number}\n`;
+            if (entity.github_url) markdownSummary += `- **Source:** [GitHub](${entity.github_url})\n`;
+            if (entity.commit_sha) markdownSummary += `- **Commit:** \`${entity.commit_sha.substring(0, 8)}\`\n`;
             markdownSummary += '\n';
             hits.push({
               entity_type: args.entity_type,
               entity_name: entity.name,
               file_path: entity.file_path,
               line_number: entity.line_number,
+              provenance: entity.cat_receipt_id ? {
+                entity_rid: entity.entity_rid,
+                cat_receipt_id: entity.cat_receipt_id,
+                commit_sha: entity.commit_sha,
+                commit_date: entity.commit_date,
+                github_url: entity.github_url,
+                extracted_at: entity.extracted_at,
+                processor_version: entity.processor_version,
+                extraction_method: entity.extraction_method,
+              } : undefined,
             });
           });
           break;
@@ -168,16 +195,65 @@ export async function executeGraphTool(args: any) {
         case 'search_entities':
           markdownSummary = `# Search Results: "${entity_name}"\n\nFound **${total_results}** matching entities:\n\n`;
           results.forEach((r: any, i: number) => {
-            const entity = r.result || r;
+            const entity = r.entity || r.result || r;
             const label = entity.label || 'Entity';
             markdownSummary += `## ${i + 1}. ${entity.name} (${label})\n`;
             markdownSummary += `- **Repository:** ${entity.repo || 'N/A'}\n`;
             markdownSummary += `- **File:** \`${entity.file_path || 'N/A'}\`\n`;
+            if (entity.github_url) markdownSummary += `- **Source:** [GitHub](${entity.github_url})\n`;
+            if (entity.commit_sha) markdownSummary += `- **Commit:** \`${entity.commit_sha.substring(0, 8)}\`\n`;
             markdownSummary += '\n';
             hits.push({
               entity_type: label,
               entity_name: entity.name,
               file_path: entity.file_path,
+              provenance: entity.cat_receipt_id ? {
+                entity_rid: entity.entity_rid,
+                cat_receipt_id: entity.cat_receipt_id,
+                commit_sha: entity.commit_sha,
+                commit_date: entity.commit_date,
+                github_url: entity.github_url,
+                extracted_at: entity.extracted_at,
+                processor_version: entity.processor_version,
+                extraction_method: entity.extraction_method,
+              } : undefined,
+            });
+          });
+          break;
+
+        case 'list_entity_types':
+          markdownSummary = `# Entity Types in Graph\n\nFound **${total_results}** entity types:\n\n`;
+          markdownSummary += '| Entity Type | Count |\n|-------------|-------|\n';
+          let totalEntities = 0;
+          results.forEach((r: any) => {
+            const type = r.entity_type || 'Unknown';
+            const count = parseInt(r.count) || 0;
+            totalEntities += count;
+            markdownSummary += `| ${type} | ${count.toLocaleString()} |\n`;
+            hits.push({ entity_type: 'EntityType', entity_name: type, content_preview: `${count} entities` });
+          });
+          markdownSummary += `| **TOTAL** | **${totalEntities.toLocaleString()}** |\n`;
+          break;
+
+        case 'get_entity_stats':
+          markdownSummary = `# Graph Statistics\n\n`;
+          let statsTotal = 0;
+          results.forEach((r: any) => {
+            statsTotal += parseInt(r.count) || 0;
+          });
+          markdownSummary += `**Total Entities:** ${statsTotal.toLocaleString()}\n\n`;
+          markdownSummary += '## Entities by Type\n\n';
+          markdownSummary += '| Type | Count | Languages | Repositories |\n|------|-------|-----------|-------------|\n';
+          results.forEach((r: any) => {
+            const type = r.entity_type || 'Unknown';
+            const count = parseInt(r.count) || 0;
+            const langs = Array.isArray(r.languages) ? r.languages.filter((l: any) => l).join(', ') : 'N/A';
+            const repos = Array.isArray(r.repos) ? r.repos.filter((repo: any) => repo).join(', ') : 'N/A';
+            markdownSummary += `| ${type} | ${count.toLocaleString()} | ${langs || 'N/A'} | ${repos || 'N/A'} |\n`;
+            hits.push({
+              entity_type: 'EntityStats',
+              entity_name: type,
+              content_preview: `${count} entities across ${repos}`
             });
           });
           break;
@@ -186,7 +262,7 @@ export async function executeGraphTool(args: any) {
           // Generic formatting for other query types
           markdownSummary = `# ${query_type} Results\n\nFound **${total_results}** results:\n\n`;
           results.forEach((r: any, i: number) => {
-            const entity = r.result || r;
+            const entity = r.entity || r.keeper || r.message || r.module || r.result || r;
             markdownSummary += `${i + 1}. ${JSON.stringify(entity)}\n`;
             hits.push({ entity_name: entity.name || 'unknown', content_preview: JSON.stringify(entity).substring(0, 100) });
           });
