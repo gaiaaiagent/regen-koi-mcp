@@ -2,7 +2,7 @@
 
 **Project Start Date:** 2025-11-24
 **Last Updated:** 2025-11-27
-**Status:** TREE-SITTER LIVE IN PRODUCTION 🚀
+**Status:** PHASE 2 COMPLETE - Generic Ontology LIVE 🚀
 
 ## Completed Phases
 - Phase 1 Validation: Complete (2025-11-25) - Embeddings validated, tools working
@@ -14,18 +14,19 @@
 - **Phase 0.3: Complete (2025-11-27) - Team onboarding documentation** ✅
 - **Phase 1: Complete (2025-11-27) - Tree-sitter extraction with CALLS edges** ✅
 - **Checkpoint: Complete (2025-11-27) - Production migration successful** ✅
+- **Phase 2: Complete (2025-11-27) - Generic ontology with domain properties** ✅
 
 ## Critical Findings (2025-11-26) - ALL RESOLVED ✅
 - ~~**Production pipeline uses REGEX, not tree-sitter**~~ **FIXED 2025-11-27** - Tree-sitter LIVE in production
 - ~~**MCP API returns incomplete metadata** (data exists in DB but not exposed)~~ **FIXED 2025-11-26**
 - ~~**No relationship edges** (CALLS, IMPORTS, IMPLEMENTS missing)~~ **FIXED 2025-11-27** - 11,331 CALLS edges LIVE
-- **Mixed ontology** (domain-specific + generic vertex types) - **Next: Phase 2**
+- ~~**Mixed ontology** (domain-specific + generic vertex types)~~ **FIXED 2025-11-27** - Generic types with domain properties
 
 ---
 
-## Current Status: Tree-sitter LIVE in Production 🚀
+## Current Status: Phase 2 Complete - Generic Ontology LIVE 🚀
 
-**Checkpoint Complete (2025-11-27):** Production migration successful!
+**Phase 2 Complete (2025-11-27):** Ontology migration successful!
 
 | Metric | Before (Regex) | After (Tree-sitter) | Improvement |
 |--------|---------------|---------------------|-------------|
@@ -42,11 +43,38 @@
 - ✅ Rollback available: `regen_graph` (regex backup)
 
 **Production State:**
-- Active Graph: `regen_graph_v2` (tree-sitter)
+- Active Graph: `regen_graph_v2` (tree-sitter + generic ontology)
 - Backup Graph: `regen_graph` (regex - preserved)
-- MCP Server: PID 412206, serving tree-sitter data
+- MCP Server: Serving tree-sitter data with generic ontology
 
-**Next:** Phase 2 (Ontology) or add TypeScript/Python extraction
+**Next Options:**
+- Phase 5: Concepts layer (link code to human concepts)
+- Phase 6: MCP Tools expansion (new traversal queries)
+- Add TypeScript/Python extraction (expand language coverage)
+
+---
+
+### Phase 2 Summary (2025-11-27)
+
+**Goal:** Standardize ontology - generic types with domain info in properties.
+
+**Migration Results:**
+| Before (Domain-Specific) | After (Generic) | Count |
+|--------------------------|-----------------|-------|
+| `Keeper` label | `Struct {domain_type: 'keeper'}` | 8 |
+| `Message` label | `Struct {domain_type: 'message'}` | 132 |
+| `Handler` label | `Function {domain_type: 'handler'}` | 39 |
+
+**Benefits:**
+- **Domain Agnostic:** Works with any codebase (not just Cosmos SDK)
+- **Backwards Compatible:** `find_by_type('Keeper')` still works
+- **Extensible:** Easy to add Django, React, etc. domain patterns
+- **Cross-Domain Queries:** "Find all stateful components" across frameworks
+
+**Files Modified:**
+- Server: `~/code-graph-service/src/core/tree_sitter_extractor.py`
+- Server: `~/code-graph-service/scripts/load_to_staging.py`
+- Server: `/opt/projects/koi-processor/koi-query-api.ts`
 
 ---
 
@@ -62,15 +90,12 @@
 | Entity types | 8 semantic | 10 generic | More precise |
 | Extraction time | 24 seconds | Unknown | Fast |
 
-**Entity Breakdown:**
+**Entity Breakdown (Generic Ontology):**
 - Method: 19,884 (receiver-bound functions)
 - Import: 3,363 (package imports)
-- Function: 1,654 (standalone functions)
-- Struct: 1,496 (type definitions)
+- Function: 1,693 (standalone + 39 handlers with `domain_type: 'handler'`)
+- Struct: 1,636 (types + 132 messages + 8 keepers with `domain_type` properties)
 - Interface: 192
-- Message: 132 (Cosmos SDK)
-- Handler: 39 (message handlers)
-- Keeper: 8 (state managers)
 
 **Key Achievements:**
 1. **Graph traversal enabled** - Can now query "What calls this function?"
@@ -253,7 +278,7 @@ Phase 0 (MVP Fix, 3-5 days)
 | **0: MVP Fix** | 3-5 days | API returns full entity metadata; can click through to code | +0% (foundation) | ✅ **COMPLETE** |
 | **1: Tree-sitter** | 1-2 weeks | Extracts ≥90% of regex entities + CALLS/IMPORTS/IMPLEMENTS edges | +10-15% | ✅ **COMPLETE** |
 | **Checkpoint** | 2 days | Graph integrity verified; staging → production switch | Required | ✅ **COMPLETE** |
-| **2: Ontology** | 1 week | All types are generic; domain info in properties only | +5% | **Priority 3** |
+| **2: Ontology** | 1 week | All types are generic; domain info in properties only | +5% | ✅ **COMPLETE** |
 | **5: Concepts** | 1 week | 20 core concepts manually curated and linked | +5% | **Priority 4** |
 | **6: MCP Tools** | Days/tool | All planned tools implemented and tested | +5% | **Priority 5** |
 | **7: Production** | 1 week | Deployed, monitored, documented | N/A | **Priority 6** |
