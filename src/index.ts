@@ -1130,8 +1130,10 @@ class KOIServer {
     try {
       console.error(`[${SERVER_NAME}] Fetching NotebookLM export from API`);
 
-      // Call the API endpoint
-      const response = await apiClient.get('/weekly-digest/notebooklm');
+      // Call the API endpoint with longer timeout (generation can take 2-3 minutes)
+      const response = await apiClient.get('/weekly-digest/notebooklm', {
+        timeout: 180000  // 3 minutes
+      });
       const data = response.data as any;
 
       if (!data.success) {
