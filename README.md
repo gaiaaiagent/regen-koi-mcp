@@ -128,19 +128,19 @@ Once you've installed the MCP server, try these queries in Claude to explore wha
 "Show me statistics about what's in the knowledge base"
 ```
 
-**What you'll get:** The system has indexed 5 repositories (regen-ledger, regen-web, koi-sensors, and more) with 26,768 code entities including Functions, Classes, Interfaces, and Cosmos SDK-specific types like Keepers and Messages.
+**What you'll get:** The system has indexed 5 repositories (regen-ledger, regen-web, koi-sensors, and more) with 26,768 code entities including Methods, Functions, Structs, and Interfaces.
 
 ### 💻 Code Exploration: Find Specific Code
 
 ```
-"What Keepers exist in regen-ledger?"
-"Find all functions related to MsgCreateBatch"
-"Show me all Message types in the ecocredit module"
-"What modules are in the regen-ledger repository?"
+"Search for functions containing 'keeper' in regen-ledger"
+"Find all code related to MsgCreateBatch"
+"What Structs exist in the ecocredit module?"
+"Show me all Interface types in regen-ledger"
 "Search for retirement-related code"
 ```
 
-**What you'll get:** Direct links to code entities with file paths, line numbers, and signatures. You can trace relationships between Keepers, Messages, and other components.
+**What you'll get:** Direct links to code entities with file paths and signatures. The graph contains Methods, Functions, Structs, and Interfaces extracted via tree-sitter AST parsing.
 
 ### 📚 Documentation: Understanding the System
 
@@ -156,13 +156,13 @@ Once you've installed the MCP server, try these queries in Claude to explore wha
 ### 🔬 Advanced: Graph Traversal
 
 ```
-"Which Keeper handles MsgCreateBatch?"
-"What messages does the ecocredit Keeper handle?"
-"Find all entities in the x/ecocredit/keeper/keeper.go file"
-"What documentation mentions MsgRetire?"
+"What functions call CreateBatch?"
+"What does the NewKeeper function call?"
+"Find orphaned code that's never called"
+"Show me the call graph for MsgRetire"
 ```
 
-**What you'll get:** Relationship traversal through the code graph, showing connections between different parts of the codebase.
+**What you'll get:** Call graph traversal showing function relationships (CALLS edges), orphan detection, and code dependency analysis.
 
 ### 📊 Knowledge Base: Recent Activity
 
