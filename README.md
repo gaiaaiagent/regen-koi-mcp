@@ -184,7 +184,8 @@ Once you've installed the MCP server, try these queries in Claude to explore wha
 | `search_knowledge` | Hybrid search (vectors + graph with RRF) | `query` (string), `limit` (1–20, default 5), `published_from` (YYYY‑MM‑DD), `published_to` (YYYY‑MM‑DD), `include_undated` (bool, default false) |
 | `hybrid_search` | Intelligent search routing (auto-detects entity vs conceptual queries) | `query` (string), `limit` (1–50, default 10) |
 | `get_stats` | Knowledge base statistics | `detailed` (boolean) |
-| `generate_weekly_digest` | Generate weekly digest of Regen Network activity | `start_date` (YYYY-MM-DD, default: 7 days ago), `end_date` (YYYY-MM-DD, default: today), `save_to_file` (bool, default false), `output_path` (string), `format` ('markdown' or 'json', default: 'markdown') |
+| `generate_weekly_digest` | Generate weekly digest SUMMARY of Regen Network activity | `start_date` (YYYY-MM-DD, default: 7 days ago), `end_date` (YYYY-MM-DD, default: today), `save_to_file` (bool, default false), `output_path` (string), `format` ('markdown' or 'json', default: 'markdown') |
+| `get_notebooklm_export` | Get FULL NotebookLM export with complete forum posts, Notion pages, and source material | `save_to_file` (bool, default false), `output_path` (string) |
 
 ### Code Knowledge Graph
 | Tool | Description | Key Inputs |
@@ -232,7 +233,8 @@ This table helps you understand which tool to use for different tasks. Just ask 
 | Semantic search across code and docs                     | "How does credit retirement work?"                       | `hybrid_search`          |
 | Advanced filtering by date                               | "Find discussions about tokens from last week"           | `search_knowledge`       |
 | **Get activity summaries**                               |                                                          |                          |
-| Generate weekly digest                                   | "Create a weekly digest of Regen activity"               | `generate_weekly_digest` |
+| Generate weekly digest summary                           | "Create a weekly digest of Regen activity"               | `generate_weekly_digest` |
+| Get full content for NotebookLM                          | "Get the full NotebookLM export with all forum posts"    | `get_notebooklm_export`  |
 
 ### Query Type Reference
 
@@ -741,30 +743,49 @@ Once configured, you can ask Claude:
 - "Generate a weekly digest of Regen Network activity from the past week"
 - "Create a digest of discussions from January 1 to January 7, 2025"
 
-### Weekly Digest Tool
+### Weekly Digest Tools
 
-The `generate_weekly_digest` tool creates comprehensive markdown summaries of Regen Network activity:
+There are two tools for getting weekly activity information, each designed for different use cases:
+
+#### `generate_weekly_digest` - Curated Summary
+
+Creates a condensed, curated markdown summary of Regen Network activity. Best for quick overview and reading in Claude.
 
 **Features:**
+- Executive summary with key highlights
+- Curated selection of important discussions and updates
+- Governance analysis and community insights
+- On-chain metrics summary
 - Automatically aggregates content from the past 7 days (or custom date range)
-- Returns markdown content that can be used directly in Claude Desktop as an artifact
-- Optionally saves to a file for use with NotebookLM or other tools
-- Includes proper source citations and statistics
 
 **Examples:**
-
-```javascript
-// In Claude Desktop or Claude Code CLI:
+```
 "Generate a weekly digest of Regen Network activity"
-
-// With custom date range:
 "Create a digest from December 1 to December 8, 2024"
-
-// Save to file:
 "Generate a weekly digest and save it to weekly_summary.md"
 ```
 
-**Note:** The digest content is returned in the response, so in Claude Desktop it will be displayed inline (and may be created as an artifact). The `save_to_file` option is useful when you want a persistent copy on disk.
+#### `get_notebooklm_export` - Full Content Export
+
+Returns the complete, unabridged source material. Best for deep analysis or loading into NotebookLM.
+
+**Features:**
+- **Full forum thread posts** - Complete text of all posts, not just summaries
+- **Complete Notion page content** - All chunks combined into full documents
+- **Enriched URLs** - Metadata and context for linked resources
+- **Detailed source material** - Everything you need for thorough analysis
+- Generates on demand if no recent cached version exists (takes 2-3 minutes)
+
+**Examples:**
+```
+"Get the full NotebookLM export"
+"Get the complete weekly content with all forum posts"
+"Export the full source material and save it to notebooklm_export.md"
+```
+
+**When to use which:**
+- Use `generate_weekly_digest` for a quick, readable summary
+- Use `get_notebooklm_export` when you need raw source content for deep analysis, fact-checking, or loading into external tools like NotebookLM
 
 ## 🤝 Contributing
 
