@@ -3,6 +3,13 @@
  * Regen KOI MCP Server
  * Provides access to Regen Network's Knowledge Organization Infrastructure
  * via the Model Context Protocol for AI agents like Claude
+ *
+ * Production Features (Phase 7):
+ * - Structured logging with pino
+ * - Metrics collection for performance monitoring
+ * - Input validation with zod schemas
+ * - Comprehensive error handling
+ * - Health check endpoint
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -20,22 +27,17 @@ import HybridSearchClient from './hybrid-client.js';
 import { QueryRouter } from './query_router.js';
 import { UnifiedSearch } from './unified_search.js';
 import { executeGraphTool } from './graph_tool.js';
-
-// DEBUG: Log ALL environment variables before dotenv
-const envKeys = Object.keys(process.env).filter(k => k.includes('KOI') || k.includes('GRAPH') || k.includes('DB'));
-console.error('[DEBUG] ALL RELEVANT ENV VARS:', envKeys);
-console.error('[DEBUG] KOI_API_ENDPOINT before dotenv:', process.env.KOI_API_ENDPOINT);
-console.error('[DEBUG] GRAPH_DB_HOST before dotenv:', process.env.GRAPH_DB_HOST);
+// Production hardening modules
+import { logger } from './logger.js';
+import { recordQuery, getMetricsMarkdown, getMetricsSummary } from './metrics.js';
+import { validateToolInput } from './validation.js';
+import { queryCache } from './cache.js';
 
 // Load environment variables
 dotenv.config();
 
-// DEBUG: Log environment after dotenv
-console.error('[DEBUG] KOI_API_ENDPOINT after dotenv:', process.env.KOI_API_ENDPOINT);
-
 // Configuration
 const KOI_API_ENDPOINT = process.env.KOI_API_ENDPOINT || 'https://regen.gaiaai.xyz/api/koi';
-console.error('[DEBUG] Final KOI_API_ENDPOINT:', KOI_API_ENDPOINT);
 const KOI_API_KEY = process.env.KOI_API_KEY || '';
 const SERVER_NAME = process.env.MCP_SERVER_NAME || 'regen-koi';
 const SERVER_VERSION = process.env.MCP_SERVER_VERSION || '1.0.0';
@@ -110,9 +112,14 @@ class KOIServer {
   }
 
   private logStartup() {
-    console.error(`[${SERVER_NAME}] Starting Regen KOI MCP Server v${SERVER_VERSION}`);
-    console.error(`[${SERVER_NAME}] KOI API Endpoint: ${KOI_API_ENDPOINT}`);
-    console.error(`[${SERVER_NAME}] API Key: ${KOI_API_KEY ? 'Configured' : 'Not configured (using anonymous access)'}`);
+    logger.info({
+      action: 'server_start',
+      server: SERVER_NAME,
+      version: SERVER_VERSION,
+      api_endpoint: KOI_API_ENDPOINT,
+      api_key_configured: !!KOI_API_KEY,
+      graph_db_configured: !!(process.env.GRAPH_DB_HOST && process.env.GRAPH_DB_NAME)
+    }, `Starting Regen KOI MCP Server v${SERVER_VERSION}`);
   }
 
   private setupHandlers() {
@@ -124,37 +131,96 @@ class KOIServer {
     // Handle tool execution
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
+      const startTime = Date.now();
+
+      logger.info({
+        action: 'tool_execute_start',
+        tool: name,
+        args_keys: Object.keys(args || {})
+      }, `Executing tool: ${name}`);
 
       try {
-        console.error(`[${SERVER_NAME}] Executing tool: ${name}`);
+        // Input validation for applicable tools
+        const validationRequired = ['search_knowledge', 'hybrid_search', 'search_github_docs', 'get_repo_overview', 'get_tech_stack', 'generate_weekly_digest'];
+        if (validationRequired.includes(name)) {
+          const validation = validateToolInput(name, args);
+          if (!validation.success) {
+            logger.warn({
+              action: 'validation_failed',
+              tool: name,
+              error: validation.error
+            }, `Validation failed for ${name}`);
 
+            recordQuery(name, Date.now() - startTime, false, validation.error);
+            return {
+              content: [{
+                type: 'text',
+                text: `Validation Error: ${validation.error}`
+              }]
+            };
+          }
+        }
+
+        let result: any;
         switch (name) {
           case 'query_code_graph':
-            return await executeGraphTool(args);
+            result = await executeGraphTool(args);
+            break;
           case 'hybrid_search':
-            return await this.handleHybridSearch(args);
+            result = await this.handleHybridSearch(args);
+            break;
           case 'search_knowledge':
-            return await this.searchKnowledge(args);
+            result = await this.searchKnowledge(args);
+            break;
           case 'get_stats':
-            return await this.getStats(args);
+            result = await this.getStats(args);
+            break;
+          case 'get_mcp_metrics':
+            result = await this.getMcpMetrics();
+            break;
           case 'generate_weekly_digest':
-            return await this.generateWeeklyDigest(args);
+            result = await this.generateWeeklyDigest(args);
+            break;
           case 'search_github_docs':
-            return await this.searchGithubDocs(args);
+            result = await this.searchGithubDocs(args);
+            break;
           case 'get_repo_overview':
-            return await this.getRepoOverview(args);
+            result = await this.getRepoOverview(args);
+            break;
           case 'get_tech_stack':
-            return await this.getTechStack(args);
+            result = await this.getTechStack(args);
+            break;
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
+
+        const duration = Date.now() - startTime;
+        recordQuery(name, duration, true);
+        logger.info({
+          action: 'tool_execute_success',
+          tool: name,
+          duration_ms: duration
+        }, `Tool ${name} completed in ${duration}ms`);
+
+        return result;
       } catch (error) {
-        console.error(`[${SERVER_NAME}] Error executing tool ${name}:`, error);
+        const duration = Date.now() - startTime;
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+        recordQuery(name, duration, false, errorMessage);
+        logger.error({
+          action: 'tool_execute_error',
+          tool: name,
+          duration_ms: duration,
+          error: errorMessage,
+          stack: error instanceof Error ? error.stack : undefined
+        }, `Tool ${name} failed: ${errorMessage}`);
+
         return {
           content: [
             {
               type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`,
+              text: `Error: ${errorMessage}`,
             },
           ],
         };
@@ -627,6 +693,49 @@ class KOIServer {
     } catch (error) {
       throw new Error(`Failed to get stats: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * Get MCP Server metrics and health status
+   * Provides performance metrics, cache stats, and system health
+   */
+  private async getMcpMetrics() {
+    const metricsMarkdown = getMetricsMarkdown();
+    const metricsSummary = getMetricsSummary();
+    const cacheStats = queryCache.getStats();
+
+    let output = metricsMarkdown;
+    output += `\n## Cache Statistics\n\n`;
+    output += `- **Total Cached Items:** ${cacheStats.totalSize}\n`;
+
+    for (const [category, stats] of Object.entries(cacheStats.byCategory)) {
+      output += `- **${category}:** ${stats.size}/${stats.maxSize} entries\n`;
+    }
+
+    output += `\n## System Health\n\n`;
+    output += `- **Graph DB Configured:** ${!!(process.env.GRAPH_DB_HOST && process.env.GRAPH_DB_NAME)}\n`;
+    output += `- **KOI API Endpoint:** ${KOI_API_ENDPOINT}\n`;
+    output += `- **Query Router Available:** ${!!this.queryRouter}\n`;
+    output += `- **Unified Search Available:** ${!!this.unifiedSearch}\n`;
+
+    // Add raw JSON for programmatic access
+    const jsonData = JSON.stringify({
+      metrics: metricsSummary,
+      cache: cacheStats,
+      config: {
+        api_endpoint: KOI_API_ENDPOINT,
+        graph_db_configured: !!(process.env.GRAPH_DB_HOST && process.env.GRAPH_DB_NAME),
+        query_router_available: !!this.queryRouter,
+        unified_search_available: !!this.unifiedSearch
+      }
+    }, null, 2);
+
+    return {
+      content: [{
+        type: 'text',
+        text: output + '\n\n---\n\n<details>\n<summary>Raw JSON</summary>\n\n```json\n' + jsonData + '\n```\n</details>'
+      }]
+    };
   }
 
   private async listCreditClasses(args: any) {
@@ -1844,6 +1953,10 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('[regen-koi] Fatal error:', error);
+  logger.fatal({
+    action: 'fatal_error',
+    error: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : undefined
+  }, 'Fatal error starting MCP server');
   process.exit(1);
 });

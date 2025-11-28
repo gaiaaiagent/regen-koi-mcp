@@ -128,7 +128,7 @@ Once you've installed the MCP server, try these queries in Claude to explore wha
 "Show me statistics about what's in the knowledge base"
 ```
 
-**What you'll get:** The system has indexed 5 repositories (regen-ledger, regen-web, koi-sensors, and more) with 23,728 code entities including Functions, Classes, Interfaces, and Cosmos SDK-specific types like Keepers and Messages.
+**What you'll get:** The system has indexed 5 repositories (regen-ledger, regen-web, koi-sensors, and more) with 26,768 code entities including Functions, Classes, Interfaces, and Cosmos SDK-specific types like Keepers and Messages.
 
 ### 💻 Code Exploration: Find Specific Code
 

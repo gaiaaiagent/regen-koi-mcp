@@ -50,8 +50,12 @@
     "@types/pg": "^8.15.6",
     "axios": "^1.7.7",
     "dotenv": "^16.4.5",
+    "lru-cache": "^11.2.2",
     "pg": "^8.16.3",
-    "regen-koi-mcp": "^1.0.0"
+    "pino": "^10.1.0",
+    "pino-pretty": "^13.1.2",
+    "regen-koi-mcp": "^1.0.0",
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@types/node": "^20.16.11",

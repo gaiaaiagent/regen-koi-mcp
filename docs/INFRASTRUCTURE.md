@@ -4,7 +4,7 @@ This document describes the infrastructure needed to run the Regen KOI MCP serve
 
 ## Overview
 
-The Regen KOI MCP server provides 8 tools for searching and navigating the Regen Network codebase. Different tools have different infrastructure requirements:
+The Regen KOI MCP server provides 9 tools for searching and navigating the Regen Network codebase. Different tools have different infrastructure requirements:
 
 ### Tool Requirements Matrix
 
@@ -18,6 +18,7 @@ The Regen KOI MCP server provides 8 tools for searching and navigating the Regen
 | `get_stats` | Required | - | - | - |
 | `generate_weekly_digest` | Required | - | - | - |
 | `query_code_graph` | Required | - | **Required** | - |
+| `get_mcp_metrics` | - | - | - | - |
 
 ## Core Requirements
 
@@ -170,7 +171,8 @@ SELECT * FROM pg_extension WHERE extname = 'age';
                        ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  Regen KOI MCP Server (Node.js)                             │
-│  - 8 tools for code search and navigation                   │
+│  - 9 tools for code search and navigation                   │
+│  - Production hardening: retry, circuit breaker, cache      │
 └──────────────────────┬──────────────────────────────────────┘
                        │ HTTP
         ┌──────────────┴──────────────┐
@@ -191,6 +193,6 @@ SELECT * FROM pg_extension WHERE extname = 'age';
 │  Tables:                                                    │
 │  - koi_memories: Documents and content                      │
 │  - koi_embeddings: 1024-dim vectors                         │
-│  - regen_graph: Entity nodes and relationships (AGE)        │
+│  - regen_graph_v2: Entity nodes and relationships (AGE)     │
 └─────────────────────────────────────────────────────────────┘
 ```

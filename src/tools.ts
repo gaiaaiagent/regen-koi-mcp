@@ -166,5 +166,13 @@ export const TOOLS: Tool[] = [
         }
       }
     }
+  },
+  {
+    name: 'get_mcp_metrics',
+    description: 'Get MCP server performance metrics, cache statistics, and health status. Useful for monitoring and debugging. Returns uptime, tool latencies, cache hit rates, error counts, and circuit breaker status.',
+    inputSchema: {
+      type: 'object',
+      properties: {}
+    }
   }
 ];

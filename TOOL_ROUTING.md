@@ -12,6 +12,7 @@
 | Tech stack info | `get_tech_stack` | Languages/frameworks used |
 | Activity digest | `generate_weekly_digest` | Weekly summary of activity |
 | System statistics | `get_stats` | Document counts, sources |
+| Performance metrics | `get_mcp_metrics` | Latency, cache, errors |
 
 ---
 
@@ -139,6 +140,22 @@ Generate a markdown summary of Regen Network activity over a date range.
 - `format` ('markdown' or 'json', default 'markdown')
 
 **Best for:** Weekly summaries, NotebookLM input, activity tracking
+
+---
+
+### get_mcp_metrics
+Get production performance metrics including query latencies, cache hit rates, error counts, and circuit breaker states.
+
+**Inputs:** None
+
+**Returns:**
+- Per-tool latency percentiles (p50, p95, p99)
+- Success/error rates
+- Cache hit/miss rates
+- Circuit breaker states
+- Last error messages
+
+**Best for:** Production monitoring, performance troubleshooting, cache optimization
 
 ---
 
