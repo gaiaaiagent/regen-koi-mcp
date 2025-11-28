@@ -8,16 +8,18 @@
 
 ## Overview
 
-The Regen KOI (Knowledge Orchestration Interface) MCP Server is a production-ready Model Context Protocol server that provides Claude Code with advanced search and navigation capabilities across the Regen Network codebase.
+The Regen KOI (Knowledge Organization Infrastructure) MCP Server is a production-ready Model Context Protocol server that provides Claude with intelligent search and navigation across all Regen Network knowledge—code, documentation, community discussions, and more.
+
+**KOI** is a distributed knowledge management system developed collaboratively by BlockScience, Metagov, and RMIT. This MCP server provides the interface layer for AI agents to access the full KOI knowledge graph.
 
 ### Key Features
 
-- **9 MCP Tools** - Semantic search, graph queries, GitHub docs, metrics
-- **26,768 Code Entities** - Functions, classes, interfaces extracted via tree-sitter AST parsing
-- **11,331 Relationship Edges** - CALLS, CONTAINS, EXPLAINS relationships
+- **9 MCP Tools** - Semantic search, graph queries, GitHub docs, weekly digests, metrics
+- **15,000+ Documents** - From GitHub, Discourse, Medium, Telegram, Discord, podcasts, websites
+- **26,768 Code Entities** - Functions, structs, interfaces extracted via tree-sitter AST parsing
+- **12 Active Sensors** - Real-time ingestion from diverse platforms
+- **Hybrid Search** - Vector similarity + knowledge graph + keyword matching with RRF fusion
 - **Production Hardening** - Retry logic, circuit breakers, caching, validation, metrics
-- **Multi-Language Support** - Go (current), TypeScript/Python (planned)
-- **Concept Layer** - Human-friendly abstractions mapped to code entities
 
 ---
 

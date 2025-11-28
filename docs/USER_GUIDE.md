@@ -1,6 +1,6 @@
 # KOI MCP Server - User Guide
 
-**Version:** 1.0.6
+**Version:** 1.1.0
 **Last Updated:** 2025-11-27
 
 Welcome to the Regen KOI (Knowledge Organization Infrastructure) MCP Server! This guide will help you get started and make the most of the system.
@@ -22,20 +22,40 @@ Welcome to the Regen KOI (Knowledge Organization Infrastructure) MCP Server! Thi
 
 ## What is KOI?
 
-KOI is a knowledge graph and semantic search system for Regen Network codebases. It provides:
+**KOI (Knowledge Organization Infrastructure)** is a distributed knowledge management system developed collaboratively by BlockScience, Metagov, and RMIT. For Regen Network, KOI provides a comprehensive knowledge layer spanning all organizational knowledge—not just code.
 
-- **26,768 code entities** indexed from Go codebases (regen-ledger, regen-web, etc.)
-- **11,331 CALLS edges** for tracing function calls and dependencies
+### Data Sources
+
+KOI ingests knowledge from **12 active sensors** monitoring diverse platforms:
+
+| Platform | Content Type |
+|----------|-------------|
+| GitHub/GitLab | Code, documentation, issues, PRs |
+| Discourse | Forum discussions, proposals |
+| Medium | Blog posts, articles |
+| Telegram/Discord | Community conversations |
+| Twitter/X | Social updates, announcements |
+| Podcasts | Audio transcripts |
+| Notion | Internal docs, notes |
+| Websites | Handbooks, guides, landing pages |
+| Ledger | On-chain data, transactions |
+
+### What's Indexed
+
+- **15,000+ documents** across all platforms
+- **26,768 code entities** from Go codebases (regen-ledger, etc.)
+- **11,331 CALLS edges** for function call relationships
 - **10 domain concepts** (Credit Class, Credit Batch, Credit Retirement, etc.)
-- **34,000+ documentation embeddings** for semantic search
-- **Graph traversal tools** for impact analysis and code exploration
+- **Semantic embeddings** (BGE 1024-dim vectors) for all content
 
-**Key Capabilities:**
-- Find code by semantic meaning, not just keywords
-- Trace "what calls this function?" and "what does this call?"
-- Understand domain concepts grounded in actual code
-- Search documentation across 4 repositories
-- Identify dead code and unused functions
+### Key Capabilities
+
+- **Semantic search** - Find information by meaning, not just keywords
+- **Hybrid search** - Combines vector similarity + knowledge graph + keyword matching
+- **Code navigation** - Trace function calls, find dependencies, detect orphan code
+- **Concept grounding** - Understand domain terms through linked code and docs
+- **Cross-platform discovery** - Search across GitHub, Discourse, Medium, and more
+- **Real-time updates** - Sensors continuously monitor and ingest new content
 
 ---
 
