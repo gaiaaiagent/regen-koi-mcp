@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-CLI Runner for Weekly Aggregator
+CLI Runner for Weekly Digest Generation
 
 Provides easy command-line interface for generating weekly digests.
+Uses WeeklyCuratorLLM with URL enrichment and NotebookLM export.
 """
 
 import sys
@@ -11,15 +12,23 @@ import json
 from datetime import datetime, timedelta
 import argparse
 import logging
+import asyncio
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv()
+# First try the koi-processor .env, then fallback to local .env
+koi_processor_env = '/opt/projects/koi-processor/.env'
+if os.path.exists(koi_processor_env):
+    load_dotenv(koi_processor_env)
+else:
+    load_dotenv()
 
-# Add parent directory to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add koi-processor to path to import WeeklyCuratorLLM
+koi_processor_path = '/opt/projects/koi-processor'
+if os.path.exists(koi_processor_path) and koi_processor_path not in sys.path:
+    sys.path.insert(0, koi_processor_path)
 
-from src.content.weekly_aggregator import WeeklyAggregator
+from src.content.weekly_curator_llm import WeeklyCuratorLLM
 from typing import Dict, Any
 
 # Configure logging
@@ -29,168 +38,135 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def preview_digest(digest, output_markdown=False):
+def preview_digest(digest: Dict[str, Any], output_markdown=False):
     """Print a preview of the digest to console
 
     Args:
-        digest: The WeeklyDigest object
+        digest: The digest dictionary from WeeklyCuratorLLM
         output_markdown: If True, output the full markdown content after preview
     """
     print("\n" + "="*80)
     print("WEEKLY DIGEST PREVIEW")
     print("="*80)
 
-    # Handle WeeklyDigest dataclass
-    if hasattr(digest, 'week_start'):
-        print(f"Period: {digest.week_start.strftime('%B %d')} - {digest.week_end.strftime('%B %d, %Y')}")
-        print(f"Total Items: {digest.total_items}")
-        if hasattr(digest, 'clusters'):
-            print(f"Clusters: {len(digest.clusters)}")
-        if hasattr(digest, 'brief'):
-            print(f"Word Count: {len(digest.brief.split())} words")
+    # Handle digest dictionary from WeeklyCuratorLLM
+    print(f"Title: {digest.get('title', 'N/A')}")
 
-        if hasattr(digest, 'top_stories') and digest.top_stories:
-            print("\n" + "-"*40 + " TOP STORIES " + "-"*40)
-            for i, story in enumerate(digest.top_stories[:5], 1):
-                print(f"\n{i}. {story.title}")
-                print(f"   Source: {story.source}")
-                if hasattr(story, 'publication_date'):
-                    print(f"   Date: {story.publication_date}")
+    # Get statistics
+    stats = digest.get('statistics', {})
+    if stats:
+        print(f"\nTotal Items: {stats.get('total_items', 0)}")
+        print(f"Word Count: {len(digest.get('brief', '').split())} words")
 
-        if hasattr(digest, 'clusters') and digest.clusters:
-            print("\n" + "-"*40 + " THEMES " + "-"*40)
-            for cluster in digest.clusters[:5]:
-                if isinstance(cluster, dict):
-                    print(f"\n• {cluster.get('theme', 'Unknown')} ({cluster.get('size', 0)} items)")
+        print("\n" + "-"*40 + " STATISTICS " + "-"*40)
+        for key, value in stats.items():
+            if isinstance(value, (int, float)) and value > 0:
+                print(f"  • {key}: {value}")
 
-        if hasattr(digest, 'brief') and digest.brief:
-            print("\n" + "-"*40 + " SUMMARY " + "-"*40)
-            print(digest.brief[:500] + "...")
-
-        if hasattr(digest, 'stats') and digest.stats:
-            print("\n" + "-"*40 + " STATISTICS " + "-"*40)
-            for key, value in digest.stats.items():
-                if key != 'source_distribution':
-                    print(f"{key}: {value}")
+    # Show brief summary
+    brief = digest.get('brief', '')
+    if brief:
+        print("\n" + "-"*40 + " SUMMARY " + "-"*40)
+        print(brief[:500] + "...")
 
     print("\n" + "="*80 + "\n")
 
     # Output full markdown content if requested
-    if output_markdown and hasattr(digest, 'brief'):
+    if output_markdown and brief:
         print("\n" + "="*80)
         print("MARKDOWN_CONTENT_START")
         print("="*80)
-        print(digest.brief)
+        print(brief)
         print("="*80)
         print("MARKDOWN_CONTENT_END")
         print("="*80)
 
-def test_digest():
+async def test_digest_async():
     """Generate a test digest with sample data"""
-    print("\n🧪 Running Weekly Aggregator Test...\n")
-    
-    # Create test configuration
-    test_config = {
-        "database": {
-            "host": "localhost",
-            "port": 5432,
-            "database": "koi_knowledge",
-            "user": "postgres",
-            "password": "postgres"
-        },
-        "bge_server_url": "http://localhost:8090",
-        "koi_coordinator_url": "http://localhost:8000",
-        "content": {
-            "min_confidence": 0.5,
-            "max_items": 1000,
-            "clustering_eps": 0.3,
-            "min_cluster_size": 2,
-            "brief_word_count": 1000
-        },
-        "sources": {
-            "prioritize": ["governance", "ecocredits", "discourse"],
-            "exclude": []
-        }
-    }
-    
-    # Save test config
-    test_config_path = "config/test_weekly_aggregator.json"
-    os.makedirs("config", exist_ok=True)
-    with open(test_config_path, 'w') as f:
-        json.dump(test_config, f, indent=2)
-    
-    # Initialize aggregator
-    aggregator = WeeklyAggregator(test_config_path)
-    
+    print("\n🧪 Running Weekly Digest Test with WeeklyCuratorLLM...\n")
+
     try:
+        # Set date range via environment variables
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=7)
+        os.environ['DIGEST_START_DATE'] = start_date.strftime('%Y-%m-%d')
+        os.environ['DIGEST_END_DATE'] = end_date.strftime('%Y-%m-%d')
+
+        # Initialize curator
+        curator = WeeklyCuratorLLM()
+
         # Generate digest
-        print("📊 Collecting content from past 7 days...")
-        digest = aggregator.generate_digest(days_back=7)
-        
+        print(f"📊 Collecting content from past 7 days ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})...")
+        digest = await curator.generate_weekly_digest()
+
         if digest:
             # Preview
             preview_digest(digest)
-            
+
             # Save outputs
             os.makedirs("output/test", exist_ok=True)
             date_str = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-            
-            md_path = f"output/test/test_digest_{date_str}.md"
-            aggregator.export_markdown(digest, md_path)
-            print(f"✅ Markdown saved to: {md_path}")
-            
+
+            # Save JSON
             json_path = f"output/test/test_digest_{date_str}.json"
-            aggregator.export_json(digest, json_path)
+            with open(json_path, 'w') as f:
+                json.dump(digest, f, indent=2)
             print(f"✅ JSON saved to: {json_path}")
-            
+
+            # Save markdown brief
+            md_path = f"output/test/test_digest_{date_str}.md"
+            with open(md_path, 'w') as f:
+                f.write(digest.get('brief', ''))
+            print(f"✅ Markdown saved to: {md_path}")
+
             print("\n🎉 Test completed successfully!")
             return True
         else:
             print("❌ No digest generated - check data availability")
             return False
-            
+
     except Exception as e:
         print(f"\n❌ Test failed: {e}")
         logger.exception("Test failed with exception")
         return False
 
-def main():
+def test_digest():
+    """Synchronous wrapper for test_digest_async"""
+    return asyncio.run(test_digest_async())
+
+async def main_async():
+    """Main async function"""
     parser = argparse.ArgumentParser(
-        description="Generate Regen Network Weekly Digest",
+        description="Generate Regen Network Weekly Digest with WeeklyCuratorLLM",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   # Generate digest for past 7 days
   python run_weekly_aggregator.py
-  
+
   # Generate digest for past 14 days
   python run_weekly_aggregator.py --days 14
-  
+
   # Preview only (no file output)
   python run_weekly_aggregator.py --preview
-  
+
   # Test with sample data
   python run_weekly_aggregator.py --test
-  
+
   # Custom output directory
   python run_weekly_aggregator.py --output-dir /path/to/output
         """
     )
-    
+
     parser.add_argument(
-        '--days', 
-        type=int, 
-        default=7, 
+        '--days',
+        type=int,
+        default=7,
         help='Number of days to look back (default: 7)'
     )
     parser.add_argument(
-        '--config', 
-        default='config/weekly_aggregator.json',
-        help='Configuration file path'
-    )
-    parser.add_argument(
-        '--output-dir', 
-        default='output/weekly',
+        '--output-dir',
+        default='/opt/projects/koi-processor/output/weekly',
         help='Output directory for digest files'
     )
     parser.add_argument(
@@ -214,63 +190,74 @@ Examples:
         action='store_true',
         help='Enable verbose logging'
     )
-    
+
     args = parser.parse_args()
-    
+
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
-    
+
     if args.test:
         success = test_digest()
         sys.exit(0 if success else 1)
-    
+
     # Create output directory
     if not args.preview:
         os.makedirs(args.output_dir, exist_ok=True)
-    
-    # Initialize aggregator
-    print(f"\n🚀 Initializing Weekly Aggregator...")
-    aggregator = WeeklyAggregator(args.config)
-    
+
+    # Set date range via environment variables (used by WeeklyCuratorLLM)
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=args.days)
+    os.environ['DIGEST_START_DATE'] = start_date.strftime('%Y-%m-%d')
+    os.environ['DIGEST_END_DATE'] = end_date.strftime('%Y-%m-%d')
+
+    # Initialize curator
+    print(f"\n🚀 Initializing Weekly Curator with LLM...")
+    curator = WeeklyCuratorLLM()
+
     # Generate digest
-    print(f"📊 Generating digest for past {args.days} days...")
-    digest = aggregator.generate_digest(args.days)
-    
+    print(f"📊 Generating digest for past {args.days} days ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})...")
+    digest = await curator.generate_weekly_digest()
+
     if digest:
         # Preview
         if args.preview:
             preview_digest(digest, output_markdown=True)
             print("\n📋 Preview mode - no files saved", file=sys.stderr)
         else:
-            # Generate filename with date
-            date_str = digest.week_end.strftime('%Y-%m-%d')
-            
+            # Generate filename with current date
+            date_str = datetime.now().strftime('%Y-%m-%d')
+
             # Export based on format
             if args.format in ['markdown', 'both']:
                 md_path = os.path.join(args.output_dir, f"weekly_digest_{date_str}.md")
-                aggregator.export_markdown(digest, md_path)
+                with open(md_path, 'w') as f:
+                    f.write(digest.get('brief', ''))
                 print(f"✅ Markdown digest saved to: {md_path}")
-            
+
             if args.format in ['json', 'both']:
                 json_path = os.path.join(args.output_dir, f"weekly_digest_{date_str}.json")
-                aggregator.export_json(digest, json_path)
+                with open(json_path, 'w') as f:
+                    json.dump(digest, f, indent=2)
                 print(f"✅ JSON digest saved to: {json_path}")
-            
+
             # Summary
+            stats = digest.get('statistics', {})
             print(f"\n📈 Weekly Digest Summary:")
-            print(f"  • Period: {digest.week_start.strftime('%B %d')} - {digest.week_end.strftime('%B %d, %Y')}")
-            print(f"  • Total items: {digest.total_items}")
-            print(f"  • Clusters: {len(digest.clusters)}")
-            print(f"  • Top stories: {len(digest.top_stories)}")
-            print(f"  • Word count: {len(digest.brief.split())} words")
+            print(f"  • Title: {digest.get('title', 'N/A')}")
+            print(f"  • Total items: {stats.get('total_items', 0)}")
+            print(f"  • Word count: {len(digest.get('brief', '').split())} words")
             print(f"\n✨ Digest generation complete!")
     else:
         print("\n❌ No content found for digest generation")
         print("   Check that:")
         print("   1. Database is accessible")
         print("   2. Content exists for the specified period")
-        print("   3. Configuration is correct")
+        print("   3. Environment variables are set (OPENAI_API_KEY, POSTGRES_URL)")
         sys.exit(1)
+
+def main():
+    """Synchronous wrapper for main_async"""
+    asyncio.run(main_async())
 
 if __name__ == "__main__":
     main()

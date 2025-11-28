@@ -80,7 +80,7 @@ export const TOOLS: Tool[] = [
   },
   {
     name: 'generate_weekly_digest',
-    description: 'Generate a weekly digest of Regen Network activity and discussions. Returns markdown content suitable for NotebookLM or sharing. Optionally saves to a file.',
+    description: 'Generate a weekly digest SUMMARY of Regen Network activity. Returns a curated markdown brief with executive summary, governance analysis, community discussions, and on-chain metrics. This is a condensed overview - use get_notebooklm_export for full content with complete forum posts and Notion pages.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -108,6 +108,24 @@ export const TOOLS: Tool[] = [
           enum: ['markdown', 'json'],
           description: 'Output format. Default: markdown',
           default: 'markdown'
+        }
+      }
+    }
+  },
+  {
+    name: 'get_notebooklm_export',
+    description: 'Get the full NotebookLM export with COMPLETE content including: full forum thread posts, complete Notion page content (all chunks), enriched URLs, and detailed source material. Use this when you need the raw source content for deep analysis or to load into NotebookLM. Much larger than the digest summary.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        save_to_file: {
+          type: 'boolean',
+          description: 'Whether to save the export to a file on disk. Default: false',
+          default: false
+        },
+        output_path: {
+          type: 'string',
+          description: 'Custom file path for saving (only used if save_to_file is true). Defaults to timestamped filename.'
         }
       }
     }

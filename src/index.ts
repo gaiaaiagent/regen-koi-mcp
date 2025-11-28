@@ -181,6 +181,9 @@ class KOIServer {
           case 'generate_weekly_digest':
             result = await this.generateWeeklyDigest(args);
             break;
+          case 'get_notebooklm_export':
+            result = await this.getNotebookLMExport(args);
+            break;
           case 'search_github_docs':
             result = await this.searchGithubDocs(args);
             break;
@@ -876,10 +879,10 @@ class KOIServer {
         const currentDir = path.dirname(currentFile);
         const mcpServerDir = path.join(currentDir, '..');
         const scriptPath = path.join(mcpServerDir, 'python', 'scripts', 'run_weekly_aggregator.py');
-        const configPath = path.join(mcpServerDir, 'python', 'config', 'weekly_aggregator.json');
 
-        // Try to find python3 or python
-        const pythonPath = 'python3'; // Will use system python3
+        // Use koi-processor's venv for WeeklyCuratorLLM dependencies
+        const koiProcessorVenv = '/opt/projects/koi-processor/venv/bin/python3';
+        const pythonPath = fs.existsSync(koiProcessorVenv) ? koiProcessorVenv : 'python3';
 
         // Check if Python script exists
         if (!fs.existsSync(scriptPath)) {
@@ -888,7 +891,8 @@ class KOIServer {
         }
 
       // Build command args - use preview mode when not saving to file
-      const scriptArgs = [scriptPath, '--config', configPath];
+      // Note: The updated script uses WeeklyCuratorLLM and doesn't need --config
+      const scriptArgs = [scriptPath];
 
       if (save_to_file) {
         // Save to file mode - need output directory
@@ -1114,6 +1118,97 @@ class KOIServer {
     } catch (error) {
       console.error(`[${SERVER_NAME}] Error generating weekly digest:`, error);
       throw new Error(`Failed to generate weekly digest: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Get NotebookLM export with full content (forum posts, Notion pages, etc.)
+   */
+  private async getNotebookLMExport(args: any) {
+    const { save_to_file = false, output_path } = args || {};
+
+    try {
+      console.error(`[${SERVER_NAME}] Fetching NotebookLM export from API`);
+
+      // Call the API endpoint
+      const response = await apiClient.get('/weekly-digest/notebooklm');
+      const data = response.data as any;
+
+      if (!data.success) {
+        // Return helpful error message
+        const errorMsg = data.error?.message || 'NotebookLM export not available';
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `## NotebookLM Export Not Available\n\n${errorMsg}\n\n**To generate a NotebookLM export:**\n1. Go to https://regen.gaiaai.xyz/digests/\n2. Click "Generate Weekly Digest"\n3. Wait for generation to complete\n4. Click "Export for NotebookLM"\n5. Then try this tool again to retrieve it`
+            }
+          ]
+        };
+      }
+
+      const content = data.content;
+      const stats = data.statistics || {};
+      const source = data.source || 'api';
+
+      console.error(`[${SERVER_NAME}] Retrieved NotebookLM export: ${stats.word_count || 'unknown'} words from ${source}`);
+
+      // Save to file if requested
+      let savedFilePath = '';
+      if (save_to_file) {
+        const fs = await import('fs');
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        savedFilePath = output_path || `notebooklm_export_${dateStr}.md`;
+        fs.writeFileSync(savedFilePath, content, 'utf-8');
+        console.error(`[${SERVER_NAME}] Saved NotebookLM export to ${savedFilePath}`);
+      }
+
+      // Build summary
+      let summaryText = `## NotebookLM Export Retrieved\n\n`;
+      summaryText += `**Source:** ${source === 'cached' ? `Cached (${data.cached_file})` : 'Generated'}\n`;
+      summaryText += `**Word Count:** ${stats.word_count?.toLocaleString() || 'unknown'}\n`;
+      summaryText += `**Character Count:** ${stats.char_count?.toLocaleString() || 'unknown'}\n`;
+      if (savedFilePath) {
+        summaryText += `**Saved to:** ${savedFilePath}\n`;
+      }
+      summaryText += `\nThe full NotebookLM export is provided below. This includes complete forum posts and Notion page content.`;
+
+      const resourceUri = `notebooklm://export/${new Date().toISOString().split('T')[0]}.md`;
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: summaryText
+          },
+          {
+            type: 'resource',
+            resource: {
+              uri: resourceUri,
+              mimeType: 'text/markdown',
+              text: content
+            }
+          }
+        ]
+      };
+
+    } catch (error) {
+      console.error(`[${SERVER_NAME}] Error fetching NotebookLM export:`, error);
+
+      // Check if it's a 404 (not available)
+      if ((error as any).response?.status === 404) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `## NotebookLM Export Not Available\n\nNo recent NotebookLM export found on the server.\n\n**To generate one:**\n1. Go to https://regen.gaiaai.xyz/digests/\n2. Click "Generate Weekly Digest"\n3. Wait for generation to complete\n4. Click "Export for NotebookLM"\n5. Then try this tool again`
+            }
+          ]
+        };
+      }
+
+      throw new Error(`Failed to fetch NotebookLM export: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
