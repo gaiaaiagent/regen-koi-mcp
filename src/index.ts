@@ -1123,9 +1123,12 @@ class KOIServer {
 
   /**
    * Get NotebookLM export with full content (forum posts, Notion pages, etc.)
+   *
+   * Always saves to a local file to avoid bloating LLM context.
+   * Returns just the file path and summary stats.
    */
   private async getNotebookLMExport(args: any) {
-    const { save_to_file = false, output_path } = args || {};
+    const { output_path } = args || {};
 
     try {
       console.error(`[${SERVER_NAME}] Fetching NotebookLM export from API`);
@@ -1155,42 +1158,43 @@ class KOIServer {
 
       console.error(`[${SERVER_NAME}] Retrieved NotebookLM export: ${stats.word_count || 'unknown'} words from ${source}`);
 
-      // Save to file if requested
-      let savedFilePath = '';
-      if (save_to_file) {
-        const fs = await import('fs');
-        const now = new Date();
-        const dateStr = now.toISOString().split('T')[0];
-        savedFilePath = output_path || `notebooklm_export_${dateStr}.md`;
-        fs.writeFileSync(savedFilePath, content, 'utf-8');
-        console.error(`[${SERVER_NAME}] Saved NotebookLM export to ${savedFilePath}`);
-      }
+      // Always save to file to avoid bloating LLM context
+      const fs = await import('fs');
+      const path = await import('path');
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
 
-      // Build summary
-      let summaryText = `## NotebookLM Export Retrieved\n\n`;
-      summaryText += `**Source:** ${source === 'cached' ? `Cached (${data.cached_file})` : 'Generated'}\n`;
-      summaryText += `**Word Count:** ${stats.word_count?.toLocaleString() || 'unknown'}\n`;
-      summaryText += `**Character Count:** ${stats.char_count?.toLocaleString() || 'unknown'}\n`;
-      if (savedFilePath) {
-        summaryText += `**Saved to:** ${savedFilePath}\n`;
-      }
-      summaryText += `\nThe full NotebookLM export is provided below. This includes complete forum posts and Notion page content.`;
+      // Use provided path or default to current directory
+      const fileName = `notebooklm_export_${dateStr}.md`;
+      const savedFilePath = output_path || fileName;
+      const absolutePath = path.resolve(savedFilePath);
 
-      const resourceUri = `notebooklm://export/${new Date().toISOString().split('T')[0]}.md`;
+      fs.writeFileSync(absolutePath, content, 'utf-8');
+      console.error(`[${SERVER_NAME}] Saved NotebookLM export to ${absolutePath}`);
+
+      // Calculate stats if not provided
+      const wordCount = stats.word_count || content.split(/\s+/).length;
+      const charCount = stats.char_count || content.length;
+
+      // Build concise summary (no full content - just file reference)
+      let summaryText = `## NotebookLM Export Saved Successfully\n\n`;
+      summaryText += `**File:** \`${absolutePath}\`\n`;
+      summaryText += `**Size:** ${(charCount / 1024).toFixed(1)} KB\n`;
+      summaryText += `**Word Count:** ${wordCount.toLocaleString()} words\n`;
+      summaryText += `**Source:** ${source === 'cached' ? `Server cache` : 'Freshly generated'}\n\n`;
+      summaryText += `The full NotebookLM export has been saved to the file above. `;
+      summaryText += `You can open it directly or upload it to NotebookLM for analysis.\n\n`;
+      summaryText += `**Contents include:**\n`;
+      summaryText += `- Complete forum thread posts\n`;
+      summaryText += `- Full Notion page content (including meeting transcripts)\n`;
+      summaryText += `- Governance proposal details\n`;
+      summaryText += `- On-chain activity summary`;
 
       return {
         content: [
           {
             type: 'text',
             text: summaryText
-          },
-          {
-            type: 'resource',
-            resource: {
-              uri: resourceUri,
-              mimeType: 'text/markdown',
-              text: content
-            }
           }
         ]
       };

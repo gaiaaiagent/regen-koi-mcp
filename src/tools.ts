@@ -114,18 +114,13 @@ export const TOOLS: Tool[] = [
   },
   {
     name: 'get_notebooklm_export',
-    description: 'Get the full NotebookLM export with COMPLETE content including: full forum thread posts, complete Notion page content (all chunks), enriched URLs, and detailed source material. Use this when you need the raw source content for deep analysis or to load into NotebookLM. Much larger than the digest summary.',
+    description: 'Get the full NotebookLM export with COMPLETE content including: full forum thread posts, complete Notion page content (all chunks), enriched URLs, and detailed source material. Automatically saves to a local file to avoid bloating LLM context. Returns the file path and summary stats.',
     inputSchema: {
       type: 'object',
       properties: {
-        save_to_file: {
-          type: 'boolean',
-          description: 'Whether to save the export to a file on disk. Default: false',
-          default: false
-        },
         output_path: {
           type: 'string',
-          description: 'Custom file path for saving (only used if save_to_file is true). Defaults to timestamped filename.'
+          description: 'Custom file path for saving. Defaults to notebooklm_export_YYYY-MM-DD.md in the current directory.'
         }
       }
     }
