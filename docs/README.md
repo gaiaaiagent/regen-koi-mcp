@@ -122,9 +122,10 @@ See [API_REFERENCE.md](API_REFERENCE.md) for detailed documentation.
 - **[archive/PHASE_0.3_COMPLETE.md](archive/PHASE_0.3_COMPLETE.md)** - Phase 0.3 completion
 
 ### HTTP API Documentation
-- **[API_ENDPOINTS.md](API_ENDPOINTS.md)** - **Quick reference for all HTTP API endpoints**
-- **[API_QUERY.md](API_QUERY.md)** - `/api/koi/query` endpoint - Hybrid RAG search (48,079+ documents)
-- **[API_GRAPH.md](API_GRAPH.md)** - `/api/koi/graph` endpoint - Code knowledge graph queries (26,768 entities)
+- **[http-api/](http-api/)** - Direct HTTP API documentation for developers
+  - **[README.md](http-api/README.md)** - Quick reference for all HTTP API endpoints
+  - **[QUERY.md](http-api/QUERY.md)** - `/api/koi/query` endpoint - Hybrid RAG search (48,079+ documents)
+  - **[GRAPH.md](http-api/GRAPH.md)** - `/api/koi/graph` endpoint - Code knowledge graph queries (26,768 entities)
 
 ---
 

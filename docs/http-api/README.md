@@ -10,8 +10,8 @@ Complete HTTP API reference for the KOI Query API server running at `https://reg
 |----------|--------|------|---------|---------------|
 | `/health` | GET | 8301 | Health check and system status | See below |
 | `/stats` | GET | 8301 | Knowledge base statistics | See below |
-| `/query` | POST | 8301 | **Hybrid RAG search** (48,079+ docs) | [API_QUERY.md](API_QUERY.md) |
-| `/graph` | POST | 8301 | **Code graph queries** (26,768 entities) | [API_GRAPH.md](API_GRAPH.md) |
+| `/query` | POST | 8301 | **Hybrid RAG search** (48,079+ docs) | [QUERY.md](QUERY.md) |
+| `/graph` | POST | 8301 | **Code graph queries** (26,768 entities) | [GRAPH.md](GRAPH.md) |
 | `/weekly-digest` | GET | 8301 | Weekly activity summary | See below |
 | `/weekly-digest/notebooklm` | GET | 8400 | Full NotebookLM export | See below |
 
@@ -116,7 +116,7 @@ curl -X POST 'https://regen.gaiaai.xyz/api/koi/query' \
 - **limit** (optional): Max results (default: 10)
 - **filters** (optional): Date range filters
 
-**📖 Full Documentation:** [API_QUERY.md](API_QUERY.md)
+**📖 Full Documentation:** [QUERY.md](QUERY.md)
 
 **Port:** 8301 (Bun server)
 **Performance:** 150-300ms typical
@@ -151,7 +151,7 @@ curl -X POST 'https://regen.gaiaai.xyz/api/koi/graph' \
 - **Relationships**: `keeper_for_msg`, `msgs_for_keeper`, `related_entities`
 - **Modules**: `list_modules`, `get_module`
 
-**📖 Full Documentation:** [API_GRAPH.md](API_GRAPH.md)
+**📖 Full Documentation:** [GRAPH.md](GRAPH.md)
 
 **Port:** 8301 (Bun server)
 **Performance:** < 200ms typical
@@ -350,11 +350,11 @@ All endpoints are prefixed with `/api/koi`.
 
 ## Related Documentation
 
-- **[API_REFERENCE.md](API_REFERENCE.md)** - MCP tools documentation
-- **[API_QUERY.md](API_QUERY.md)** - Complete `/query` endpoint docs
-- **[API_GRAPH.md](API_GRAPH.md)** - Complete `/graph` endpoint docs
-- **[USER_GUIDE.md](USER_GUIDE.md)** - Installation and usage
-- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Deployment guide
+- **[../API_REFERENCE.md](../API_REFERENCE.md)** - MCP tools documentation
+- **[QUERY.md](QUERY.md)** - Complete `/query` endpoint docs
+- **[GRAPH.md](GRAPH.md)** - Complete `/graph` endpoint docs
+- **[../USER_GUIDE.md](../USER_GUIDE.md)** - Installation and usage
+- **[../DEPLOYMENT.md](../DEPLOYMENT.md)** - Deployment guide
 
 ---
 
