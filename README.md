@@ -4,21 +4,62 @@ Access Regen Network's Knowledge Organization Infrastructure (KOI) through Model
 
 ## 🚀 Quick Start
 
-### One-Line Install (Easiest!)
+**Choose your installation method:**
+- **Native CLI commands** (Recommended) - Most transparent and secure
+- **Automated install script** - Convenient for multiple clients at once
+- **Manual configuration** - Full control over your setup
+
+### Recommended: Native CLI Commands
+
+The simplest and most secure way to install for supported clients:
+
+**Claude Code CLI:**
+```bash
+claude mcp add regen-koi npx -y regen-koi-mcp@latest
+```
+
+**Codex:**
+```bash
+codex mcp add regen-koi npx "-y regen-koi-mcp@latest"
+```
+
+**Warp:**
+```bash
+/add-mcp regen-koi npx -y regen-koi-mcp@latest
+```
+
+**Amp:**
+```bash
+amp mcp add regen-koi -- npx -y regen-koi-mcp@latest
+```
+
+**Factory:**
+```bash
+droid mcp add regen-koi "npx -y regen-koi-mcp@latest"
+```
+
+Then configure the environment variable (see [client-specific sections](#-supported-clients) below for details).
+
+### Alternative: Automated Install Script
+
+**⚠️ Security Note:** This script requires bash access and modifies config files. Review the [install script](https://raw.githubusercontent.com/gaiaaiagent/regen-koi-mcp/main/install.sh) before running.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/gaiaaiagent/regen-koi-mcp/main/install.sh | bash
 ```
 
-This automatically configures Claude Desktop and Claude Code CLI. Just restart and you're done! 🎉
+**What this does:**
+- Automatically configures Claude Desktop and Claude Code CLI
+- Sets up environment variables
+- Works for multiple clients at once
 
-**Quick Test:** After restarting, open Claude and ask: _"What repositories are indexed in KOI?"_ to verify the tools are working.
+**Quick Test:** After installation, restart your client and ask: _"What repositories are indexed in KOI?"_ to verify the tools are working.
 
 ---
 
-### Option 1: NPM (Recommended - Auto-Updates)
+### Manual Configuration (All Clients)
 
-**No installation needed!** Just configure Claude Desktop with:
+**For clients without a CLI command**, manually add this configuration:
 
 ```json
 {
@@ -55,7 +96,9 @@ Then restart Claude Desktop and you're done! 🎉
 
 ### 🔄 Migrating from Git Installation
 
-If you previously installed via `git clone`, switch to npx for automatic updates:
+If you previously installed via `git clone`, switch to npx for automatic updates.
+
+⚠️ **Security Note:** Review the [migrate script](https://raw.githubusercontent.com/gaiaaiagent/regen-koi-mcp/main/migrate.sh) before running.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/gaiaaiagent/regen-koi-mcp/main/migrate.sh | bash
@@ -399,12 +442,13 @@ regen-koi-mcp/
 
 ### Claude Desktop
 
-**One-line install:**
-```bash
-curl -fsSL https://raw.githubusercontent.com/gaiaaiagent/regen-koi-mcp/main/install.sh | bash
-```
+**Recommended: Manual configuration**
 
-Or manually add to config (`~/Library/Application Support/Claude/claude_desktop_config.json` on Mac, `~/.config/Claude/claude_desktop_config.json` on Linux):
+Add to your config file:
+- **Mac:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+- **Linux:** `~/.config/Claude/claude_desktop_config.json`
+
 ```json
 {
   "mcpServers": {
@@ -417,25 +461,30 @@ Or manually add to config (`~/Library/Application Support/Claude/claude_desktop_
     }
   }
 }
+```
+
+**Alternative: Automated installer**
+
+⚠️ **Security Note:** Review the [install script](https://raw.githubusercontent.com/gaiaaiagent/regen-koi-mcp/main/install.sh) before running.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/gaiaaiagent/regen-koi-mcp/main/install.sh | bash
 ```
 
 ---
 
 ### Claude Code CLI
 
-**Option 1: Use the automated installer (recommended)**
-```bash
-curl -fsSL https://raw.githubusercontent.com/gaiaaiagent/regen-koi-mcp/main/install.sh | bash
-```
-This configures both Claude Desktop and Claude Code CLI with the correct environment variables.
-
-**Option 2: Manual installation**
-1. Add the MCP server:
+**Recommended: One-line command**
 ```bash
 claude mcp add regen-koi npx -y regen-koi-mcp@latest
 ```
 
-2. Configure the environment variable in your Claude Code settings file (`~/.claude/settings.json` or similar):
+Then manually add the environment variable to your Claude Code settings file:
+
+**Mac/Linux:** `~/.config/claude/claude_code_config.json`
+**Windows:** `%APPDATA%\claude\claude_code_config.json`
+
 ```json
 {
   "mcpServers": {
@@ -449,6 +498,16 @@ claude mcp add regen-koi npx -y regen-koi-mcp@latest
   }
 }
 ```
+
+**Alternative: Use the automated installer**
+
+⚠️ **Security Note:** Review the [install script](https://raw.githubusercontent.com/gaiaaiagent/regen-koi-mcp/main/install.sh) before running.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/gaiaaiagent/regen-koi-mcp/main/install.sh | bash
+```
+
+This configures both Claude Desktop and Claude Code CLI with the correct environment variables.
 
 **Verification:** After installation, restart Claude Code and ask: "What repositories are indexed?" to verify the tools are working.
 
@@ -456,15 +515,21 @@ claude mcp add regen-koi npx -y regen-koi-mcp@latest
 
 ### VS Code / VS Code Insiders
 
-**One-line install:**
+**Recommended: CLI command**
+
+For VS Code:
 ```bash
 code --add-mcp '{"name":"regen-koi","command":"npx","args":["-y","regen-koi-mcp@latest"],"env":{"KOI_API_ENDPOINT":"https://regen.gaiaai.xyz/api/koi"}}'
 ```
 
-Or for VS Code Insiders:
+For VS Code Insiders:
 ```bash
 code-insiders --add-mcp '{"name":"regen-koi","command":"npx","args":["-y","regen-koi-mcp@latest"],"env":{"KOI_API_ENDPOINT":"https://regen.gaiaai.xyz/api/koi"}}'
 ```
+
+**Alternative: Manual configuration**
+
+Add to your VS Code MCP settings with the command, args, and env values shown above.
 
 ---
 
@@ -553,45 +618,57 @@ Install [Continue from VS Code Marketplace](https://marketplace.visualstudio.com
 
 ### Warp
 
-**Via Settings:**
-1. Open Settings → AI → Manage MCP Servers
-2. Add new server
-
-Or use slash command:
+**Recommended: Slash command**
 ```bash
 /add-mcp regen-koi npx -y regen-koi-mcp@latest
 ```
+
+Then add the environment variable `KOI_API_ENDPOINT=https://regen.gaiaai.xyz/api/koi` in the server settings.
+
+**Alternative: Manual configuration via Settings**
+1. Open Settings → AI → Manage MCP Servers
+2. Add new server
+3. Configure:
+   - Command: `npx`
+   - Args: `-y regen-koi-mcp@latest`
+   - Env: `KOI_API_ENDPOINT=https://regen.gaiaai.xyz/api/koi`
 
 ---
 
 ### Amp
 
-**One-line install:**
+**Recommended: One-line command**
 ```bash
 amp mcp add regen-koi -- npx -y regen-koi-mcp@latest
 ```
+
+Then manually add the environment variable `KOI_API_ENDPOINT=https://regen.gaiaai.xyz/api/koi` to the server configuration.
 
 ---
 
 ### Factory
 
-**One-line install:**
+**Recommended: One-line command**
 ```bash
 droid mcp add regen-koi "npx -y regen-koi-mcp@latest"
 ```
 
-Or use interactive UI with `/mcp` command.
+Then manually add the environment variable `KOI_API_ENDPOINT=https://regen.gaiaai.xyz/api/koi` to the server configuration.
+
+**Alternative: Interactive UI**
+
+Use the `/mcp` command in Factory to add the server interactively.
 
 ---
 
 ### Codex
 
-**One-line install:**
+**Recommended: One-line command**
 ```bash
 codex mcp add regen-koi npx "-y regen-koi-mcp@latest"
 ```
 
-Or manually edit `~/.codex/config.toml`:
+Then manually add the environment variable to `~/.codex/config.toml`:
 ```toml
 [[mcp.servers]]
 name = "regen-koi"
@@ -600,6 +677,10 @@ args = ["-y", "regen-koi-mcp@latest"]
 [mcp.servers.env]
 KOI_API_ENDPOINT = "https://regen.gaiaai.xyz/api/koi"
 ```
+
+**Alternative: Manual configuration**
+
+Edit `~/.codex/config.toml` directly with the complete config above.
 
 ---
 
