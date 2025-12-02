@@ -675,18 +675,28 @@ class KOIServer {
     const { detailed = false } = args;
 
     try {
-      const response = await apiClient.get('/health');
+      const response = await apiClient.get('/stats');
 
-      const health = response.data as any;
+      const stats = response.data as any;
       let formatted = `# KOI Knowledge Base Statistics\n\n`;
-      formatted += `- **Status**: ${health.status || 'Unknown'}\n`;
 
-      // Since /health is minimal, we'll provide estimated stats
-      formatted += `- **Total Documents**: 15,000+\n`;
-      formatted += `- **Topics Covered**: Regen Network, Carbon Credits, Ecological Assets\n`;
-      formatted += `- **Data Sources**: Multiple (Websites, Podcasts, Documentation)\n`;
-      // Display the resolved endpoint that this server is using
-      formatted += `- **API Endpoint**: ${KOI_API_ENDPOINT}\n`;
+      // Main statistics
+      formatted += `- **Total Documents**: ${stats.total_documents?.toLocaleString() || 'Unknown'}\n`;
+      formatted += `- **Recent (7 days)**: ${stats.recent_7_days?.toLocaleString() || 'Unknown'}\n`;
+      formatted += `- **API Endpoint**: ${KOI_API_ENDPOINT}\n\n`;
+
+      // Source breakdown
+      if (stats.by_source && Object.keys(stats.by_source).length > 0) {
+        formatted += `## Documents by Source\n\n`;
+
+        // Sort sources by count (descending)
+        const sortedSources = Object.entries(stats.by_source)
+          .sort(([, a], [, b]) => (b as number) - (a as number));
+
+        for (const [source, count] of sortedSources) {
+          formatted += `- **${source}**: ${(count as number).toLocaleString()}\n`;
+        }
+      }
 
       return {
         content: [

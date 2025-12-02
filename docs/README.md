@@ -15,7 +15,7 @@ The Regen KOI (Knowledge Organization Infrastructure) MCP Server is a production
 ### Key Features
 
 - **9 MCP Tools** - Semantic search, graph queries, GitHub docs, weekly digests, metrics
-- **15,000+ Documents** - From GitHub, Discourse, Medium, Telegram, Discord, podcasts, websites
+- **48,079+ Documents** - From GitHub, Discourse, Medium, Telegram, Discord, podcasts, websites
 - **26,768 Code Entities** - Functions, structs, interfaces extracted via tree-sitter AST parsing
 - **12 Active Sensors** - Real-time ingestion from diverse platforms
 - **Hybrid Search** - Vector similarity + knowledge graph + keyword matching with RRF fusion
@@ -108,7 +108,7 @@ See [API_REFERENCE.md](API_REFERENCE.md) for detailed documentation.
 
 ### For Users
 - **[USER_GUIDE.md](USER_GUIDE.md)** - Installation, usage, troubleshooting, FAQ
-- **[API_REFERENCE.md](API_REFERENCE.md)** - Complete API documentation for all 9 tools
+- **[API_REFERENCE.md](API_REFERENCE.md)** - Complete API documentation for all 9 MCP tools
 
 ### For Operators
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** - Deployment runbook, rollback, health checks
@@ -120,6 +120,11 @@ See [API_REFERENCE.md](API_REFERENCE.md) for detailed documentation.
 - **[archive/CODE_EXAMPLES.md](archive/CODE_EXAMPLES.md)** - Historical code examples
 - **[archive/PHASE_0.2_COMPLETE.md](archive/PHASE_0.2_COMPLETE.md)** - Phase 0.2 completion
 - **[archive/PHASE_0.3_COMPLETE.md](archive/PHASE_0.3_COMPLETE.md)** - Phase 0.3 completion
+
+### HTTP API Documentation
+- **[API_ENDPOINTS.md](API_ENDPOINTS.md)** - **Quick reference for all HTTP API endpoints**
+- **[API_QUERY.md](API_QUERY.md)** - `/api/koi/query` endpoint - Hybrid RAG search (48,079+ documents)
+- **[API_GRAPH.md](API_GRAPH.md)** - `/api/koi/graph` endpoint - Code knowledge graph queries (26,768 entities)
 
 ---
 
