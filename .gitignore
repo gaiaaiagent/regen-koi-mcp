@@ -65,3 +65,8 @@ results/
 
 # Scripts (keep setup.js for npm setup)
 scripts/eval-*.js
+
+# Google OAuth
+client_secret.json
+tokens.json
+.google_tokens.json

@@ -105,6 +105,93 @@ Want complete control including data collection? You'll need:
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed setup instructions and architecture overview.
 
+## 🔐 Authentication (Optional - Team Members Only)
+
+### Public Data (No Auth Required)
+KOI provides access to extensive public Regen Network knowledge:
+- ✅ Regen Ledger code and documentation
+- ✅ Regen Network forum discussions
+- ✅ Public GitHub repositories
+- ✅ Website content and blogs
+
+**Most users don't need authentication** - just install and start querying!
+
+### Internal Documentation (Regen Network Team)
+Regen Network team members with `@regen.network` emails can optionally authenticate to access additional internal documentation.
+
+**To authenticate:**
+```
+User: "Please use the regen_koi_authenticate tool"
+
+MCP: Opening browser for authentication...
+     [Browser opens to Google OAuth]
+
+User: [Log in with yourname@regen.network]
+      [Grant permissions: email, profile]
+
+MCP: ✅ Authentication successful!
+     Authenticated as: yourname@regen.network
+```
+
+**After authentication:**
+- Queries automatically include internal documentation
+- Token is saved on the server (not your machine)
+- No need to re-authenticate unless token expires (~7 days)
+
+### What Permissions Are Requested
+
+The OAuth flow requests **minimal, identity-only permissions**:
+- ✅ `openid` - Verify your identity
+- ✅ `email` - Confirm you're @regen.network
+- ✅ `profile` - Basic profile info
+
+**NOT requested:**
+- ❌ Access to your personal Drive files
+- ❌ Access to your Gmail
+- ❌ Any write/modification permissions
+
+The service account (not your OAuth token) handles all data access.
+
+### Example: Team Member Workflow
+
+```
+# First time - authenticate
+User: "Use regen_koi_authenticate to authenticate me"
+
+MCP: Opening browser...
+     ✅ Authenticated as: alice@regen.network
+
+# Now all queries include internal docs
+User: "How do I register a carbon project?"
+
+MCP: Found 23 results from multiple sources:
+     - Project Registration Guide (2024)
+     - Registry Standards Documentation
+     - Carbon Methodology Overview
+     ...
+```
+
+### Token Security
+
+Your authentication tokens are:
+- 🔒 Stored server-side only (never on your machine)
+- 🔒 Encrypted in PostgreSQL database
+- 🔒 User-specific (never shared between users)
+- 🔒 Automatically refreshed when needed
+
+### Troubleshooting
+
+**"Authentication window opened but nothing happened"**
+- Check if your browser blocked the popup
+- Try manually clicking the URL shown in the terminal
+
+**"Access denied" after logging in**
+- Ensure you're using your `@regen.network` email (not personal Gmail)
+- Contact your Workspace admin if you don't have access
+
+**Still having issues?**
+- Open an issue: https://github.com/gaiaaiagent/regen-koi-mcp/issues
+
 ## 🎯 What This Does
 
 This MCP server gives AI assistants access to Regen Network's comprehensive knowledge base with 15,000+ documents about:

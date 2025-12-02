@@ -193,6 +193,9 @@ class KOIServer {
           case 'get_tech_stack':
             result = await this.getTechStack(args);
             break;
+          case 'regen_koi_authenticate':
+            result = await this.authenticateUser();
+            break;
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
@@ -1642,6 +1645,96 @@ class KOIServer {
         content: [{
           type: 'text',
           text: `Error getting tech stack: ${error instanceof Error ? error.message : 'Unknown error occurred'}`
+        }]
+      };
+    }
+  }
+
+  /**
+   * Authenticate user with @regen.network email for access to private documentation
+   */
+  private async authenticateUser() {
+    const startTime = Date.now();
+
+    try {
+      console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate Event=start`);
+
+      // Get user email (same logic as graph_tool.ts uses)
+      const userEmail = process.env.REGEN_USER_EMAIL ||
+                        process.env.USER_EMAIL ||
+                        `${process.env.USER}@regen.network`;
+
+      console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate UserEmail=${userEmail}`);
+
+      // Call the auth initiate endpoint
+      const response = await axios.get(`${KOI_API_ENDPOINT}/auth/initiate`, {
+        params: { user_email: userEmail }
+      });
+
+      const { auth_url, state } = response.data as { auth_url: string; state: string };
+
+      if (!auth_url) {
+        throw new Error('No auth URL returned from server');
+      }
+
+      // Open browser for OAuth
+      console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate Event=opening_browser URL=${auth_url}`);
+
+      const open = (await import('open')).default;
+      await open(auth_url);
+
+      let output = `## Authentication Started\n\n`;
+      output += `✅ Opening browser for OAuth login...\n\n`;
+      output += `**Please:**\n`;
+      output += `1. Log in with your **@regen.network** email\n`;
+      output += `2. Grant the requested permissions (email, profile)\n`;
+      output += `3. The browser will show a success message when complete\n\n`;
+      output += `**After authenticating:**\n`;
+      output += `- Your token is saved on the server\n`;
+      output += `- Future queries will automatically include private Drive data\n`;
+      output += `- You won't need to authenticate again unless the token expires\n\n`;
+      output += `**Polling for authentication completion...**\n`;
+
+      // Poll for authentication status
+      const pollUrl = `${KOI_API_ENDPOINT}/auth/status?user_email=${encodeURIComponent(userEmail)}`;
+      const maxAttempts = 60; // 2 minutes
+      const pollInterval = 2000; // 2 seconds
+
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+        try {
+          const statusResponse = await axios.get(pollUrl);
+          if ((statusResponse.data as { authenticated: boolean }).authenticated) {
+            console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate Event=success Duration=${Date.now() - startTime}ms`);
+
+            output += `\n✅ **Authentication Successful!**\n\n`;
+            output += `Authenticated as: ${userEmail}\n\n`;
+            output += `You now have access to internal Regen Network documentation.\n`;
+            output += `Try asking questions that might reference internal documents!\n`;
+
+            return {
+              content: [{
+                type: 'text',
+                text: output
+              }]
+            };
+          }
+        } catch (pollError) {
+          // Continue polling
+        }
+      }
+
+      // Timeout
+      throw new Error('Authentication timeout - please try again');
+
+    } catch (error) {
+      console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate Event=error`, error);
+
+      return {
+        content: [{
+          type: 'text',
+          text: `## Authentication Error\n\n${error instanceof Error ? error.message : 'Unknown error occurred'}\n\nPlease try again or contact support if the issue persists.`
         }]
       };
     }
