@@ -15,7 +15,7 @@ The simplest and most secure way to install for supported clients:
 
 **Claude Code CLI:**
 ```bash
-claude mcp add regen-koi npx -y regen-koi-mcp@latest
+claude mcp add regen-koi npx regen-koi-mcp@latest
 ```
 
 **Codex:**
@@ -66,7 +66,7 @@ curl -fsSL https://raw.githubusercontent.com/gaiaaiagent/regen-koi-mcp/main/inst
   "mcpServers": {
     "regen-koi": {
       "command": "npx",
-      "args": ["-y", "regen-koi-mcp@latest"],
+      "args": ["regen-koi-mcp@latest"],
       "env": {
         "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
       }
@@ -454,7 +454,7 @@ Add to your config file:
   "mcpServers": {
     "regen-koi": {
       "command": "npx",
-      "args": ["-y", "regen-koi-mcp@latest"],
+      "args": ["regen-koi-mcp@latest"],
       "env": {
         "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
       }
@@ -477,7 +477,7 @@ curl -fsSL https://raw.githubusercontent.com/gaiaaiagent/regen-koi-mcp/main/inst
 
 **Recommended: One-line command**
 ```bash
-claude mcp add regen-koi npx -y regen-koi-mcp@latest
+claude mcp add regen-koi npx regen-koi-mcp@latest
 ```
 
 Then manually add the environment variable to your Claude Code settings file:
@@ -490,7 +490,7 @@ Then manually add the environment variable to your Claude Code settings file:
   "mcpServers": {
     "regen-koi": {
       "command": "npx",
-      "args": ["-y", "regen-koi-mcp@latest"],
+      "args": ["regen-koi-mcp@latest"],
       "env": {
         "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
       }
@@ -519,12 +519,12 @@ This configures both Claude Desktop and Claude Code CLI with the correct environ
 
 For VS Code:
 ```bash
-code --add-mcp '{"name":"regen-koi","command":"npx","args":["-y","regen-koi-mcp@latest"],"env":{"KOI_API_ENDPOINT":"https://regen.gaiaai.xyz/api/koi"}}'
+code --add-mcp '{"name":"regen-koi","command":"npx","args":["regen-koi-mcp@latest"],"env":{"KOI_API_ENDPOINT":"https://regen.gaiaai.xyz/api/koi"}}'
 ```
 
 For VS Code Insiders:
 ```bash
-code-insiders --add-mcp '{"name":"regen-koi","command":"npx","args":["-y","regen-koi-mcp@latest"],"env":{"KOI_API_ENDPOINT":"https://regen.gaiaai.xyz/api/koi"}}'
+code-insiders --add-mcp '{"name":"regen-koi","command":"npx","args":["regen-koi-mcp@latest"],"env":{"KOI_API_ENDPOINT":"https://regen.gaiaai.xyz/api/koi"}}'
 ```
 
 **Alternative: Manual configuration**
@@ -542,7 +542,7 @@ Add to your VS Code MCP settings with the command, args, and env values shown ab
 4. Enter:
    - Name: `regen-koi`
    - Command: `npx`
-   - Args: `-y regen-koi-mcp@latest`
+   - Args: `regen-koi-mcp@latest`
    - Env: `KOI_API_ENDPOINT=https://regen.gaiaai.xyz/api/koi`
 
 ---
@@ -555,7 +555,7 @@ Add to your Windsurf MCP config:
   "mcpServers": {
     "regen-koi": {
       "command": "npx",
-      "args": ["-y", "regen-koi-mcp@latest"],
+      "args": ["regen-koi-mcp@latest"],
       "env": {
         "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
       }
@@ -574,7 +574,7 @@ Install [Cline from VS Code Marketplace](https://marketplace.visualstudio.com/it
   "mcpServers": {
     "regen-koi": {
       "command": "npx",
-      "args": ["-y", "regen-koi-mcp@latest"],
+      "args": ["regen-koi-mcp@latest"],
       "env": {
         "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
       }
@@ -593,7 +593,7 @@ Install [Continue from VS Code Marketplace](https://marketplace.visualstudio.com
   "mcpServers": {
     "regen-koi": {
       "command": "npx",
-      "args": ["-y", "regen-koi-mcp@latest"],
+      "args": ["regen-koi-mcp@latest"],
       "env": {
         "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
       }
@@ -611,7 +611,7 @@ Install [Continue from VS Code Marketplace](https://marketplace.visualstudio.com
 2. Go to Extensions
 3. Add MCP server with:
    - Command: `npx`
-   - Args: `-y regen-koi-mcp@latest`
+   - Args: `regen-koi-mcp@latest`
    - Env: `KOI_API_ENDPOINT=https://regen.gaiaai.xyz/api/koi`
 
 ---
@@ -630,7 +630,7 @@ Then add the environment variable `KOI_API_ENDPOINT=https://regen.gaiaai.xyz/api
 2. Add new server
 3. Configure:
    - Command: `npx`
-   - Args: `-y regen-koi-mcp@latest`
+   - Args: `regen-koi-mcp@latest`
    - Env: `KOI_API_ENDPOINT=https://regen.gaiaai.xyz/api/koi`
 
 ---
@@ -673,7 +673,7 @@ Then manually add the environment variable to `~/.codex/config.toml`:
 [[mcp.servers]]
 name = "regen-koi"
 command = "npx"
-args = ["-y", "regen-koi-mcp@latest"]
+args = ["regen-koi-mcp@latest"]
 [mcp.servers.env]
 KOI_API_ENDPOINT = "https://regen.gaiaai.xyz/api/koi"
 ```
@@ -692,7 +692,7 @@ Add to `~/.config/opencode/opencode.json`:
   "mcpServers": {
     "regen-koi": {
       "command": "npx",
-      "args": ["-y", "regen-koi-mcp@latest"],
+      "args": ["regen-koi-mcp@latest"],
       "env": {
         "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
       }
@@ -711,7 +711,7 @@ Add to `.kiro/settings/mcp.json`:
   "mcpServers": {
     "regen-koi": {
       "command": "npx",
-      "args": ["-y", "regen-koi-mcp@latest"],
+      "args": ["regen-koi-mcp@latest"],
       "env": {
         "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
       }
@@ -727,7 +727,7 @@ Add to `.kiro/settings/mcp.json`:
 **Via Settings:**
 1. Open Program sidebar
 2. Go to MCP configuration
-3. Add server with npx command: `npx -y regen-koi-mcp@latest`
+3. Add server with npx command: `npx regen-koi-mcp@latest`
 
 ---
 
@@ -738,7 +738,7 @@ Add to `.kiro/settings/mcp.json`:
 2. Click "Connect more tools"
 3. Add MCP server:
    - Command: `npx`
-   - Args: `-y regen-koi-mcp@latest`
+   - Args: `regen-koi-mcp@latest`
    - Env: `KOI_API_ENDPOINT=https://regen.gaiaai.xyz/api/koi`
 
 ---
@@ -751,7 +751,7 @@ Add to Gemini CLI MCP config:
   "mcpServers": {
     "regen-koi": {
       "command": "npx",
-      "args": ["-y", "regen-koi-mcp@latest"],
+      "args": ["regen-koi-mcp@latest"],
       "env": {
         "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
       }
@@ -769,7 +769,7 @@ Any MCP-compatible client can use this server with:
 ```json
 {
   "command": "npx",
-  "args": ["-y", "regen-koi-mcp@latest"],
+  "args": ["regen-koi-mcp@latest"],
   "env": {
     "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi"
   }
