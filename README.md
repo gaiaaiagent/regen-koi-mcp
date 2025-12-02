@@ -286,6 +286,11 @@ Once you've installed the MCP server, try these queries in Claude to explore wha
 | `get_repo_overview` | Get structured overview of a Regen repository | `repository` (enum: regen-ledger, regen-web, regen-data-standards, regenie-corpus) |
 | `get_tech_stack` | Get technical stack information for Regen repositories | `repository` (optional, omit to show all repos) |
 
+### Authentication (Team Members Only)
+| Tool | Description | Key Inputs |
+|------|-------------|-----------|
+| `regen_koi_authenticate` | Authenticate with @regen.network email to access internal documentation | None (opens browser for OAuth login) |
+
 ---
 
 ## 🤔 What Can I Ask? User Guide
