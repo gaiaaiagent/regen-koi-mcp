@@ -1733,6 +1733,7 @@ class KOIServer {
             access_token?: string;
             token_type?: string;
             expires_in?: number;
+            email?: string;
             error?: string;
             error_description?: string;
           }>(`${KOI_API_ENDPOINT}/auth/token`, {
@@ -1793,7 +1794,7 @@ class KOIServer {
             saveAuthState({
               accessToken: data.access_token,
               accessTokenExpiresAt: tokenExpiry,
-              userEmail: state.userEmail
+              userEmail: data.email
             });
 
             return {

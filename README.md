@@ -166,20 +166,31 @@ Regen Network team members with `@regen.network` emails can optionally authentic
 ```
 User: "Please use the regen_koi_authenticate tool"
 
-MCP: Opening browser for authentication...
-     [Browser opens to Google OAuth]
+MCP: ## Authentication Required
 
-User: [Log in with yourname@regen.network]
-      [Grant permissions: email, profile]
+     🌐 Your browser should open automatically. If not, click:
+     [Open Activation Page](https://regen.gaiaai.xyz/activate)
 
-MCP: ✅ Authentication successful!
+     Enter this code: NWDV-FCFC
+
+     Sign in with your @regen.network email.
+
+     After completing, run this tool again to retrieve your session token.
+
+User: [Completes authentication in browser]
+      "Please use the regen_koi_authenticate tool again"
+
+MCP: ✅ Authentication Successful!
+     You now have access to internal Regen Network documentation.
+
      Authenticated as: yourname@regen.network
 ```
 
 **After authentication:**
 - Queries automatically include internal documentation
-- Token is saved on the server (not your machine)
-- No need to re-authenticate unless token expires (~7 days)
+- Token is saved locally in `~/.koi-auth.json` and cached in memory
+- Session expires after ~1 hour
+- Browser auto-opens to activation page for convenience
 
 ### What Permissions Are Requested
 
@@ -217,10 +228,14 @@ MCP: Found 23 results from multiple sources:
 ### Token Security
 
 Your authentication tokens are:
-- 🔒 Stored server-side only (never on your machine)
-- 🔒 Encrypted in PostgreSQL database
+- 🔒 Stored locally in `~/.koi-auth.json` (excluded from git)
+- 🔒 Hashed (SHA-256) when stored in PostgreSQL database
 - 🔒 User-specific (never shared between users)
-- 🔒 Automatically refreshed when needed
+- 🔒 Session expires after 1 hour
+- 🔒 RFC 8628 Device Authorization Grant prevents phishing attacks
+- 🔒 Rate limiting and JWT validation for additional security
+
+See [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md) for complete security documentation.
 
 ### Troubleshooting
 

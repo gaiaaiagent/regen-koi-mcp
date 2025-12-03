@@ -20,7 +20,10 @@ The KOI system has two tiers of data access:
 
 This implementation follows [RFC 8628](https://datatracker.ietf.org/doc/html/rfc8628) to prevent phishing attacks.
 
+**"One Tool, Two Calls" Pattern** - No polling loop, uses file-based state persistence.
+
 ```
+CALL 1: Request Device Code
 ┌─────────────────┐
 │   MCP Client    │ 1. POST /auth/device/code
 │  (Claude Code)  │    (no parameters needed)
@@ -37,53 +40,69 @@ This implementation follows [RFC 8628](https://datatracker.ietf.org/doc/html/rfc
          │ 3. Return: device_code, user_code, verification_uri
          ▼
 ┌─────────────────┐
-│   MCP Client    │ 4. Display to user:
-│                 │    "Go to https://regen.gaiaai.xyz/activate"
-│                 │    "Enter code: WDJB-QK4Z"
+│   MCP Client    │ 4. Save state to ~/.koi-auth.json
+│                 │ 5. Auto-open browser (optional)
+│                 │ 6. Display to user:
+│                 │    🌐 Browser should open automatically
+│                 │    [Open Activation Page](https://regen.gaiaai.xyz/activate)
+│                 │    "Enter code: NWDV-FCFC"
+│                 │    "Run tool again after completing auth"
 │                 │
-│ 5. Start polling│                      ┌─────────────────┐
-│    POST /auth/  │                      │   User Browser  │
-│    token        │                      │                 │
-│    (loop)       │                      │ 6. User goes to │
-│         │       │                      │    /activate    │
-│         │       │                      │                 │
-│         │       │                      │ 7. Types code   │
-│         │       │                      │    WDJB-QK4Z    │
-│         │       │                      │                 │
-│         │       │                      │ 8. Clicks       │
-│         │       │                      │    "Continue"   │
-│         │       │                      └────────┬────────┘
-│         │       │                               │
-│         │       │                      ┌────────▼────────┐
-│         │       │                      │   KOI Server    │
-│         │       │                      │ 9. Validate     │
-│         │       │                      │    user_code    │
-│         │       │                      │10. Redirect to  │
-│         │       │                      │    Google OAuth │
-│         │       │                      │    (state_id)   │
-│         │       │                      └────────┬────────┘
-│         │       │                               │
-│         │       │                      ┌────────▼────────┐
-│         │       │                      │  Google OAuth   │
-│         │       │                      │11. User signs in│
-│         │       │                      │    @regen.net   │
-│         │       │                      └────────┬────────┘
-│         │       │                               │
-│         │       │                      ┌────────▼────────┐
-│         │       │                      │   KOI Server    │
-│         │       │                      │12. Verify email │
-│         │       │                      │13. Gen session  │
-│         │       │                      │14. Store HASH   │
-│         │       │                      │15. Mark status= │
-│         │       │                      │    authenticated│
-│         │       │                      └────────┬────────┘
-│         │       │                               │
-│         ▼       │     16. Return session_token  │
-│ ◄───────────────┼───────────────────────────────┘
-│ (returned ONCE, │     (only to device_code holder)
-│  marked 'used') │
-│                 │
-│ Stores token    │
+│ RETURNS         │                      ┌─────────────────┐
+│ IMMEDIATELY     │                      │   User Browser  │
+└─────────────────┘                      │                 │
+                                         │ 7. User goes to │
+                                         │    /activate    │
+                                         │                 │
+                                         │ 8. Types code   │
+                                         │    NWDV-FCFC    │
+                                         │                 │
+                                         │ 9. Clicks       │
+                                         │    "Continue"   │
+                                         └────────┬────────┘
+                                                  │
+                                         ┌────────▼────────┐
+                                         │   KOI Server    │
+                                         │10. Validate     │
+                                         │    user_code    │
+                                         │11. Redirect to  │
+                                         │    Google OAuth │
+                                         │    (state_id)   │
+                                         └────────┬────────┘
+                                                  │
+                                         ┌────────▼────────┐
+                                         │  Google OAuth   │
+                                         │12. User signs in│
+                                         │    @regen.net   │
+                                         └────────┬────────┘
+                                                  │
+                                         ┌────────▼────────┐
+                                         │   KOI Server    │
+                                         │13. Validate JWT │
+                                         │14. Verify email │
+                                         │15. Gen session  │
+                                         │16. Store HASH   │
+                                         │17. Mark status= │
+                                         │    authenticated│
+                                         └─────────────────┘
+
+CALL 2: Retrieve Session Token
+┌─────────────────┐
+│   MCP Client    │ 1. Load state from ~/.koi-auth.json
+│  (Claude Code)  │ 2. POST /auth/token (device_code)
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐     18. Return session_token + email
+│   KOI Server    │ ────────────────────────────────────▶
+│                 │     (only to device_code holder)
+└─────────────────┘     (returned ONCE, marked 'used')
+         │
+         ▼
+┌─────────────────┐
+│   MCP Client    │ 3. Save token + email to ~/.koi-auth.json
+│                 │ 4. Cache in memory
+│                 │ 5. Display: "✅ Authenticated as email@regen.network"
 └─────────────────┘
 ```
 
@@ -95,12 +114,28 @@ This implementation follows [RFC 8628](https://datatracker.ietf.org/doc/html/rfc
 Previously, an attacker could send a victim a link containing the attacker's `device_code`. When the victim clicked the link and authenticated, the attacker would receive the session token.
 
 **The Solution (RFC 8628):**
-- Server generates a short `user_code` (e.g., "WDJB-QK4Z")
+- Server generates a short `user_code` (e.g., "NWDV-FCFC")
 - User must **manually type** this code at the activation page
 - Attacker cannot force victim to type an unknown code
 - User sees the code on their own device, preventing impersonation
+- Browser auto-opens to activation page (safe - URL is hardcoded, not user-controlled)
 
-### 2. Secrets in POST Body, Not URL
+### 2. Entropy & Rate Limiting
+
+**Vowel-Free Alphabet:**
+- User codes use `BCDFGHJKMNPQRTVWXYZ2346789` (20 characters)
+- Excludes vowels (A, E, U) to prevent accidental words
+- Excludes confusables: S/5, L/1, O/0
+- 8 characters = ~34.5 bits entropy (20^8 ≈ 2^34.5)
+- Sufficient with rate limiting
+
+**Rate Limiting:**
+- `/activate` endpoint: 5 attempts per minute per IP
+- `/auth/token` endpoint: 60 requests per minute per IP
+- Code lockout: 5 failed attempts per code → 10 minute lockout
+- In-memory sliding window rate limiter
+
+### 3. Secrets in POST Body, Not URL
 
 **The Problem (Fixed):**
 GET requests with `device_code` in the URL could be logged by:
@@ -113,7 +148,7 @@ GET requests with `device_code` in the URL could be logged by:
 - `POST /auth/token` - device_code in request body
 - `POST /activate` - user_code in form body
 
-### 3. Opaque State ID
+### 4. Opaque State ID
 
 **The Problem (Fixed):**
 The OAuth state parameter previously contained the `device_code`, exposing it to Google's servers.
@@ -124,18 +159,46 @@ The OAuth state parameter previously contained the `device_code`, exposing it to
 - `device_code` never leaves our infrastructure
 - Lookup by `state_id` on callback
 
-### 4. Token Hashing
+### 5. JWT Validation (Not Userinfo)
+
+**The Solution:**
+- Validate Google ID token (JWT) locally with Google's public keys
+- Verify signature using RSA-256
+- Check issuer (`iss`), audience (`aud`), expiry (`exp`)
+- Verify `email_verified` claim
+- No network call to `/userinfo` endpoint after receiving token
+
+### 6. Token Hashing
 
 - `session_tokens` table stores **ONLY hashes**, never plain tokens
 - `auth_requests` table stores plain token temporarily (10 min max)
 - After retrieval, plain token is immediately NULLed
 - Database compromise reveals no usable tokens
 
-### 5. Identity-Only Google OAuth
+### 7. Identity-Only Google OAuth
 
 - Google tokens used ONLY to verify @regen.network email
 - Tokens are NOT stored after identity verification
 - Only our own session tokens are stored (and hashed)
+
+### 8. Logging Rules
+
+**What We Log:**
+- Event types and timestamps
+- RIDs and user codes (for debugging)
+- IP addresses (for rate limiting)
+- HTTP status codes
+
+**What We NEVER Log:**
+- `device_code` (secret)
+- `access_token` / `session_token` (secrets)
+- `id_token` / `refresh_token` from Google (secrets)
+- Password fields (if any)
+
+**Log Redaction:**
+- All logging statements audited
+- Sensitive fields explicitly excluded
+- Server-side logs only (never client-side)
 
 ## API Endpoints
 
@@ -181,7 +244,8 @@ Response (success - returned ONCE):
 {
   "access_token": "fb93a489-c1f5-4a00-9bf2-...",
   "token_type": "Bearer",
-  "expires_in": 3600
+  "expires_in": 3600,
+  "email": "darren@regen.network"
 }
 ```
 
@@ -239,34 +303,108 @@ CREATE INDEX idx_session_tokens_hash ON session_tokens(token_hash);
 
 ## MCP Client Implementation
 
+**"One Tool, Two Calls" Pattern** - No polling loop, uses file-based state persistence.
+
 ```typescript
-// src/index.ts - RFC 8628 Device Authorization Flow
+// src/auth-store.ts - File-based state persistence
+export interface AuthState {
+  deviceCode?: string;
+  userCode?: string;
+  verificationUri?: string;
+  deviceCodeExpiresAt?: number;  // Unix timestamp (ms)
+  accessToken?: string;
+  accessTokenExpiresAt?: number;
+  userEmail?: string;
+}
+
+const AUTH_FILE = path.join(os.homedir(), '.koi-auth.json');
+
+export function loadAuthState(): AuthState {
+  if (fs.existsSync(AUTH_FILE)) {
+    return JSON.parse(fs.readFileSync(AUTH_FILE, 'utf8'));
+  }
+  return {};
+}
+
+export function saveAuthState(state: AuthState): void {
+  fs.writeFileSync(AUTH_FILE, JSON.stringify(state, null, 2), 'utf8');
+}
+
+// src/index.ts - RFC 8628 Device Authorization Flow (One Tool, Two Calls)
 private async authenticateUser() {
-  // Step 1: Request device code from server
-  const response = await axios.post(`${API}/auth/device/code`, {});
-  const { device_code, user_code, verification_uri, interval } = response.data;
+  const { loadAuthState, saveAuthState, hasValidAccessToken, hasValidDeviceCode } =
+    await import('./auth-store.js');
+  const state = loadAuthState();
 
-  // Step 2: Display instructions (DO NOT auto-open browser - prevents phishing)
-  console.log(`Go to: ${verification_uri}`);
-  console.log(`Enter code: ${user_code}`);
+  // Check 1: Already authenticated?
+  if (hasValidAccessToken(state)) {
+    return {
+      content: [{
+        type: 'text',
+        text: `## Already Authenticated\n\nYou are authenticated as **${state.userEmail}**.\n\nSession valid until ${new Date(state.accessTokenExpiresAt!).toLocaleString()}.`
+      }]
+    };
+  }
 
-  // Step 3: Poll for completion
-  while (true) {
-    await sleep(interval * 1000);
-
+  // Check 2: Have pending device code? Check its status
+  if (hasValidDeviceCode(state)) {
     const tokenResponse = await axios.post(`${API}/auth/token`, {
-      device_code,
+      device_code: state.deviceCode,
       grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
     });
 
-    if (tokenResponse.data.access_token) {
-      return tokenResponse.data.access_token;
+    if (tokenResponse.data.error === 'authorization_pending') {
+      return {
+        content: [{
+          type: 'text',
+          text: `## Authentication Pending\n\n**Still waiting for you to complete authentication.**\n\n1. Go to: [${state.verificationUri}](${state.verificationUri})\n2. Enter code: **\`${state.userCode}\`**\n3. Sign in with your **@regen.network** email\n\n**After completing, run this tool again.**`
+        }]
+      };
     }
 
-    if (tokenResponse.data.error !== 'authorization_pending') {
-      throw new Error(tokenResponse.data.error_description);
+    if (tokenResponse.data.access_token) {
+      // Success! Save token and email
+      const tokenExpiry = Date.now() + (tokenResponse.data.expires_in * 1000);
+      saveAuthState({
+        accessToken: tokenResponse.data.access_token,
+        accessTokenExpiresAt: tokenExpiry,
+        userEmail: tokenResponse.data.email
+      });
+      return {
+        content: [{
+          type: 'text',
+          text: `## ✅ Authentication Successful!\n\nYou now have access to internal Regen Network documentation.`
+        }]
+      };
     }
   }
+
+  // Check 3: No state - start new auth flow
+  const deviceCodeResponse = await axios.post(`${API}/auth/device/code`, {});
+  const { device_code, user_code, verification_uri, expires_in } = deviceCodeResponse.data;
+
+  // Save device code state
+  saveAuthState({
+    deviceCode: device_code,
+    userCode: user_code,
+    verificationUri: verification_uri,
+    deviceCodeExpiresAt: Date.now() + (expires_in * 1000)
+  });
+
+  // Auto-open browser (safe - URL is hardcoded)
+  try {
+    const open = (await import('open')).default;
+    await open(verification_uri);
+  } catch (err) {
+    // Continue anyway - user can click the link
+  }
+
+  return {
+    content: [{
+      type: 'text',
+      text: `## Authentication Required\n\n🌐 **Your browser should open automatically.** If not, click:\n\n### [Open Activation Page](${verification_uri})\n\n### Enter this code:\n\n\`\`\`\n${user_code}\n\`\`\`\n\n### Sign in with Google\n\nUse your **@regen.network** email.\n\n**After completing authentication, run this tool again to retrieve your session token.**`
+    }]
+  };
 }
 ```
 
@@ -316,8 +454,9 @@ WHERE user_email = 'user@regen.network';
 
 - `koi-processor/src/services/auth_service.py` - Server-side RFC 8628 implementation
 - `koi-processor/migrations/019_rfc8628_user_code_flow.sql` - user_code and state_id columns
-- `regen-koi-mcp/src/index.ts` - MCP client authentication flow
-- `regen-koi-mcp/src/auth.ts` - Client-side token storage
+- `regen-koi-mcp/src/index.ts` - MCP client authentication flow (One Tool, Two Calls)
+- `regen-koi-mcp/src/auth-store.ts` - File-based state persistence (~/.koi-auth.json)
+- `regen-koi-mcp/.gitignore` - Excludes .koi-auth.json from version control
 
 ## Legacy Endpoints (Deprecated)
 
