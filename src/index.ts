@@ -1692,7 +1692,20 @@ class KOIServer {
   }
 
   /**
+   * Generate a cryptographically secure device code for auth binding
+   * This prevents IDOR attacks by binding the auth request to this MCP client
+   */
+  private generateDeviceCode(): string {
+    const bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  /**
    * Authenticate user with @regen.network email for access to private documentation
+   *
+   * SECURITY: Uses device_code binding to prevent IDOR attacks.
+   * Only this MCP client can retrieve the session token because only it knows the device_code.
    */
   private async authenticateUser() {
     const startTime = Date.now();
@@ -1705,11 +1718,17 @@ class KOIServer {
                         process.env.USER_EMAIL ||
                         `${process.env.USER}@regen.network`;
 
-      console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate UserEmail=${userEmail}`);
+      // SECURITY: Generate unique device_code to bind this client to the auth request
+      const deviceCode = this.generateDeviceCode();
 
-      // Call the auth initiate endpoint
+      console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate UserEmail=${userEmail} DeviceCode=${deviceCode.substring(0, 8)}...`);
+
+      // Call the auth initiate endpoint with device_code
       const response = await axios.get(`${KOI_API_ENDPOINT}/auth/initiate`, {
-        params: { user_email: userEmail }
+        params: {
+          user_email: userEmail,
+          device_code: deviceCode  // REQUIRED: Binds this client to the auth request
+        }
       });
 
       const { auth_url, state } = response.data as { auth_url: string; state: string };
@@ -1731,13 +1750,13 @@ class KOIServer {
       output += `2. Grant the requested permissions (email, profile)\n`;
       output += `3. The browser will show a success message when complete\n\n`;
       output += `**After authenticating:**\n`;
-      output += `- Your token is saved on the server\n`;
+      output += `- Your session token is securely generated\n`;
       output += `- Future queries will automatically include private Drive data\n`;
       output += `- You won't need to authenticate again unless the token expires\n\n`;
       output += `**Polling for authentication completion...**\n`;
 
-      // Poll for authentication status
-      const pollUrl = `${KOI_API_ENDPOINT}/auth/status?user_email=${encodeURIComponent(userEmail)}`;
+      // Poll for authentication status using device_code (SECURE - prevents IDOR)
+      const pollUrl = `${KOI_API_ENDPOINT}/auth/status?device_code=${encodeURIComponent(deviceCode)}`;
       const maxAttempts = 60; // 2 minutes
       const pollInterval = 2000; // 2 seconds
 
@@ -1746,26 +1765,47 @@ class KOIServer {
 
         try {
           const statusResponse = await axios.get<{
+            status: string;
             authenticated: boolean;
-            session_token?: string;  // Our server's token, NOT Google OAuth
+            user_email?: string;
+            session_token?: string;  // Our server's token, NOT Google OAuth - returned ONCE
             token_expiry?: string;
+            reason?: string;
           }>(pollUrl);
 
-          if (statusResponse.data.authenticated) {
+          const data = statusResponse.data;
+
+          if (data.status === 'rejected') {
+            throw new Error('Email domain not allowed. Only @regen.network emails are permitted.');
+          }
+
+          if (data.status === 'expired') {
+            throw new Error('Auth request expired. Please try again.');
+          }
+
+          if (data.status === 'already_retrieved') {
+            // Token was already retrieved - this shouldn't happen in normal flow
+            console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate Warning: Token already retrieved`);
+            output += `\n⚠️ **Session token was already retrieved.**\n`;
+            output += `If you're seeing this, please try authenticating again.\n`;
+            return { content: [{ type: 'text', text: output }] };
+          }
+
+          if (data.status === 'authenticated' && data.session_token) {
             console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate Event=success Duration=${Date.now() - startTime}ms`);
 
             // Store the session token for future API calls
             // SECURITY: This is our server's session token, NOT a Google OAuth token
             // Safe to store - only works with our API, can't access Google
-            if (statusResponse.data.session_token) {
-              const tokenExpiry = statusResponse.data.token_expiry
-                ? new Date(statusResponse.data.token_expiry).getTime()
-                : undefined;
-              setAccessToken(statusResponse.data.session_token, tokenExpiry);
-            }
+            const tokenExpiry = data.token_expiry
+              ? new Date(data.token_expiry).getTime()
+              : undefined;
+            setAccessToken(data.session_token, tokenExpiry);
+
+            const authenticatedEmail = data.user_email || userEmail;
 
             output += `\n✅ **Authentication Successful!**\n\n`;
-            output += `Authenticated as: ${userEmail}\n\n`;
+            output += `Authenticated as: ${authenticatedEmail}\n\n`;
             output += `You now have access to internal Regen Network documentation.\n`;
             output += `Private Notion data from the main Regen workspace is now accessible.\n`;
 
@@ -1776,8 +1816,18 @@ class KOIServer {
               }]
             };
           }
+
+          // Still pending - continue polling
+          if (data.status === 'pending') {
+            continue;
+          }
+
         } catch (pollError) {
-          // Continue polling
+          // Check if it's a known error
+          if (pollError instanceof Error && pollError.message.includes('Email domain not allowed')) {
+            throw pollError;
+          }
+          // Otherwise continue polling
         }
       }
 
