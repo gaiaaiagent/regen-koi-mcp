@@ -19,47 +19,47 @@ The KOI system has two tiers of data access:
 ## Authentication Flow (Secure Device Code Binding)
 
 ```
-┌─────────────────┐                           ┌─────────────────┐
-│   MCP Client    │ ─── 1. Generate ──────────│  device_code    │
-│  (Claude Code)  │     device_code           │  (64 char hex)  │
-└─────────────────┘                           └─────────────────┘
-        │                                             │
-        │ 2. /auth/initiate?device_code=xxx&user_email=yyy
-        ▼                                             │
-┌─────────────────┐                           ┌─────────────────┐
-│   KOI Server    │ ─── 3. Store in ──────────│  auth_requests  │
-│                 │     database              │  (device_code   │
-│                 │                           │   + status)     │
-└─────────────────┘                           └─────────────────┘
-        │
-        │ 4. Return auth_url with device_code in state
-        ▼
-┌─────────────────┐                           ┌─────────────────┐
-│   User Browser  │ ──── 5. Google OAuth ────▶│  Google OAuth   │
-│                 │                           │                 │
-└─────────────────┘                           └─────────────────┘
-                                                      │
-                                                      │ 6. access_token
-                                                      │    (ya29.xxx)
-                                                      ▼
-                                              ┌─────────────────┐
-                                              │   KOI Server    │
-                                              │ 7. Verify email │
-                                              │    @regen.net   │
-                                              │ 8. Generate     │
-                                              │    session_tok  │
-                                              │ 9. Store HASH   │
-                                              └─────────────────┘
-        │                                             │
-        │ 10. Poll /auth/status?device_code=xxx       │
-        │     (ONLY device_code holder can retrieve)  │
-        ▼                                             │
-┌─────────────────┐                           ┌─────────────────┐
-│   MCP Client    │ ◄── 11. session_token ────│   Response      │
-│                 │     (returned ONCE,       │   (marks auth   │
-│ Stores:         │      marked as 'used')    │   as 'used')    │
-│ fb93a489-c1f5.. │                           │                 │
-└─────────────────┘                           └─────────────────┘
+┌─────────────────┐
+│   MCP Client    │ 1. Generate device_code (64 char hex)
+│  (Claude Code)  │
+└────────┬────────┘
+         │
+         │ 2. /auth/initiate?device_code=xxx&user_email=yyy
+         ▼
+┌─────────────────┐      3. Store        ┌─────────────────┐
+│   KOI Server    │ ───────────────────▶ │  auth_requests  │
+│                 │      device_code     │  status=pending │
+└────────┬────────┘                      └─────────────────┘
+         │
+         │ 4. Return auth_url (with device_code in state)
+         ▼
+┌─────────────────┐                      ┌─────────────────┐
+│   MCP Client    │                      │   User Browser  │
+│                 │                      │                 │
+│ 5. Open browser─┼─────────────────────▶│ 6. Google OAuth │
+│                 │                      │    login        │
+│ 7. Start polling│                      └────────┬────────┘
+│    (loop)       │                               │
+│         │       │                               │ 8. Callback with code
+│         │       │                               ▼
+│         │       │                      ┌─────────────────┐
+│         │       │                      │   KOI Server    │
+│         │       │                      │ 9. Verify email │
+│         ▼       │                      │    @regen.net   │
+│  GET /auth/     │                      │10. Gen session  │
+│  status?device_ │                      │11. Store HASH   │
+│  code=xxx       │                      │12. Mark status= │
+│         │       │                      │    authenticated│
+│         │       │                      └────────┬────────┘
+│         │       │                               │
+│         ▼       │     13. Return session_token  │
+│ ◄───────────────┼───────────────────────────────┘
+│ (returned ONCE, │     (only to device_code holder)
+│  marked 'used') │
+│                 │
+│ Stores token:   │
+│ fb93a489-c1f5.. │
+└─────────────────┘
 ```
 
 ## Security Improvements (December 2025)
