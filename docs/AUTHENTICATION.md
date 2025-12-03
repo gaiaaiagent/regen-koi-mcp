@@ -82,7 +82,7 @@ We now use a device code binding pattern (similar to OAuth 2.0 Device Authorizat
 5. After OAuth, only the client with the original `device_code` can retrieve the session token
 6. Session token is returned ONCE and marked as 'used'
 
-### 2. Token Hashing
+### 2. Token Hashing (with Proper Storage Separation)
 
 **The Problem (Fixed):**
 Session tokens were stored in plain text in the database. If the database was compromised:
@@ -90,10 +90,11 @@ Session tokens were stored in plain text in the database. If the database was co
 - Attackers could impersonate any authenticated user
 
 **The Solution:**
-- Session tokens are now SHA-256 hashed before storage
-- Plain token is sent to client ONCE during retrieval
-- Validation compares hashes, never exposes stored tokens
-- Even database compromise doesn't reveal usable tokens
+- `session_tokens` table (long-lived, 1 hour): Stores **ONLY hashes**, never plain tokens
+- `auth_requests` table (short-lived, 10 min): Stores plain token temporarily for one-time retrieval
+- After retrieval, plain token is immediately NULLed from auth_requests
+- Validation always uses hash comparison against session_tokens
+- A database dump of session_tokens reveals no usable tokens
 
 ### 3. Identity-Only Google OAuth
 
@@ -134,27 +135,28 @@ We implemented our own session tokens that:
 
 ## Database Schema
 
-### auth_requests (Device code binding)
+### auth_requests (Device code binding + temporary token storage)
 ```sql
 CREATE TABLE auth_requests (
     id SERIAL PRIMARY KEY,
     device_code VARCHAR(64) NOT NULL UNIQUE,  -- MCP client's binding code
     user_email VARCHAR(255),                   -- Set after OAuth callback
     status VARCHAR(20) DEFAULT 'pending',      -- pending, authenticated, used, rejected, expired
-    session_token_hash VARCHAR(64),            -- SHA-256 hash of session token
+    session_token VARCHAR(64),                 -- Plain token (temporary, NULLed after retrieval)
+    session_token_hash VARCHAR(64),            -- SHA-256 hash (for linking to session_tokens)
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     expires_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() + INTERVAL '10 minutes',
     authenticated_at TIMESTAMP WITH TIME ZONE,
     used_at TIMESTAMP WITH TIME ZONE
 );
 ```
+**Note:** `session_token` is stored temporarily and NULLed immediately after the client retrieves it.
 
-### session_tokens (Safe for clients - hashed storage)
+### session_tokens (Long-lived - hash only, no plain tokens)
 ```sql
 CREATE TABLE session_tokens (
     id SERIAL PRIMARY KEY,
-    session_token VARCHAR(64) NOT NULL,        -- Plain token (for one-time retrieval)
-    token_hash VARCHAR(64) NOT NULL,           -- SHA-256 hash (for validation)
+    token_hash VARCHAR(64) NOT NULL,           -- SHA-256 hash ONLY (plain token never stored)
     user_email VARCHAR(255) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -164,6 +166,7 @@ CREATE TABLE session_tokens (
 
 CREATE INDEX idx_session_tokens_hash ON session_tokens(token_hash);
 ```
+**Security:** Plain tokens are NEVER stored in this table. A database dump reveals no usable tokens.
 
 ## API Endpoints
 
