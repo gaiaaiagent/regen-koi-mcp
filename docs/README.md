@@ -1,7 +1,7 @@
 # Regen KOI MCP Server - Documentation
 
 **Status:** Production Ready ✅
-**Version:** Phase 7 Complete (2025-11-27)
+**Version:** Phase 8 - Private Data Access (2025-12-03)
 **Server:** 202.61.196.119
 
 ---
@@ -14,12 +14,13 @@ The Regen KOI (Knowledge Organization Infrastructure) MCP Server is a production
 
 ### Key Features
 
-- **9 MCP Tools** - Semantic search, graph queries, GitHub docs, weekly digests, metrics
+- **10 MCP Tools** - Semantic search, graph queries, GitHub docs, weekly digests, auth, metrics
 - **48,079+ Documents** - From GitHub, Discourse, Medium, Telegram, Discord, podcasts, websites
 - **26,768 Code Entities** - Functions, structs, interfaces extracted via tree-sitter AST parsing
 - **12 Active Sensors** - Real-time ingestion from diverse platforms
 - **Hybrid Search** - Vector similarity + knowledge graph + keyword matching with RRF fusion
 - **Production Hardening** - Retry logic, circuit breakers, caching, validation, metrics
+- **Private Data Access** - OAuth-gated access to internal Regen Notion workspace (Phase 8)
 
 ---
 
@@ -73,7 +74,55 @@ The Regen KOI (Knowledge Organization Infrastructure) MCP Server is a production
 8. **generate_weekly_digest** - Weekly activity summaries
 9. **get_mcp_metrics** - Production metrics (latency, cache, errors)
 
+### Authentication
+10. **regen_koi_authenticate** - OAuth login with @regen.network email for private data access
+
 See [API_REFERENCE.md](API_REFERENCE.md) for detailed documentation.
+
+---
+
+## Private Data Access (Phase 8)
+
+KOI supports two tiers of data:
+
+### Public Data (No Authentication Required)
+- GitHub documentation and README files
+- Discourse forum posts
+- Medium articles
+- Telegram/Discord messages
+- Podcast transcripts
+- Regentokenomics Notion workspace (public tokenomics documentation)
+
+### Private Data (Requires @regen.network OAuth)
+- Main Regen Notion workspace
+  - Strategy documents
+  - AI specifications
+  - Partner analyses
+  - Internal project planning
+  - KOI implementation notes
+
+### How to Access Private Data
+
+1. Use the `regen_koi_authenticate` tool
+2. A browser window opens for Google OAuth
+3. Log in with your @regen.network email
+4. Token is saved and cached for future sessions
+
+### Sample Prompts for Private Data
+
+After authentication, try:
+```
+"What are the current AI strategy documents?"
+"Find internal partner onboarding documentation"
+"Search for KOI specification documents in Notion"
+"What's in the PRP Regen Network Series database?"
+```
+
+### Technical Implementation
+- `is_private` column on `koi_memories` table
+- `X-User-Email` header sent with all API requests
+- Auth status cached for 5 minutes in MCP server
+- Privacy filter applied at SQL query level
 
 ---
 
@@ -271,6 +320,15 @@ Before contributing, review:
 
 ## Changelog
 
+### 2025-12-03 - Phase 8 Complete
+- Private data access control for Notion workspace
+- OAuth-gated access with @regen.network email validation
+- `is_private` column added to koi_memories table
+- Auth caching in MCP server (5 minute TTL)
+- `X-User-Email` header on all API calls
+- `/api/koi/auth/status` endpoint for auth validation
+- `regen_koi_authenticate` tool for OAuth flow
+
 ### 2025-11-27 - Phase 7 Complete
 - Production hardening complete (retry, circuit breaker, caching, validation)
 - Complete documentation (USER_GUIDE, API_REFERENCE, DEPLOYMENT)
@@ -296,5 +354,5 @@ Before contributing, review:
 
 ---
 
-**Last Updated:** 2025-11-27
+**Last Updated:** 2025-12-03
 **Maintained By:** Regen Network Development Team
