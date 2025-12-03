@@ -1708,51 +1708,25 @@ class KOIServer {
     try {
       console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate Event=start`);
 
-      // Step 1: Request device code from server (RFC 8628)
-      const deviceCodeResponse = await axios.post<{
-        device_code: string;
-        user_code: string;
-        verification_uri: string;
-        expires_in: number;
-        interval: number;
-      }>(`${KOI_API_ENDPOINT}/auth/device/code`, {});
+      // Load saved auth state from disk
+      const { loadAuthState, saveAuthState, clearDeviceCode, hasValidAccessToken, hasValidDeviceCode } = await import('./auth-store.js');
+      const state = loadAuthState();
 
-      const { device_code, user_code, verification_uri, expires_in, interval } = deviceCodeResponse.data;
+      // Check 1: Already authenticated?
+      if (hasValidAccessToken(state)) {
+        console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate Event=already_authenticated User=${state.userEmail}`);
 
-      console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate UserCode=${user_code} VerificationUri=${verification_uri}`);
+        return {
+          content: [{
+            type: 'text',
+            text: `## Already Authenticated\n\nYou are already authenticated as **${state.userEmail}**.\n\nYour session is valid until ${new Date(state.accessTokenExpiresAt!).toLocaleString()}.\n\n✅ You have access to private Regen Network documentation.`
+          }]
+        };
+      }
 
-      // Step 2: Display instructions to user (DO NOT auto-open browser - prevents phishing)
-      let output = `## Authentication Required\n\n`;
-      output += `To access private Regen Network documentation, please complete these steps:\n\n`;
-      output += `### Step 1: Go to the activation page\n`;
-      output += `Open your browser and navigate to:\n\n`;
-      output += `**${verification_uri}**\n\n`;
-      output += `### Step 2: Enter this code\n\n`;
-      output += `\`\`\`\n`;
-      output += `${user_code}\n`;
-      output += `\`\`\`\n\n`;
-      output += `### Step 3: Sign in with Google\n`;
-      output += `Use your **@regen.network** email address.\n\n`;
-      output += `---\n`;
-      output += `*This code expires in ${Math.floor(expires_in / 60)} minutes.*\n\n`;
-      output += `**Waiting for authentication...**\n`;
-
-      // IMPORTANT: Print instructions immediately so user sees them during polling
-      console.error(`\n${'='.repeat(60)}`);
-      console.error(`AUTHENTICATION REQUIRED`);
-      console.error(`${'='.repeat(60)}`);
-      console.error(`\n1. Go to: ${verification_uri}`);
-      console.error(`\n2. Enter code: ${user_code}`);
-      console.error(`\n3. Sign in with your @regen.network Google account`);
-      console.error(`\nCode expires in ${Math.floor(expires_in / 60)} minutes.`);
-      console.error(`${'='.repeat(60)}\n`);
-
-      // Step 3: Poll for completion using POST (device_code in body, not URL)
-      const maxAttempts = Math.ceil(expires_in / interval);
-      const pollIntervalMs = interval * 1000;
-
-      for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+      // Check 2: Have pending device code? Check its status
+      if (hasValidDeviceCode(state)) {
+        console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate Event=check_status UserCode=${state.userCode}`);
 
         try {
           const tokenResponse = await axios.post<{
@@ -1762,29 +1736,46 @@ class KOIServer {
             error?: string;
             error_description?: string;
           }>(`${KOI_API_ENDPOINT}/auth/token`, {
-            device_code: device_code,
+            device_code: state.deviceCode,
             grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
           });
 
           const data = tokenResponse.data;
 
-          // Check for errors
+          // Still pending?
+          if (data.error === 'authorization_pending') {
+            const expiresInMin = Math.floor((state.deviceCodeExpiresAt! - Date.now()) / 60000);
+            return {
+              content: [{
+                type: 'text',
+                text: `## Authentication Pending\n\n**Still waiting for you to complete authentication.**\n\n### Instructions:\n\n1. Go to: **${state.verificationUri}**\n2. Enter code: **\`${state.userCode}\`**\n3. Sign in with your **@regen.network** email\n\n---\n\n*Code expires in ${expiresInMin} minutes.*\n\n**After completing authentication, run this tool again to retrieve your session token.**`
+              }]
+            };
+          }
+
+          // Expired or other error?
           if (data.error) {
-            if (data.error === 'authorization_pending') {
-              // User hasn't completed auth yet - keep polling
-              continue;
-            }
-            if (data.error === 'slow_down') {
-              // Server wants us to slow down
-              await new Promise(resolve => setTimeout(resolve, 5000));
-              continue;
-            }
+            // Clear expired device code
+            saveAuthState(clearDeviceCode(state));
+
             if (data.error === 'expired_token') {
-              throw new Error('Authentication expired. Please try again.');
+              return {
+                content: [{
+                  type: 'text',
+                  text: `## Authentication Expired\n\nYour authentication code has expired.\n\n**Run this tool again to get a new code.**`
+                }]
+              };
             }
+
             if (data.error === 'access_denied') {
-              throw new Error(data.error_description || 'Access denied. Only @regen.network emails are permitted.');
+              return {
+                content: [{
+                  type: 'text',
+                  text: `## Access Denied\n\n${data.error_description || 'Only @regen.network email addresses are permitted.'}`
+                }]
+              };
             }
+
             throw new Error(data.error_description || data.error);
           }
 
@@ -1792,39 +1783,64 @@ class KOIServer {
           if (data.access_token) {
             console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate Event=success Duration=${Date.now() - startTime}ms`);
 
-            // Store the session token
+            // Save token to file and in-memory cache
             const tokenExpiry = data.expires_in
               ? Date.now() + (data.expires_in * 1000)
-              : undefined;
+              : Date.now() + 3600000; // Default 1 hour
+
             setAccessToken(data.access_token, tokenExpiry);
 
-            output += `\n✅ **Authentication Successful!**\n\n`;
-            output += `You now have access to internal Regen Network documentation.\n`;
-            output += `Private Notion data from the main Regen workspace is now accessible.\n`;
+            saveAuthState({
+              accessToken: data.access_token,
+              accessTokenExpiresAt: tokenExpiry,
+              userEmail: state.userEmail
+            });
 
             return {
               content: [{
                 type: 'text',
-                text: output
+                text: `## ✅ Authentication Successful!\n\nYou now have access to internal Regen Network documentation.\n\nPrivate Notion data from the main Regen workspace is now accessible.\n\n**Session expires:** ${new Date(tokenExpiry).toLocaleString()}`
               }]
             };
           }
 
-        } catch (pollError) {
-          // Check if it's a known error we should surface
-          if (pollError instanceof Error &&
-              (pollError.message.includes('Access denied') ||
-               pollError.message.includes('expired') ||
-               pollError.message.includes('@regen.network'))) {
-            throw pollError;
-          }
-          // Network errors - continue polling
-          console.error(`[${SERVER_NAME}] Poll error:`, pollError);
+        } catch (checkError) {
+          console.error(`[${SERVER_NAME}] Error checking auth status:`, checkError);
+          // Clear device code and let user try again
+          saveAuthState(clearDeviceCode(state));
+          throw checkError;
         }
       }
 
-      // Timeout
-      throw new Error('Authentication timeout - the code has expired. Please try again.');
+      // Check 3: No state - start new auth flow
+      console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate Event=request_device_code`);
+
+      const deviceCodeResponse = await axios.post<{
+        device_code: string;
+        user_code: string;
+        verification_uri: string;
+        expires_in: number;
+        interval: number;
+      }>(`${KOI_API_ENDPOINT}/auth/device/code`, {});
+
+      const { device_code, user_code, verification_uri, expires_in } = deviceCodeResponse.data;
+
+      console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate UserCode=${user_code} VerificationUri=${verification_uri}`);
+
+      // Save device code state
+      saveAuthState({
+        deviceCode: device_code,
+        userCode: user_code,
+        verificationUri: verification_uri,
+        deviceCodeExpiresAt: Date.now() + (expires_in * 1000)
+      });
+
+      return {
+        content: [{
+          type: 'text',
+          text: `## Authentication Required\n\nTo access private Regen Network documentation, please complete these steps:\n\n### Step 1: Go to the activation page\n\nOpen your browser and navigate to:\n\n**${verification_uri}**\n\n### Step 2: Enter this code\n\n\`\`\`\n${user_code}\n\`\`\`\n\n### Step 3: Sign in with Google\n\nUse your **@regen.network** email address.\n\n---\n\n*This code expires in ${Math.floor(expires_in / 60)} minutes.*\n\n**After completing authentication, run this tool again to retrieve your session token.**`
+        }]
+      };
 
     } catch (error) {
       console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate Event=error`, error);

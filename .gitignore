@@ -69,4 +69,4 @@ scripts/eval-*.js
 # Google OAuth
 client_secret.json
 tokens.json
-.google_tokens.json
+.google_tokens.json.koi-auth.json
