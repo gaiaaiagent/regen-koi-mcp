@@ -20,7 +20,6 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import axios from 'axios';
 import dotenv from 'dotenv';
-import { execSync } from 'child_process';
 import { TOOLS } from './tools.js';
 // Use enhanced SPARQL client with focused retrieval
 import { SPARQLClient } from './sparql-client-enhanced.js';
@@ -33,6 +32,8 @@ import { logger } from './logger.js';
 import { recordQuery, getMetricsMarkdown, getMetricsSummary } from './metrics.js';
 import { validateToolInput } from './validation.js';
 import { queryCache } from './cache.js';
+// Shared auth module
+import { USER_EMAIL, getAccessToken, setAccessToken, clearAuthCache } from './auth.js';
 
 // Load environment variables
 dotenv.config();
@@ -43,80 +44,43 @@ const KOI_API_KEY = process.env.KOI_API_KEY || '';
 const SERVER_NAME = process.env.MCP_SERVER_NAME || 'regen-koi';
 const SERVER_VERSION = process.env.MCP_SERVER_VERSION || '1.0.0';
 
-// Determine user email for authentication context
-function getUserEmail(): string {
-  // Check environment variables first
-  if (process.env.REGEN_USER_EMAIL) return process.env.REGEN_USER_EMAIL;
-  if (process.env.USER_EMAIL) return process.env.USER_EMAIL;
-
-  // Try to get from git config
-  try {
-    const email = execSync('git config user.email').toString().trim();
-    if (email) return email;
-  } catch (e) {
-    // Git config not available
-  }
-
-  // Fall back to system user
-  return `${process.env.USER || 'unknown'}@local`;
-}
-
-const USER_EMAIL = getUserEmail();
 console.error(`[${SERVER_NAME}] User email for auth: ${USER_EMAIL}`);
-
-// Auth cache for checking authentication status
-interface AuthCacheEntry {
-  authenticated: boolean;
-  expiresAt: number;
-}
-const authCache = new Map<string, AuthCacheEntry>();
-const AUTH_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 // Check if user is authenticated (with caching)
 async function isUserAuthenticated(): Promise<boolean> {
-  const userEmail = USER_EMAIL;
+  const token = getAccessToken();
+  if (!token) return false;
 
-  // Check cache first
-  const cached = authCache.get(userEmail);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.authenticated;
-  }
-
-  // Validate with server
+  // Validate token with server
   try {
     const response = await axios.get<{ authenticated: boolean }>(`${KOI_API_ENDPOINT}/auth/status`, {
-      params: { user_email: userEmail },
+      headers: { 'Authorization': `Bearer ${token}` },
       timeout: 5000
     });
-    const authenticated = response.data.authenticated || false;
-
-    // Cache result
-    authCache.set(userEmail, {
-      authenticated,
-      expiresAt: Date.now() + AUTH_CACHE_TTL_MS
-    });
-
-    return authenticated;
+    return response.data.authenticated || false;
   } catch (error) {
-    // On error, assume not authenticated
     return false;
   }
 }
 
-// Clear auth cache (called after successful OAuth)
-function clearAuthCache(): void {
-  authCache.delete(USER_EMAIL);
-}
-
-// API client configuration with X-User-Email header for privacy filtering
+// API client configuration
+// SECURITY: Authorization header is set dynamically based on access token
 const apiClient = axios.create({
   baseURL: KOI_API_ENDPOINT,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
-    'X-User-Email': USER_EMAIL,
-    ...(KOI_API_KEY ? { 'Authorization': `Bearer ${KOI_API_KEY}` } : {})
+    'X-User-Email': USER_EMAIL, // Kept for logging purposes only, not for auth
   }
+});
+
+// Add request interceptor to dynamically include access token
+apiClient.interceptors.request.use((config) => {
+  const token = getAccessToken();
+  if (token && config.headers) {
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
+  return config;
 });
 
 // Tool definitions are imported from tools.ts
@@ -1781,12 +1745,22 @@ class KOIServer {
         await new Promise(resolve => setTimeout(resolve, pollInterval));
 
         try {
-          const statusResponse = await axios.get(pollUrl);
-          if ((statusResponse.data as { authenticated: boolean }).authenticated) {
+          const statusResponse = await axios.get<{
+            authenticated: boolean;
+            access_token?: string;
+            token_expiry?: string;
+          }>(pollUrl);
+
+          if (statusResponse.data.authenticated) {
             console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate Event=success Duration=${Date.now() - startTime}ms`);
 
-            // Clear auth cache to force fresh check on next query
-            clearAuthCache();
+            // Store the access token for future API calls
+            if (statusResponse.data.access_token) {
+              const tokenExpiry = statusResponse.data.token_expiry
+                ? new Date(statusResponse.data.token_expiry).getTime()
+                : undefined;
+              setAccessToken(statusResponse.data.access_token, tokenExpiry);
+            }
 
             output += `\n✅ **Authentication Successful!**\n\n`;
             output += `Authenticated as: ${userEmail}\n\n`;

@@ -20,12 +20,13 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import axios from 'axios';
 import open from 'open';
-import { execSync } from 'child_process';
 import { logger, logQuery } from './logger.js';
 import { recordQuery, recordApiCall } from './metrics.js';
 import { withRetry, withTimeout, circuitBreakers, CircuitBreakerError, TimeoutError } from './resilience.js';
 import { cachedQuery, shouldCache } from './cache.js';
 import { validateToolInput, detectInjection, sanitizeString } from './validation.js';
+// Shared auth module
+import { USER_EMAIL, getAccessToken, setAccessToken } from './auth.js';
 import {
   GraphClient,
   createGraphClient,
@@ -42,17 +43,6 @@ import {
 // Check if we should use API mode
 const KOI_API_ENDPOINT = process.env.KOI_API_ENDPOINT || 'https://regen.gaiaai.xyz/api/koi';
 const USE_GRAPH_API = !!KOI_API_ENDPOINT;
-
-// Determine user email for auth
-let USER_EMAIL = process.env.USER_EMAIL;
-if (!USER_EMAIL) {
-  try {
-    USER_EMAIL = execSync('git config user.email').toString().trim();
-  } catch (e) {
-    USER_EMAIL = 'unknown-user@regen.network';
-    logger.warn('Could not determine user email from git config, using default');
-  }
-}
 
 // Tool definition following the pattern from tools.ts
 export const GRAPH_TOOL: Tool = {
@@ -169,6 +159,19 @@ async function executeViaApi(args: any): Promise<any> {
   const graphApiUrl = `${KOI_API_ENDPOINT}/graph`;
   const startTime = Date.now();
 
+  // Build headers with access token if available
+  const buildHeaders = () => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-User-Email': USER_EMAIL, // Kept for logging only
+    };
+    const token = getAccessToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+  };
+
   // Use circuit breaker to prevent cascading failures
   return circuitBreakers.graphApi.execute(async () => {
     return withRetry(
@@ -177,10 +180,7 @@ async function executeViaApi(args: any): Promise<any> {
           async () => {
             try {
               const response = await axios.post(graphApiUrl, args, {
-                headers: { 
-                  'Content-Type': 'application/json',
-                  'X-User-Email': USER_EMAIL
-                },
+                headers: buildHeaders(),
                 timeout: API_TIMEOUT_MS,
               });
 
@@ -199,13 +199,10 @@ async function executeViaApi(args: any): Promise<any> {
               if (error.response && error.response.status === 401 && error.response.data.auth_url) {
                 logger.info('Authentication required, initiating flow...');
                 await handleAuthFlow(error.response.data.auth_url, error.response.data.poll_url);
-                
+
                 // Retry the request immediately after auth success
                 const response = await axios.post(graphApiUrl, args, {
-                  headers: { 
-                    'Content-Type': 'application/json',
-                    'X-User-Email': USER_EMAIL
-                  },
+                  headers: buildHeaders(),
                   timeout: API_TIMEOUT_MS,
                 });
                 return response.data;
