@@ -1747,19 +1747,21 @@ class KOIServer {
         try {
           const statusResponse = await axios.get<{
             authenticated: boolean;
-            access_token?: string;
+            session_token?: string;  // Our server's token, NOT Google OAuth
             token_expiry?: string;
           }>(pollUrl);
 
           if (statusResponse.data.authenticated) {
             console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate Event=success Duration=${Date.now() - startTime}ms`);
 
-            // Store the access token for future API calls
-            if (statusResponse.data.access_token) {
+            // Store the session token for future API calls
+            // SECURITY: This is our server's session token, NOT a Google OAuth token
+            // Safe to store - only works with our API, can't access Google
+            if (statusResponse.data.session_token) {
               const tokenExpiry = statusResponse.data.token_expiry
                 ? new Date(statusResponse.data.token_expiry).getTime()
                 : undefined;
-              setAccessToken(statusResponse.data.access_token, tokenExpiry);
+              setAccessToken(statusResponse.data.session_token, tokenExpiry);
             }
 
             output += `\n✅ **Authentication Successful!**\n\n`;
