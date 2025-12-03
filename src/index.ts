@@ -1748,7 +1748,7 @@ class KOIServer {
             return {
               content: [{
                 type: 'text',
-                text: `## Authentication Pending\n\n**Still waiting for you to complete authentication.**\n\n### Instructions:\n\n1. Go to: **${state.verificationUri}**\n2. Enter code: **\`${state.userCode}\`**\n3. Sign in with your **@regen.network** email\n\n---\n\n*Code expires in ${expiresInMin} minutes.*\n\n**After completing authentication, run this tool again to retrieve your session token.**`
+                text: `## Authentication Pending\n\n**Still waiting for you to complete authentication.**\n\n### Instructions:\n\n1. Go to: [${state.verificationUri}](${state.verificationUri})\n2. Enter code: **\`${state.userCode}\`**\n3. Sign in with your **@regen.network** email\n\n---\n\n*Code expires in ${expiresInMin} minutes.*\n\n**After completing authentication, run this tool again to retrieve your session token.**`
               }]
             };
           }
@@ -1835,10 +1835,20 @@ class KOIServer {
         deviceCodeExpiresAt: Date.now() + (expires_in * 1000)
       });
 
+      // Auto-open browser to activation page (safe because URL is hardcoded, not user-controlled)
+      try {
+        const open = (await import('open')).default;
+        await open(verification_uri);
+        console.error(`[${SERVER_NAME}] Opened browser to ${verification_uri}`);
+      } catch (err) {
+        console.error(`[${SERVER_NAME}] Failed to open browser:`, err);
+        // Continue anyway - user can click the link
+      }
+
       return {
         content: [{
           type: 'text',
-          text: `## Authentication Required\n\nTo access private Regen Network documentation, please complete these steps:\n\n### Step 1: Go to the activation page\n\nOpen your browser and navigate to:\n\n**${verification_uri}**\n\n### Step 2: Enter this code\n\n\`\`\`\n${user_code}\n\`\`\`\n\n### Step 3: Sign in with Google\n\nUse your **@regen.network** email address.\n\n---\n\n*This code expires in ${Math.floor(expires_in / 60)} minutes.*\n\n**After completing authentication, run this tool again to retrieve your session token.**`
+          text: `## Authentication Required\n\n🌐 **Your browser should open automatically.** If not, click the link below:\n\n### [Open Activation Page](${verification_uri})\n\n---\n\n### Enter this code:\n\n\`\`\`\n${user_code}\n\`\`\`\n\n### Sign in with Google\n\nUse your **@regen.network** email address.\n\n---\n\n*Code expires in ${Math.floor(expires_in / 60)} minutes.*\n\n**After completing authentication, run this tool again to retrieve your session token.**`
         }]
       };
 
