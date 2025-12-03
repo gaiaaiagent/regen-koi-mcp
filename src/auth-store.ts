@@ -44,11 +44,15 @@ export function loadAuthState(): AuthState {
 }
 
 /**
- * Save auth state to disk.
+ * Save auth state to disk with secure file permissions.
+ * File is set to 0o600 (owner read/write only) for security on shared machines.
  */
 export function saveAuthState(state: AuthState): void {
   try {
-    fs.writeFileSync(AUTH_FILE, JSON.stringify(state, null, 2), 'utf8');
+    fs.writeFileSync(AUTH_FILE, JSON.stringify(state, null, 2), {
+      encoding: 'utf8',
+      mode: 0o600  // Owner read/write only
+    });
   } catch (err) {
     console.error('[Auth] Failed to save auth state:', err);
   }

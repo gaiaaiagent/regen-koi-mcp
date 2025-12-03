@@ -1746,10 +1746,11 @@ class KOIServer {
           // Still pending?
           if (data.error === 'authorization_pending') {
             const expiresInMin = Math.floor((state.deviceCodeExpiresAt! - Date.now()) / 60000);
+            const ACTIVATION_URL = 'https://regen.gaiaai.xyz/activate';
             return {
               content: [{
                 type: 'text',
-                text: `## Authentication Pending\n\n**Still waiting for you to complete authentication.**\n\n### Instructions:\n\n1. Go to: [${state.verificationUri}](${state.verificationUri})\n2. Enter code: **\`${state.userCode}\`**\n3. Sign in with your **@regen.network** email\n\n---\n\n*Code expires in ${expiresInMin} minutes.*\n\n**After completing authentication, run this tool again to retrieve your session token.**`
+                text: `## Authentication Pending\n\n**Still waiting for you to complete authentication.**\n\n### Instructions:\n\n1. Go to: [${ACTIVATION_URL}](${ACTIVATION_URL})\n2. Enter code: **\`${state.userCode}\`**\n3. Sign in with your **@regen.network** email\n\n---\n\n*Code expires in ${expiresInMin} minutes.*\n\n**After completing authentication, run this tool again to retrieve your session token.**`
               }]
             };
           }
@@ -1824,23 +1825,26 @@ class KOIServer {
         interval: number;
       }>(`${KOI_API_ENDPOINT}/auth/device/code`, {});
 
-      const { device_code, user_code, verification_uri, expires_in } = deviceCodeResponse.data;
+      const { device_code, user_code, expires_in } = deviceCodeResponse.data;
 
-      console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate UserCode=${user_code} VerificationUri=${verification_uri}`);
+      // Hardcode activation URL (don't trust server's verification_uri)
+      const ACTIVATION_URL = 'https://regen.gaiaai.xyz/activate';
+
+      console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate UserCode=${user_code} VerificationUri=${ACTIVATION_URL}`);
 
       // Save device code state
       saveAuthState({
         deviceCode: device_code,
         userCode: user_code,
-        verificationUri: verification_uri,
+        verificationUri: ACTIVATION_URL,
         deviceCodeExpiresAt: Date.now() + (expires_in * 1000)
       });
 
-      // Auto-open browser to activation page (safe because URL is hardcoded, not user-controlled)
+      // Auto-open browser to activation page
       try {
         const open = (await import('open')).default;
-        await open(verification_uri);
-        console.error(`[${SERVER_NAME}] Opened browser to ${verification_uri}`);
+        await open(ACTIVATION_URL);
+        console.error(`[${SERVER_NAME}] Opened browser to ${ACTIVATION_URL}`);
       } catch (err) {
         console.error(`[${SERVER_NAME}] Failed to open browser:`, err);
         // Continue anyway - user can click the link
@@ -1849,7 +1853,7 @@ class KOIServer {
       return {
         content: [{
           type: 'text',
-          text: `## Authentication Required\n\n🌐 **Your browser should open automatically.** If not, click the link below:\n\n### [Open Activation Page](${verification_uri})\n\n---\n\n### Enter this code:\n\n\`\`\`\n${user_code}\n\`\`\`\n\n### Sign in with Google\n\nUse your **@regen.network** email address.\n\n---\n\n*Code expires in ${Math.floor(expires_in / 60)} minutes.*\n\n**After completing authentication, run this tool again to retrieve your session token.**`
+          text: `## Authentication Required\n\n🌐 **Your browser should open automatically.** If not, click the link below:\n\n### [Open Activation Page](${ACTIVATION_URL})\n\n---\n\n### Enter this code:\n\n\`\`\`\n${user_code}\n\`\`\`\n\n### Sign in with Google\n\nUse your **@regen.network** email address.\n\n---\n\n*Code expires in ${Math.floor(expires_in / 60)} minutes.*\n\n**After completing authentication, run this tool again to retrieve your session token.**`
         }]
       };
 

@@ -228,14 +228,20 @@ MCP: Found 23 results from multiple sources:
 ### Token Security
 
 Your authentication tokens are:
-- 🔒 Stored locally in `~/.koi-auth.json` (excluded from git)
-- 🔒 Hashed (SHA-256) when stored in PostgreSQL database
-- 🔒 User-specific (never shared between users)
-- 🔒 Session expires after 1 hour
-- 🔒 RFC 8628 Device Authorization Grant prevents phishing attacks
-- 🔒 Rate limiting and JWT validation for additional security
+- 🔒 **Local Storage**: Saved in `~/.koi-auth.json` with `0o600` permissions (owner read/write only)
+- 🔒 **Database**: SHA-256 hashed when stored in PostgreSQL (no plain tokens stored)
+- 🔒 **User-Specific**: Never shared between users; each session is isolated
+- 🔒 **Short-Lived**: Sessions expire after 1 hour; tokens are revocable
+- 🔒 **Domain Enforcement**: Only `@regen.network` emails are permitted (verified in JWT claims)
+- 🔒 **Phishing Prevention**: RFC 8628 Device Authorization Grant with user-typed codes
+- 🔒 **Rate Limited**: 5 attempts/min on activation, 60 req/min on token endpoint
+- 🔒 **No Secrets in URLs**: All authentication flows use POST requests to prevent logging
+- 🔒 **Hardcoded URLs**: Activation page URL is hardcoded in the client (not from server)
+- 🔒 **JWT Validation**: Google ID tokens validated locally with signature verification
 
-See [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md) for complete security documentation.
+**Production-Ready:** This authentication system follows RFC 8628 and industry best practices.
+
+See [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md) for complete security documentation and threat model.
 
 ### Troubleshooting
 

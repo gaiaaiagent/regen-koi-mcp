@@ -25,7 +25,7 @@ This implementation follows [RFC 8628](https://datatracker.ietf.org/doc/html/rfc
 ```
 CALL 1: Request Device Code
 ┌─────────────────┐
-│   MCP Client    │ 1. POST /auth/device/code
+│   MCP Client    │ 1. POST /api/koi/auth/device/code
 │  (Claude Code)  │    (no parameters needed)
 └────────┬────────┘
          │
@@ -73,7 +73,7 @@ CALL 1: Request Device Code
                                          ┌────────▼────────┐
                                          │  Google OAuth   │
                                          │12. User signs in│
-                                         │    @regen.net   │
+                                         │  @regen.network │
                                          └────────┬────────┘
                                                   │
                                          ┌────────▼────────┐
@@ -89,7 +89,7 @@ CALL 1: Request Device Code
 CALL 2: Retrieve Session Token
 ┌─────────────────┐
 │   MCP Client    │ 1. Load state from ~/.koi-auth.json
-│  (Claude Code)  │ 2. POST /auth/token (device_code)
+│  (Claude Code)  │ 2. POST /api/koi/auth/token (device_code)
 └────────┬────────┘
          │
          ▼
@@ -116,9 +116,9 @@ Previously, an attacker could send a victim a link containing the attacker's `de
 **The Solution (RFC 8628):**
 - Server generates a short `user_code` (e.g., "NWDV-FCFC")
 - User must **manually type** this code at the activation page
-- Attacker cannot force victim to type an unknown code
-- User sees the code on their own device, preventing impersonation
-- Browser auto-opens to activation page (safe - URL is hardcoded, not user-controlled)
+- User sees the code on their own device, significantly reducing link-based phishing
+- Users can still be socially engineered if tricked into entering an attacker-supplied code
+- Browser auto-opens to activation page (safe - URL is hardcoded on the client)
 
 ### 2. Entropy & Rate Limiting
 
@@ -131,8 +131,10 @@ Previously, an attacker could send a victim a link containing the attacker's `de
 
 **Rate Limiting:**
 - `/activate` endpoint: 5 attempts per minute per IP
-- `/auth/token` endpoint: 60 requests per minute per IP
+- `/api/koi/auth/token` endpoint: 60 requests per minute per IP
 - Code lockout: 5 failed attempts per code → 10 minute lockout
+- Locked-out codes always return generic "invalid code / expired" error (regardless of IP)
+- Server enforces RFC 8628's `interval` by returning `slow_down` error when client exceeds rate
 - In-memory sliding window rate limiter
 
 ### 3. Secrets in POST Body, Not URL
@@ -144,8 +146,8 @@ GET requests with `device_code` in the URL could be logged by:
 - Browser history
 
 **The Solution:**
-- `POST /auth/device/code` - No secrets in request
-- `POST /auth/token` - device_code in request body
+- `POST /api/koi/auth/device/code` - No secrets in request
+- `POST /api/koi/auth/token` - device_code in request body
 - `POST /activate` - user_code in form body
 
 ### 4. Opaque State ID
@@ -165,8 +167,15 @@ The OAuth state parameter previously contained the `device_code`, exposing it to
 - Validate Google ID token (JWT) locally with Google's public keys
 - Verify signature using RSA-256
 - Check issuer (`iss`), audience (`aud`), expiry (`exp`)
-- Verify `email_verified` claim
+- Verify `email_verified` claim is `true`
+- **Enforce domain check**: Email must end with exactly `@regen.network`
 - No network call to `/userinfo` endpoint after receiving token
+
+**Domain Validation Example:**
+```python
+if not email.endswith("@regen.network"):
+    raise ValueError("Unauthorized domain")
+```
 
 ### 6. Token Hashing
 
@@ -327,7 +336,20 @@ export function loadAuthState(): AuthState {
 }
 
 export function saveAuthState(state: AuthState): void {
-  fs.writeFileSync(AUTH_FILE, JSON.stringify(state, null, 2), 'utf8');
+  fs.writeFileSync(AUTH_FILE, JSON.stringify(state, null, 2), {
+    encoding: 'utf8',
+    mode: 0o600  // Owner read/write only (important for shared machines)
+  });
+}
+
+export function hasValidAccessToken(state: AuthState): boolean {
+  return !!state.accessToken && !!state.accessTokenExpiresAt &&
+         state.accessTokenExpiresAt > Date.now();
+}
+
+export function hasValidDeviceCode(state: AuthState): boolean {
+  return !!state.deviceCode && !!state.deviceCodeExpiresAt &&
+         state.deviceCodeExpiresAt > Date.now();
 }
 
 // src/index.ts - RFC 8628 Device Authorization Flow (One Tool, Two Calls)
@@ -348,7 +370,7 @@ private async authenticateUser() {
 
   // Check 2: Have pending device code? Check its status
   if (hasValidDeviceCode(state)) {
-    const tokenResponse = await axios.post(`${API}/auth/token`, {
+    const tokenResponse = await axios.post(`${API}/api/koi/auth/token`, {
       device_code: state.deviceCode,
       grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
     });
@@ -357,7 +379,7 @@ private async authenticateUser() {
       return {
         content: [{
           type: 'text',
-          text: `## Authentication Pending\n\n**Still waiting for you to complete authentication.**\n\n1. Go to: [${state.verificationUri}](${state.verificationUri})\n2. Enter code: **\`${state.userCode}\`**\n3. Sign in with your **@regen.network** email\n\n**After completing, run this tool again.**`
+          text: `## Authentication Pending\n\n**Still waiting for you to complete authentication.**\n\n1. Go to: https://regen.gaiaai.xyz/activate\n2. Enter code: **\`${state.userCode}\`**\n3. Sign in with your **@regen.network** email\n\n**After completing, run this tool again.**`
         }]
       };
     }
@@ -377,24 +399,39 @@ private async authenticateUser() {
         }]
       };
     }
+
+    // Handle other errors (expired_token, access_denied, invalid_grant, etc.)
+    if (tokenResponse.data.error) {
+      // Clear state and tell user to start over
+      saveAuthState({});
+      return {
+        content: [{
+          type: 'text',
+          text: `## Authentication Failed\n\n**Error:** ${tokenResponse.data.error}\n\n${tokenResponse.data.error_description || 'Please run this tool again to start a new authentication flow.'}`
+        }]
+      };
+    }
   }
 
   // Check 3: No state - start new auth flow
-  const deviceCodeResponse = await axios.post(`${API}/auth/device/code`, {});
-  const { device_code, user_code, verification_uri, expires_in } = deviceCodeResponse.data;
+  const deviceCodeResponse = await axios.post(`${API}/api/koi/auth/device/code`, {});
+  const { device_code, user_code, expires_in } = deviceCodeResponse.data;
+
+  // Hardcode activation URL (don't trust server's verification_uri)
+  const ACTIVATION_URL = 'https://regen.gaiaai.xyz/activate';
 
   // Save device code state
   saveAuthState({
     deviceCode: device_code,
     userCode: user_code,
-    verificationUri: verification_uri,
+    verificationUri: ACTIVATION_URL,
     deviceCodeExpiresAt: Date.now() + (expires_in * 1000)
   });
 
-  // Auto-open browser (safe - URL is hardcoded)
+  // Auto-open browser
   try {
     const open = (await import('open')).default;
-    await open(verification_uri);
+    await open(ACTIVATION_URL);
   } catch (err) {
     // Continue anyway - user can click the link
   }
@@ -402,7 +439,7 @@ private async authenticateUser() {
   return {
     content: [{
       type: 'text',
-      text: `## Authentication Required\n\n🌐 **Your browser should open automatically.** If not, click:\n\n### [Open Activation Page](${verification_uri})\n\n### Enter this code:\n\n\`\`\`\n${user_code}\n\`\`\`\n\n### Sign in with Google\n\nUse your **@regen.network** email.\n\n**After completing authentication, run this tool again to retrieve your session token.**`
+      text: `## Authentication Required\n\n🌐 **Your browser should open automatically.** If not, click:\n\n### [Open Activation Page](${ACTIVATION_URL})\n\n### Enter this code:\n\n\`\`\`\n${user_code}\n\`\`\`\n\n### Sign in with Google\n\nUse your **@regen.network** email.\n\n**After completing authentication, run this tool again to retrieve your session token.**`
     }]
   };
 }
@@ -412,7 +449,7 @@ private async authenticateUser() {
 
 | Threat | Mitigation |
 |--------|------------|
-| Phishing attack (malicious link) | User must manually type code displayed on their device |
+| Phishing attack (malicious link) | User must manually type code from their own device; significantly reduces link-based phishing |
 | device_code in logs | POST requests keep secrets in body |
 | device_code exposed to Google | Opaque state_id used instead |
 | Database compromise | Tokens stored as SHA-256 hashes |
