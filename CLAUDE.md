@@ -58,6 +58,7 @@ After authenticating with `regen_koi_authenticate`, try:
 - `docs/USER_GUIDE.md` - Installation and usage
 - `docs/API_REFERENCE.md` - Complete API documentation
 - `docs/DEPLOYMENT.md` - Production deployment guide
+- `docs/AUTHENTICATION.md` - Security design and session tokens
 
 ## Development
 
@@ -93,14 +94,15 @@ REGEN_USER_EMAIL=your@regen.network  # For auth
 ┌─────────────────────────────────────────┐
 │  KOI MCP Server (index.ts)              │
 │  - 10 tools                             │
-│  - Auth caching (5 min TTL)             │
-│  - X-User-Email header on all calls     │
+│  - Session token storage (src/auth.ts)  │
+│  - Authorization: Bearer <session_tok>  │
 └─────────────┬───────────────────────────┘
-              │ HTTP API
+              │ HTTPS API
               ▼
 ┌─────────────────────────────────────────┐
 │  KOI Query API (Bun)                    │
 │  - Privacy filtering based on auth      │
+│  - Session token validation             │
 │  - Hybrid RAG (vector + keyword)        │
 └─────────────┬───────────────────────────┘
               │
@@ -109,9 +111,13 @@ REGEN_USER_EMAIL=your@regen.network  # For auth
 │  PostgreSQL + Apache AGE                │
 │  - koi_memories (48K+ docs)             │
 │  - is_private column for access control │
-│  - oauth_tokens for auth validation     │
+│  - session_tokens (UUID → user mapping) │
+│  - oauth_tokens (Google tokens - safe)  │
 └─────────────────────────────────────────┘
 ```
+
+**Security Note**: Google OAuth tokens never leave the server. MCP clients only receive
+session tokens (UUIDs) which are safe to store. See `docs/AUTHENTICATION.md` for details.
 
 ## Common Tasks
 
@@ -123,15 +129,24 @@ REGEN_USER_EMAIL=your@regen.network  # For auth
 
 ### Testing Authentication
 ```bash
-# Check auth status
-curl 'https://regen.gaiaai.xyz/api/koi/auth/status?user_email=test@regen.network'
+# Get a session token (after OAuth completed)
+curl 'https://regen.gaiaai.xyz/api/koi/auth/status?user_email=user@regen.network'
+# Returns: {"session_token": "fb93a489-c1f5-...", ...}
 
-# Query with auth header
+# Query with session token (private data accessible)
+SESSION_TOKEN="fb93a489-c1f5-..."
 curl -X POST 'https://regen.gaiaai.xyz/api/koi/query' \
   -H 'Content-Type: application/json' \
-  -H 'X-User-Email: authenticated@regen.network' \
-  -d '{"question": "internal docs", "limit": 5}'
+  -H "Authorization: Bearer $SESSION_TOKEN" \
+  -d '{"question": "internal meeting notes", "limit": 5}'
+
+# Query without token (public data only)
+curl -X POST 'https://regen.gaiaai.xyz/api/koi/query' \
+  -H 'Content-Type: application/json' \
+  -d '{"question": "internal meeting notes", "limit": 5}'
 ```
+
+See `docs/AUTHENTICATION.md` for full security documentation.
 
 ### Deploying Changes
 1. Build locally: `npm run build`
