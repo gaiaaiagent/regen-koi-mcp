@@ -1737,6 +1737,16 @@ class KOIServer {
       output += `*This code expires in ${Math.floor(expires_in / 60)} minutes.*\n\n`;
       output += `**Waiting for authentication...**\n`;
 
+      // IMPORTANT: Print instructions immediately so user sees them during polling
+      console.error(`\n${'='.repeat(60)}`);
+      console.error(`AUTHENTICATION REQUIRED`);
+      console.error(`${'='.repeat(60)}`);
+      console.error(`\n1. Go to: ${verification_uri}`);
+      console.error(`\n2. Enter code: ${user_code}`);
+      console.error(`\n3. Sign in with your @regen.network Google account`);
+      console.error(`\nCode expires in ${Math.floor(expires_in / 60)} minutes.`);
+      console.error(`${'='.repeat(60)}\n`);
+
       // Step 3: Poll for completion using POST (device_code in body, not URL)
       const maxAttempts = Math.ceil(expires_in / interval);
       const pollIntervalMs = interval * 1000;
