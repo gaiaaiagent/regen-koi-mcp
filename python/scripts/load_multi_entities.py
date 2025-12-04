@@ -322,7 +322,7 @@ class MultiLangEntityLoader:
 
 def main():
     """Main entry point."""
-    DB_CONNECTION = "postgresql://darrenzal@localhost:5432/eliza"
+    DB_CONNECTION = "postgresql://postgres:postgres@localhost:5433/eliza"
     GRAPH_NAME = "regen_graph"
     JSON_FILE = Path(__file__).parent.parent / "data" / "multi_repo_entities.json"
 

@@ -32,6 +32,8 @@ import { logger } from './logger.js';
 import { recordQuery, getMetricsMarkdown, getMetricsSummary } from './metrics.js';
 import { validateToolInput } from './validation.js';
 import { queryCache } from './cache.js';
+// Shared auth module
+import { USER_EMAIL, getAccessToken, setAccessToken, clearAuthCache } from './auth.js';
 
 // Load environment variables
 dotenv.config();
@@ -42,14 +44,43 @@ const KOI_API_KEY = process.env.KOI_API_KEY || '';
 const SERVER_NAME = process.env.MCP_SERVER_NAME || 'regen-koi';
 const SERVER_VERSION = process.env.MCP_SERVER_VERSION || '1.0.0';
 
+console.error(`[${SERVER_NAME}] User email for auth: ${USER_EMAIL}`);
+
+// Check if user is authenticated (with caching)
+async function isUserAuthenticated(): Promise<boolean> {
+  const token = getAccessToken();
+  if (!token) return false;
+
+  // Validate token with server
+  try {
+    const response = await axios.get<{ authenticated: boolean }>(`${KOI_API_ENDPOINT}/auth/status`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+      timeout: 5000
+    });
+    return response.data.authenticated || false;
+  } catch (error) {
+    return false;
+  }
+}
+
 // API client configuration
+// SECURITY: Authorization header is set dynamically based on access token
 const apiClient = axios.create({
   baseURL: KOI_API_ENDPOINT,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
-    ...(KOI_API_KEY ? { 'Authorization': `Bearer ${KOI_API_KEY}` } : {})
+    'X-User-Email': USER_EMAIL, // Kept for logging purposes only, not for auth
   }
+});
+
+// Add request interceptor to dynamically include access token
+apiClient.interceptors.request.use((config) => {
+  const token = getAccessToken();
+  if (token && config.headers) {
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
+  return config;
 });
 
 // Tool definitions are imported from tools.ts
@@ -192,6 +223,9 @@ class KOIServer {
             break;
           case 'get_tech_stack':
             result = await this.getTechStack(args);
+            break;
+          case 'regen_koi_authenticate':
+            result = await this.authenticateUser();
             break;
           default:
             throw new Error(`Unknown tool: ${name}`);
@@ -672,18 +706,28 @@ class KOIServer {
     const { detailed = false } = args;
 
     try {
-      const response = await apiClient.get('/health');
+      const response = await apiClient.get('/stats');
 
-      const health = response.data as any;
+      const stats = response.data as any;
       let formatted = `# KOI Knowledge Base Statistics\n\n`;
-      formatted += `- **Status**: ${health.status || 'Unknown'}\n`;
 
-      // Since /health is minimal, we'll provide estimated stats
-      formatted += `- **Total Documents**: 15,000+\n`;
-      formatted += `- **Topics Covered**: Regen Network, Carbon Credits, Ecological Assets\n`;
-      formatted += `- **Data Sources**: Multiple (Websites, Podcasts, Documentation)\n`;
-      // Display the resolved endpoint that this server is using
-      formatted += `- **API Endpoint**: ${KOI_API_ENDPOINT}\n`;
+      // Main statistics
+      formatted += `- **Total Documents**: ${stats.total_documents?.toLocaleString() || 'Unknown'}\n`;
+      formatted += `- **Recent (7 days)**: ${stats.recent_7_days?.toLocaleString() || 'Unknown'}\n`;
+      formatted += `- **API Endpoint**: ${KOI_API_ENDPOINT}\n\n`;
+
+      // Source breakdown
+      if (stats.by_source && Object.keys(stats.by_source).length > 0) {
+        formatted += `## Documents by Source\n\n`;
+
+        // Sort sources by count (descending)
+        const sortedSources = Object.entries(stats.by_source)
+          .sort(([, a], [, b]) => (b as number) - (a as number));
+
+        for (const [source, count] of sortedSources) {
+          formatted += `- **${source}**: ${(count as number).toLocaleString()}\n`;
+        }
+      }
 
       return {
         content: [
@@ -1642,6 +1686,161 @@ class KOIServer {
         content: [{
           type: 'text',
           text: `Error getting tech stack: ${error instanceof Error ? error.message : 'Unknown error occurred'}`
+        }]
+      };
+    }
+  }
+
+  /**
+   * Generate a cryptographically secure device code for auth binding
+   * This prevents IDOR attacks by binding the auth request to this MCP client
+   */
+  private generateDeviceCode(): string {
+    const bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  /**
+   * Authenticate user with @regen.network email for access to private documentation
+   *
+   * SECURITY: Uses device_code binding to prevent IDOR attacks.
+   * Only this MCP client can retrieve the session token because only it knows the device_code.
+   */
+  private async authenticateUser() {
+    const startTime = Date.now();
+
+    try {
+      console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate Event=start`);
+
+      // Get user email (same logic as graph_tool.ts uses)
+      const userEmail = process.env.REGEN_USER_EMAIL ||
+                        process.env.USER_EMAIL ||
+                        `${process.env.USER}@regen.network`;
+
+      // SECURITY: Generate unique device_code to bind this client to the auth request
+      const deviceCode = this.generateDeviceCode();
+
+      console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate UserEmail=${userEmail} DeviceCode=${deviceCode.substring(0, 8)}...`);
+
+      // Call the auth initiate endpoint with device_code
+      const response = await axios.get(`${KOI_API_ENDPOINT}/auth/initiate`, {
+        params: {
+          user_email: userEmail,
+          device_code: deviceCode  // REQUIRED: Binds this client to the auth request
+        }
+      });
+
+      const { auth_url, state } = response.data as { auth_url: string; state: string };
+
+      if (!auth_url) {
+        throw new Error('No auth URL returned from server');
+      }
+
+      // Open browser for OAuth
+      console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate Event=opening_browser URL=${auth_url}`);
+
+      const open = (await import('open')).default;
+      await open(auth_url);
+
+      let output = `## Authentication Started\n\n`;
+      output += `✅ Opening browser for OAuth login...\n\n`;
+      output += `**Please:**\n`;
+      output += `1. Log in with your **@regen.network** email\n`;
+      output += `2. Grant the requested permissions (email, profile)\n`;
+      output += `3. The browser will show a success message when complete\n\n`;
+      output += `**After authenticating:**\n`;
+      output += `- Your session token is securely generated\n`;
+      output += `- Future queries will automatically include private Drive data\n`;
+      output += `- You won't need to authenticate again unless the token expires\n\n`;
+      output += `**Polling for authentication completion...**\n`;
+
+      // Poll for authentication status using device_code (SECURE - prevents IDOR)
+      const pollUrl = `${KOI_API_ENDPOINT}/auth/status?device_code=${encodeURIComponent(deviceCode)}`;
+      const maxAttempts = 60; // 2 minutes
+      const pollInterval = 2000; // 2 seconds
+
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+        try {
+          const statusResponse = await axios.get<{
+            status: string;
+            authenticated: boolean;
+            user_email?: string;
+            session_token?: string;  // Our server's token, NOT Google OAuth - returned ONCE
+            token_expiry?: string;
+            reason?: string;
+          }>(pollUrl);
+
+          const data = statusResponse.data;
+
+          if (data.status === 'rejected') {
+            throw new Error('Email domain not allowed. Only @regen.network emails are permitted.');
+          }
+
+          if (data.status === 'expired') {
+            throw new Error('Auth request expired. Please try again.');
+          }
+
+          if (data.status === 'already_retrieved') {
+            // Token was already retrieved - this shouldn't happen in normal flow
+            console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate Warning: Token already retrieved`);
+            output += `\n⚠️ **Session token was already retrieved.**\n`;
+            output += `If you're seeing this, please try authenticating again.\n`;
+            return { content: [{ type: 'text', text: output }] };
+          }
+
+          if (data.status === 'authenticated' && data.session_token) {
+            console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate Event=success Duration=${Date.now() - startTime}ms`);
+
+            // Store the session token for future API calls
+            // SECURITY: This is our server's session token, NOT a Google OAuth token
+            // Safe to store - only works with our API, can't access Google
+            const tokenExpiry = data.token_expiry
+              ? new Date(data.token_expiry).getTime()
+              : undefined;
+            setAccessToken(data.session_token, tokenExpiry);
+
+            const authenticatedEmail = data.user_email || userEmail;
+
+            output += `\n✅ **Authentication Successful!**\n\n`;
+            output += `Authenticated as: ${authenticatedEmail}\n\n`;
+            output += `You now have access to internal Regen Network documentation.\n`;
+            output += `Private Notion data from the main Regen workspace is now accessible.\n`;
+
+            return {
+              content: [{
+                type: 'text',
+                text: output
+              }]
+            };
+          }
+
+          // Still pending - continue polling
+          if (data.status === 'pending') {
+            continue;
+          }
+
+        } catch (pollError) {
+          // Check if it's a known error
+          if (pollError instanceof Error && pollError.message.includes('Email domain not allowed')) {
+            throw pollError;
+          }
+          // Otherwise continue polling
+        }
+      }
+
+      // Timeout
+      throw new Error('Authentication timeout - please try again');
+
+    } catch (error) {
+      console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate Event=error`, error);
+
+      return {
+        content: [{
+          type: 'text',
+          text: `## Authentication Error\n\n${error instanceof Error ? error.message : 'Unknown error occurred'}\n\nPlease try again or contact support if the issue persists.`
         }]
       };
     }
