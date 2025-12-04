@@ -187,5 +187,13 @@ export const TOOLS: Tool[] = [
       type: 'object',
       properties: {}
     }
+  },
+  {
+    name: 'regen_koi_authenticate',
+    description: 'Authenticate with your @regen.network email to access internal Regen Network documentation in addition to public sources. Opens a browser window for secure OAuth login. Authentication token is saved on the server and persists across sessions. Only needs to be done once.',
+    inputSchema: {
+      type: 'object',
+      properties: {}
+    }
   }
 ];

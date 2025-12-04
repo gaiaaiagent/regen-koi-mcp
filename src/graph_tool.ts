@@ -19,11 +19,14 @@
 
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import axios from 'axios';
+import open from 'open';
 import { logger, logQuery } from './logger.js';
 import { recordQuery, recordApiCall } from './metrics.js';
 import { withRetry, withTimeout, circuitBreakers, CircuitBreakerError, TimeoutError } from './resilience.js';
 import { cachedQuery, shouldCache } from './cache.js';
 import { validateToolInput, detectInjection, sanitizeString } from './validation.js';
+// Shared auth module
+import { USER_EMAIL, getAccessToken, setAccessToken } from './auth.js';
 import {
   GraphClient,
   createGraphClient,
@@ -114,6 +117,41 @@ interface Hit {
 const API_TIMEOUT_MS = parseInt(process.env.GRAPH_API_TIMEOUT || '30000');
 const API_MAX_RETRIES = parseInt(process.env.GRAPH_API_MAX_RETRIES || '3');
 
+async function handleAuthFlow(authUrl: string, pollUrl: string): Promise<void> {
+  console.error(`\n=== AUTHENTICATION REQUIRED ===`);
+  console.error(`Opening browser to: ${authUrl}`);
+  console.error(`Please log in with ${USER_EMAIL} to continue...`);
+  
+  await open(authUrl);
+
+  // Poll for status
+  const fullPollUrl = pollUrl.startsWith('http') ? pollUrl : `${KOI_API_ENDPOINT}${pollUrl}`;
+  
+  process.stdout.write('Waiting for authentication...');
+  
+  return new Promise((resolve, reject) => {
+    const interval = setInterval(async () => {
+      try {
+        process.stdout.write('.');
+        const response = await axios.get(fullPollUrl);
+        if ((response.data as { authenticated: boolean }).authenticated) {
+          clearInterval(interval);
+          console.error('\nAuthentication successful! Resuming query...');
+          resolve();
+        }
+      } catch (e) {
+        // Ignore polling errors
+      }
+    }, 2000);
+
+    // Timeout after 2 minutes
+    setTimeout(() => {
+      clearInterval(interval);
+      reject(new Error('Authentication timed out'));
+    }, 120000);
+  });
+}
+
 /**
  * Execute graph query via HTTP API with retry, timeout, and circuit breaker
  */
@@ -121,27 +159,56 @@ async function executeViaApi(args: any): Promise<any> {
   const graphApiUrl = `${KOI_API_ENDPOINT}/graph`;
   const startTime = Date.now();
 
+  // Build headers with access token if available
+  const buildHeaders = () => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-User-Email': USER_EMAIL, // Kept for logging only
+    };
+    const token = getAccessToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+  };
+
   // Use circuit breaker to prevent cascading failures
   return circuitBreakers.graphApi.execute(async () => {
     return withRetry(
       async () => {
         return withTimeout(
           async () => {
-            const response = await axios.post(graphApiUrl, args, {
-              headers: { 'Content-Type': 'application/json' },
-              timeout: API_TIMEOUT_MS,
-            });
+            try {
+              const response = await axios.post(graphApiUrl, args, {
+                headers: buildHeaders(),
+                timeout: API_TIMEOUT_MS,
+              });
 
-            const duration = Date.now() - startTime;
-            recordApiCall(duration, true);
-            logger.debug({
-              action: 'api_request',
-              url: graphApiUrl,
-              query_type: args.query_type,
-              duration_ms: duration
-            }, `Graph API request completed`);
+              const duration = Date.now() - startTime;
+              recordApiCall(duration, true);
+              logger.debug({
+                action: 'api_request',
+                url: graphApiUrl,
+                query_type: args.query_type,
+                duration_ms: duration
+              }, `Graph API request completed`);
 
-            return response.data;
+              return response.data;
+            } catch (error: any) {
+              // Check for Auth Required
+              if (error.response && error.response.status === 401 && error.response.data.auth_url) {
+                logger.info('Authentication required, initiating flow...');
+                await handleAuthFlow(error.response.data.auth_url, error.response.data.poll_url);
+
+                // Retry the request immediately after auth success
+                const response = await axios.post(graphApiUrl, args, {
+                  headers: buildHeaders(),
+                  timeout: API_TIMEOUT_MS,
+                });
+                return response.data;
+              }
+              throw error;
+            }
           },
           API_TIMEOUT_MS,
           'Graph API request'
@@ -211,6 +278,7 @@ async function executeViaApi(args: any): Promise<any> {
     throw new Error(`Graph query failed: ${error.message}`);
   });
 }
+
 
 /**
  * Execute the query_code_graph tool with production hardening
