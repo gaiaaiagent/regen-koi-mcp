@@ -30,19 +30,138 @@ fi
 echo "Detected OS: $OS"
 echo ""
 
+# Minimum Node.js version required (pino logger needs v19.9.0+ for diagnostics_channel.tracingChannel)
+MIN_NODE_VERSION=20
+
+# Function to extract major version number from node version string
+get_node_major_version() {
+    echo "$1" | sed 's/v//' | cut -d. -f1
+}
+
+# Function to find a compatible Node.js installation
+find_compatible_node() {
+    local found_path=""
+    local found_version=0
+
+    # Check nvm installations
+    if [ -d "$HOME/.nvm/versions/node" ]; then
+        for node_dir in "$HOME/.nvm/versions/node"/v*/bin; do
+            if [ -f "$node_dir/node" ]; then
+                local ver=$("$node_dir/node" --version 2>/dev/null)
+                local major=$(get_node_major_version "$ver")
+                if [ "$major" -ge "$MIN_NODE_VERSION" ] && [ "$major" -gt "$found_version" ]; then
+                    found_version=$major
+                    found_path="$node_dir"
+                fi
+            fi
+        done
+    fi
+
+    # Check fnm installations
+    if [ -d "$HOME/.fnm" ]; then
+        for node_dir in "$HOME/.fnm/node-versions"/v*/installation/bin; do
+            if [ -f "$node_dir/node" ]; then
+                local ver=$("$node_dir/node" --version 2>/dev/null)
+                local major=$(get_node_major_version "$ver")
+                if [ "$major" -ge "$MIN_NODE_VERSION" ] && [ "$major" -gt "$found_version" ]; then
+                    found_version=$major
+                    found_path="$node_dir"
+                fi
+            fi
+        done
+    fi
+
+    # Check Homebrew on macOS
+    if [ -d "/opt/homebrew/bin" ] && [ -f "/opt/homebrew/bin/node" ]; then
+        local ver=$(/opt/homebrew/bin/node --version 2>/dev/null)
+        local major=$(get_node_major_version "$ver")
+        if [ "$major" -ge "$MIN_NODE_VERSION" ] && [ "$major" -gt "$found_version" ]; then
+            found_version=$major
+            found_path="/opt/homebrew/bin"
+        fi
+    fi
+
+    # Check /usr/local/bin
+    if [ -f "/usr/local/bin/node" ]; then
+        local ver=$(/usr/local/bin/node --version 2>/dev/null)
+        local major=$(get_node_major_version "$ver")
+        if [ "$major" -ge "$MIN_NODE_VERSION" ] && [ "$major" -gt "$found_version" ]; then
+            found_version=$major
+            found_path="/usr/local/bin"
+        fi
+    fi
+
+    echo "$found_path"
+}
+
 # Check if npx is available
 if ! command -v npx &> /dev/null; then
     echo "❌ Error: npx is not installed"
-    echo "Please install Node.js 16+ from https://nodejs.org"
+    echo "Please install Node.js $MIN_NODE_VERSION+ from https://nodejs.org"
     exit 1
 fi
 
-echo "✓ Node.js $(node --version) detected"
+# Check Node.js version
+CURRENT_NODE_VERSION=$(node --version)
+CURRENT_MAJOR=$(get_node_major_version "$CURRENT_NODE_VERSION")
+
+echo "✓ Node.js $CURRENT_NODE_VERSION detected"
+
+# Variables for the config
+NPX_COMMAND="npx"
+NODE_PATH_ENV=""
+
+if [ "$CURRENT_MAJOR" -lt "$MIN_NODE_VERSION" ]; then
+    echo "⚠️  Node.js $CURRENT_NODE_VERSION is too old (need v$MIN_NODE_VERSION+)"
+    echo "   Searching for a compatible Node.js installation..."
+
+    COMPATIBLE_PATH=$(find_compatible_node)
+
+    if [ -n "$COMPATIBLE_PATH" ]; then
+        COMPAT_VERSION=$("$COMPATIBLE_PATH/node" --version)
+        echo "✓ Found compatible Node.js $COMPAT_VERSION at $COMPATIBLE_PATH"
+        NPX_COMMAND="$COMPATIBLE_PATH/npx"
+        NODE_PATH_ENV="$COMPATIBLE_PATH:/usr/local/bin:/usr/bin:/bin"
+    else
+        echo ""
+        echo "❌ Error: No compatible Node.js version found"
+        echo ""
+        echo "The regen-koi MCP server requires Node.js v$MIN_NODE_VERSION or higher."
+        echo "Your current version ($CURRENT_NODE_VERSION) is not supported."
+        echo ""
+        echo "Please install a newer Node.js version:"
+        echo "  - Using nvm: nvm install $MIN_NODE_VERSION && nvm use $MIN_NODE_VERSION"
+        echo "  - Using Homebrew: brew install node@$MIN_NODE_VERSION"
+        echo "  - From nodejs.org: https://nodejs.org"
+        echo ""
+        exit 1
+    fi
+else
+    echo "✓ Node.js version is compatible"
+fi
+
 echo "✓ npx is available"
 echo ""
 
-# MCP server configuration
-MCP_CONFIG='{
+# MCP server configuration - use full path if needed
+if [ -n "$NODE_PATH_ENV" ]; then
+    MCP_CONFIG=$(cat <<EOF
+{
+  "mcpServers": {
+    "regen-koi": {
+      "command": "$NPX_COMMAND",
+      "args": ["-y", "regen-koi-mcp@latest"],
+      "env": {
+        "KOI_API_ENDPOINT": "https://regen.gaiaai.xyz/api/koi",
+        "PATH": "$NODE_PATH_ENV"
+      }
+    }
+  }
+}
+EOF
+)
+else
+    MCP_CONFIG='{
   "mcpServers": {
     "regen-koi": {
       "command": "npx",
@@ -53,6 +172,7 @@ MCP_CONFIG='{
     }
   }
 }'
+fi
 
 # Function to merge or create config
 configure_claude_desktop() {
@@ -130,12 +250,19 @@ configure_claude_code() {
     echo "📝 Configuring Claude Code CLI..."
 
     if command -v claude &> /dev/null; then
+        # Build the JSON config based on whether we need a custom path
+        if [ -n "$NODE_PATH_ENV" ]; then
+            CLI_CONFIG="{\"command\":\"$NPX_COMMAND\",\"args\":[\"-y\",\"regen-koi-mcp@latest\"],\"env\":{\"KOI_API_ENDPOINT\":\"https://regen.gaiaai.xyz/api/koi\",\"PATH\":\"$NODE_PATH_ENV\"}}"
+        else
+            CLI_CONFIG='{"command":"npx","args":["-y","regen-koi-mcp@latest"],"env":{"KOI_API_ENDPOINT":"https://regen.gaiaai.xyz/api/koi"}}'
+        fi
+
         # Try to add the MCP server
-        if claude mcp add-json regen-koi '{"command":"npx","args":["-y","regen-koi-mcp@latest"],"env":{"KOI_API_ENDPOINT":"https://regen.gaiaai.xyz/api/koi"}}' 2>&1 | grep -q "added successfully\|already exists"; then
+        if claude mcp add-json regen-koi "$CLI_CONFIG" 2>&1 | grep -q "added successfully\|already exists"; then
             echo "   ✅ Configured Claude Code CLI"
         else
             echo "   ⚠️  Could not auto-configure Claude Code"
-            echo "   Run manually: claude mcp add-json regen-koi '{\"command\":\"npx\",\"args\":[\"-y\",\"regen-koi-mcp@latest\"],\"env\":{\"KOI_API_ENDPOINT\":\"https://regen.gaiaai.xyz/api/koi\"}}'"
+            echo "   Run manually: claude mcp add-json regen-koi '$CLI_CONFIG'"
         fi
     else
         echo "   ⏭️  Claude Code CLI not found (optional)"
