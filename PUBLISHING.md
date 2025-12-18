@@ -132,35 +132,58 @@ Before publishing, ensure:
 - [ ] Build succeeds (`npm run build`)
 - [ ] Dry run looks correct (`npm pack --dry-run`)
 
-## Automation (Future)
+## Automated Publishing (Enabled!)
 
-You can automate publishing using GitHub Actions:
+Publishing is now automated via GitHub Actions. When you push a version tag, npm gets updated automatically.
 
-```yaml
-# .github/workflows/publish.yml
-name: Publish to NPM
+### One-Time Setup: Add NPM Token to GitHub
 
-on:
-  release:
-    types: [created]
+1. **Create an npm access token:**
+   - Go to https://www.npmjs.com/settings/YOUR_USERNAME/tokens
+   - Click "Generate New Token" → "Granular Access Token"
+   - Name: `github-actions-regen-koi-mcp`
+   - Expiration: 1 year (or as preferred)
+   - Permissions: Read and write
+   - Packages: Select "regen-koi-mcp" or "All packages"
+   - Copy the token (starts with `npm_`)
 
-jobs:
-  publish:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-          registry-url: 'https://registry.npmjs.org'
-      - run: npm ci
-      - run: npm run build
-      - run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+2. **Add token to GitHub repo:**
+   - Go to https://github.com/gaiaaiagent/regen-koi-mcp/settings/secrets/actions
+   - Click "New repository secret"
+   - Name: `NPM_TOKEN`
+   - Value: Paste your npm token
+   - Click "Add secret"
+
+### Release with One Command
+
+```bash
+# Bug fix (1.2.1 -> 1.2.2)
+./scripts/release.sh patch
+
+# New feature (1.2.1 -> 1.3.0)
+./scripts/release.sh minor
+
+# Breaking change (1.2.1 -> 2.0.0)
+./scripts/release.sh major
 ```
 
-## Updating the Package
+This script:
+1. Ensures you're on main with clean working directory
+2. Pulls latest changes
+3. Runs build to verify
+4. Bumps version and creates git tag
+5. Pushes to GitHub → triggers auto-publish to npm
+
+### Manual Release (Alternative)
+
+```bash
+npm version patch  # or minor, major
+git push origin main --tags
+```
+
+GitHub Actions will automatically publish to npm when it sees the version tag.
+
+## Updating the Package (Legacy - Before Automation)
 
 ### For Bug Fixes
 
