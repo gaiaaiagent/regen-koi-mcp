@@ -3,7 +3,7 @@
 KOI API Server - Self-contained API for the Regen KOI MCP Server
 
 Provides endpoints for:
-- Hybrid search (vector + keyword)
+- Hybrid search (vector + keyword) - queries BOTH embedding tables
 - Statistics
 - Weekly digest generation
 
@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="KOI API Server",
-    version="1.0.0",
+    version="1.1.0",
     description="Knowledge Organization Infrastructure API for Regen Network"
 )
 
@@ -116,7 +116,7 @@ async def root():
     """API root"""
     return {
         "service": "KOI API Server",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "endpoints": {
             "search": "/api/koi/search",
             "stats": "/api/koi/stats",
@@ -148,7 +148,9 @@ async def health():
 async def search(request: SearchRequest):
     """
     Hybrid search across KOI knowledge base
-    Combines vector similarity and keyword search with RRF
+    Queries BOTH embedding tables:
+    - koi_embeddings (legacy chunks)
+    - koi_memory_chunks (new chunked architecture)
     """
     try:
         # Handle both 'query' and 'question' parameters
@@ -171,49 +173,83 @@ async def search(request: SearchRequest):
         results = []
 
         if embedding:
-            # Vector search with date filtering
-            date_filter = ""
+            # Build date filter clause
+            date_filter_legacy = ""
+            date_filter_chunks = ""
             date_params = []
 
             if published_from:
-                date_filter += " AND m.published_at >= %s::timestamptz"
+                date_filter_legacy += " AND m.published_at >= %s::timestamptz"
+                date_filter_chunks += " AND parent.published_at >= %s::timestamptz"
                 date_params.append(published_from)
             if published_to:
-                date_filter += " AND m.published_at <= %s::timestamptz"
+                date_filter_legacy += " AND m.published_at <= %s::timestamptz"
+                date_filter_chunks += " AND parent.published_at <= %s::timestamptz"
                 date_params.append(published_to)
             if not include_undated and (published_from or published_to):
-                # Exclude undated documents
-                date_filter += " AND m.published_at IS NOT NULL"
+                date_filter_legacy += " AND m.published_at IS NOT NULL"
+                date_filter_chunks += " AND parent.published_at IS NOT NULL"
 
+            # UNION query: search both embedding tables
+            # Note: We use a subquery to combine results, then order and limit
             query = f"""
-                SELECT
-                    m.rid,
-                    m.content->>'text' as content,
-                    m.metadata->>'source' as source,
-                    m.metadata->>'url' as url,
-                    1 - (e.dim_1024 <=> %s::vector) as similarity,
-                    m.published_at
-                FROM koi_memories m
-                JOIN koi_embeddings e ON m.id = e.memory_id
-                WHERE
-                    m.content->>'text' IS NOT NULL
-                    AND LENGTH(m.content->>'text') > 50
-                    AND e.dim_1024 IS NOT NULL
-                    {date_filter}
-                ORDER BY e.dim_1024 <=> %s::vector
+                WITH combined_results AS (
+                    -- Legacy embeddings (koi_embeddings)
+                    SELECT
+                        m.rid,
+                        m.content->>'text' as content,
+                        m.metadata->>'source' as source,
+                        m.metadata->>'url' as url,
+                        1 - (e.dim_1024 <=> %s::vector) as similarity,
+                        m.published_at,
+                        'legacy' as embedding_source
+                    FROM koi_memories m
+                    JOIN koi_embeddings e ON m.id = e.memory_id
+                    WHERE
+                        m.content->>'text' IS NOT NULL
+                        AND LENGTH(m.content->>'text') > 50
+                        AND e.dim_1024 IS NOT NULL
+                        {date_filter_legacy}
+                    
+                    UNION ALL
+                    
+                    -- New chunked embeddings (koi_memory_chunks)
+                    SELECT
+                        mc.chunk_rid as rid,
+                        mc.content->>'text' as content,
+                        parent.metadata->>'source' as source,
+                        parent.metadata->>'url' as url,
+                        1 - (mc.embedding <=> %s::vector) as similarity,
+                        parent.published_at,
+                        'chunks' as embedding_source
+                    FROM koi_memory_chunks mc
+                    JOIN koi_memories parent ON mc.document_rid = parent.rid
+                    WHERE
+                        mc.content->>'text' IS NOT NULL
+                        AND LENGTH(mc.content->>'text') > 50
+                        AND mc.embedding IS NOT NULL
+                        {date_filter_chunks}
+                )
+                SELECT rid, content, source, url, similarity, published_at, embedding_source
+                FROM combined_results
+                ORDER BY similarity DESC
                 LIMIT %s
             """
-            # Build params: [embedding for similarity, ...date params, embedding for ORDER BY, limit]
-            params_with_vector = [json.dumps(embedding)] + date_params + [json.dumps(embedding), request.limit]
-            print(f"DEBUG: date_filter='{date_filter}'", flush=True)
-            print(f"DEBUG: date_params={date_params}", flush=True)
-            print(f"DEBUG: params_with_vector length={len(params_with_vector)}, limit={request.limit}", flush=True)
-            print(f"DEBUG: SQL query:\n{query}", flush=True)
-            cur.execute(query, params_with_vector)
+            
+            # Build params: [embedding1, ...date_params_legacy, embedding2, ...date_params_chunks, limit]
+            params = [json.dumps(embedding)] + date_params + [json.dumps(embedding)] + date_params + [request.limit]
+            
+            logger.info(f"Executing unified search query (legacy + chunks)")
+            cur.execute(query, params)
             results = cur.fetchall()
-            print(f"DEBUG: Vector search returned {len(results)} results", flush=True)
+            logger.info(f"Unified search returned {len(results)} results")
+            
+            # Log source distribution
+            legacy_count = sum(1 for r in results if r.get('embedding_source') == 'legacy')
+            chunks_count = sum(1 for r in results if r.get('embedding_source') == 'chunks')
+            logger.info(f"Results breakdown: {legacy_count} from legacy, {chunks_count} from chunks")
         else:
-            # Fallback to keyword search
+            # Fallback to keyword search (searches both via koi_memories)
             date_filter = ""
             params = [f"%{search_query}%", f"%{search_query.replace(' ', '%')}%"]
 
@@ -313,6 +349,13 @@ async def get_stats(detailed: bool = False):
             WHERE created_at > NOW() - INTERVAL '7 days'
         """)
         recent = cur.fetchone()["recent"]
+        
+        # Embedding stats
+        cur.execute("SELECT COUNT(*) as count FROM koi_embeddings")
+        legacy_embeddings = cur.fetchone()["count"]
+        
+        cur.execute("SELECT COUNT(*) as count FROM koi_memory_chunks WHERE embedding IS NOT NULL")
+        chunk_embeddings = cur.fetchone()["count"]
 
         cur.close()
         conn.close()
@@ -320,7 +363,12 @@ async def get_stats(detailed: bool = False):
         stats = {
             "total_documents": total,
             "recent_7_days": recent,
-            "by_source": {r["source"]: r["count"] for r in by_source}
+            "by_source": {r["source"]: r["count"] for r in by_source},
+            "embeddings": {
+                "legacy_koi_embeddings": legacy_embeddings,
+                "new_koi_memory_chunks": chunk_embeddings,
+                "total_searchable": legacy_embeddings + chunk_embeddings
+            }
         }
 
         if detailed:
@@ -401,8 +449,9 @@ async def generate_weekly_digest(
 
 if __name__ == "__main__":
     port = int(os.getenv("KOI_API_PORT", "8301"))
-    logger.info(f"Starting KOI API Server on port {port}")
+    logger.info(f"Starting KOI API Server v1.1.0 on port {port}")
     logger.info(f"Database: {DB_CONFIG['database']} @ {DB_CONFIG['host']}:{DB_CONFIG['port']}")
     logger.info(f"Weekly digest: {'available' if WEEKLY_DIGEST_AVAILABLE else 'unavailable'}")
+    logger.info("Search now queries BOTH koi_embeddings (legacy) and koi_memory_chunks (new)")
 
     uvicorn.run(app, host="0.0.0.0", port=port)

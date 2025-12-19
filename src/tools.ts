@@ -9,7 +9,7 @@ export const TOOLS: Tool[] = [
   GRAPH_TOOL,
   {
     name: 'hybrid_search',
-    description: 'Intelligent search that automatically routes to graph (for entity/relationship queries) or vector (for conceptual queries) based on query intent. Uses QueryRouter for classification and UnifiedSearch for hybrid retrieval with RRF fusion. Best for general questions about the Regen codebase.',
+    description: 'Intelligent search that automatically routes to graph (for entity/relationship queries) or vector (for conceptual queries) based on query intent. Uses QueryRouter for classification and UnifiedSearch for hybrid retrieval with RRF fusion. Best for general questions about the Regen codebase. NOT for live blockchain data - use Ledger MCP for retirements, balances, projects, batches.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -30,7 +30,7 @@ export const TOOLS: Tool[] = [
   },
   {
     name: 'search_knowledge',
-    description: 'Hybrid search across KOI (vectors + graph). Accepts optional published date range filter.',
+    description: 'Hybrid search across KOI (vectors + graph). NOT for live blockchain queries - use Ledger MCP for on-chain state.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -127,7 +127,7 @@ export const TOOLS: Tool[] = [
   },
   {
     name: 'search_github_docs',
-    description: 'Search Regen Network GitHub repositories for documentation, README files, configuration files, and technical content. Searches regen-ledger (blockchain), regen-web (frontend), regen-data-standards (schemas), and regenie-corpus (docs). Note: Currently searches documentation and config files, not source code.',
+    description: 'Search Regen Network GitHub repositories for documentation, README files, configuration files, and technical content. Searches regen-ledger (blockchain), regen-web (frontend), regen-data-standards (schemas), and regenie-corpus (docs). Searches docs only - use Ledger MCP for on-chain data.',
     inputSchema: {
       type: 'object',
       properties: {
