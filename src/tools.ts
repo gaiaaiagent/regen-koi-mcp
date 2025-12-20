@@ -8,29 +8,8 @@ import { GRAPH_TOOL } from './graph_tool.js';
 export const TOOLS: Tool[] = [
   GRAPH_TOOL,
   {
-    name: 'hybrid_search',
-    description: 'Intelligent search that automatically routes to graph (for entity/relationship queries) or vector (for conceptual queries) based on query intent. Uses QueryRouter for classification and UnifiedSearch for hybrid retrieval with RRF fusion. Best for general questions about the Regen codebase. NOT for live blockchain data - use Ledger MCP for retirements, balances, projects, batches.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        query: {
-          type: 'string',
-          description: 'Natural language query about Regen code, architecture, or documentation'
-        },
-        limit: {
-          type: 'number',
-          default: 10,
-          minimum: 1,
-          maximum: 50,
-          description: 'Maximum results to return (default: 10)'
-        }
-      },
-      required: ['query']
-    }
-  },
-  {
-    name: 'search_knowledge',
-    description: 'Hybrid search across KOI (vectors + graph). NOT for live blockchain queries - use Ledger MCP for on-chain state.',
+    name: 'search',
+    description: 'Search the Regen Network knowledge base. Automatically uses hybrid search (vector + graph + keyword) with entity boosting. Supports date filtering. NOT for live blockchain queries - use Ledger MCP for on-chain state.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -40,10 +19,10 @@ export const TOOLS: Tool[] = [
         },
         limit: {
           type: 'number',
-          description: 'Maximum number of results to return (default: 5, max: 20)',
+          description: 'Maximum number of results to return (default: 10, max: 50)',
           minimum: 1,
-          maximum: 20,
-          default: 5
+          maximum: 50,
+          default: 10
         },
         published_from: {
           type: 'string',

@@ -332,8 +332,7 @@ Once you've installed the MCP server, try these queries in Claude to explore wha
 ### Knowledge Base Search
 | Tool | Description | Key Inputs |
 |------|-------------|-----------|
-| `search_knowledge` | Hybrid search (vectors + graph with RRF) | `query` (string), `limit` (1–20, default 5), `published_from` (YYYY‑MM‑DD), `published_to` (YYYY‑MM‑DD), `include_undated` (bool, default false) |
-| `hybrid_search` | Intelligent search routing (auto-detects entity vs conceptual queries) | `query` (string), `limit` (1–50, default 10) |
+| `search` | Hybrid search (vectors + graph with RRF) | `query` (string), `limit` (1–50, default 10), `published_from` (YYYY‑MM‑DD), `published_to` (YYYY‑MM‑DD), `include_undated` (bool, default false) |
 | `get_stats` | Knowledge base statistics | `detailed` (boolean) |
 | `generate_weekly_digest` | Generate weekly digest SUMMARY of Regen Network activity | `start_date` (YYYY-MM-DD, default: 7 days ago), `end_date` (YYYY-MM-DD, default: today), `save_to_file` (bool, default false), `output_path` (string), `format` ('markdown' or 'json', default: 'markdown') |
 | `get_notebooklm_export` | Get FULL NotebookLM export with complete forum posts, Notion pages, and source material | `save_to_file` (bool, default false), `output_path` (string) |
@@ -386,8 +385,8 @@ This table helps you understand which tool to use for different tasks. Just ask 
 | Get repository overview                                  | "Give me an overview of regen-web"                       | `get_repo_overview`      |
 | Understand tech stack                                    | "What's the tech stack for regen-ledger?"                | `get_tech_stack`         |
 | **Search everything (hybrid)**                           |                                                          |                          |
-| Semantic search across code and docs                     | "How does credit retirement work?"                       | `hybrid_search`          |
-| Advanced filtering by date                               | "Find discussions about tokens from last week"           | `search_knowledge`       |
+| Semantic search across code and docs                     | "How does credit retirement work?"                       | `search`                 |
+| Advanced filtering by date                               | "Find discussions about tokens from last week"           | `search`                 |
 | **Get activity summaries**                               |                                                          |                          |
 | Generate weekly digest summary                           | "Create a weekly digest of Regen activity"               | `generate_weekly_digest` |
 | Get full content for NotebookLM                          | "Get the full NotebookLM export with all forum posts"    | `get_notebooklm_export`  |
@@ -869,7 +868,7 @@ curl -s http://localhost:8301/api/koi/query \
   }' | jq '.results[0:3]'
 ```
 
-Within MCP, the `search_knowledge` tool accepts:
+Within MCP, the `search` tool accepts:
 
 - `published_from` / `published_to` (YYYY-MM-DD)
 - `include_undated` (boolean)

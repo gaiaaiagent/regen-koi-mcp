@@ -4,9 +4,8 @@
 
 | Query Type | Best Tool | Example |
 |------------|-----------|---------|
-| General knowledge search | `search_knowledge` | "What is regenerative agriculture?" |
+| General knowledge search | `search` | "What is regenerative agriculture?" |
 | Entity-specific queries | `query_code_graph` | "What Keeper handles MsgCreateBatch?" |
-| Auto-routing (entity vs conceptual) | `hybrid_search` | "How does credit batch creation work?" |
 | GitHub documentation | `search_github_docs` | "ecocredit module architecture" |
 | Repository overview | `get_repo_overview` | Get structure of regen-ledger |
 | Tech stack info | `get_tech_stack` | Languages/frameworks used |
@@ -16,47 +15,47 @@
 
 ---
 
-## Knowledge Base Search Tools
+## Knowledge Base Search
 
-### search_knowledge
-Use for general knowledge retrieval with date filtering. Runs hybrid vector + keyword search with RRF fusion.
+### search
+
+The primary search tool for the Regen Network knowledge base. Uses the backend's Hybrid RAG system which automatically combines:
+- **Vector search** (semantic similarity via BGE embeddings)
+- **Entity search** (entity-chunk links with 614K+ associations)
+- **Keyword search** (lexical matching)
+
+Results are ranked using Weighted Average Fusion with entity boosting.
 
 **Inputs:**
 - `query` (string) — what you're looking for
-- `limit` (1–20, default 5)
-- `published_from` (YYYY‑MM‑DD) — filter by publication date
-- `published_to` (YYYY‑MM‑DD)
+- `limit` (1–50, default 10)
+- `published_from` (YYYY-MM-DD) — filter by publication date
+- `published_to` (YYYY-MM-DD)
 - `include_undated` (boolean, default false)
 
 **Behavior:**
-- Hybrid search combining vector similarity + keyword matching
+- Hybrid search combining vector + entity + keyword matching
+- Entity boost applied automatically when query matches known entities
+- Source-diversity sampling prevents any single source from dominating
 - Smart date filtering with natural language support ("past week", "last month")
 - Falls back gracefully when filters are too strict
 
-**Best for:** Time-sensitive queries, research on specific topics, finding recent content
+**Best for:** All knowledge queries - conceptual questions, entity lookups, time-sensitive research
 
----
-
-### hybrid_search
-Use for intelligent query routing. Automatically detects whether your query is about specific code entities (routes to graph) or conceptual topics (routes to vector search).
-
-**Inputs:**
-- `query` (string) — natural language question
-- `limit` (1–50, default 10)
-
-**Behavior:**
-- Analyzes query for entity patterns (MsgSend, Keeper, EventBurn, etc.)
-- Routes entity queries to graph search for precise results
-- Routes conceptual queries to vector search for semantic matching
-- Returns classification metadata showing how the query was routed
-
-**Best for:** When you're not sure which search method to use, general questions about the codebase
+**Examples:**
+```
+"What is regenerative agriculture?"
+"How does the ecocredit module work?"
+"Regen Network governance proposals from last month"
+"What is the credit class framework?"
+```
 
 ---
 
 ## Code Knowledge Graph Tools
 
 ### query_code_graph
+
 Use for precise queries about code structure and relationships. Queries the Apache AGE graph database directly.
 
 **Inputs:**
@@ -88,6 +87,7 @@ What docs mention MsgRetire?
 ## GitHub Documentation Tools
 
 ### search_github_docs
+
 Search Regen Network GitHub repositories for documentation, README files, and technical content.
 
 **Inputs:**
@@ -100,6 +100,7 @@ Search Regen Network GitHub repositories for documentation, README files, and te
 ---
 
 ### get_repo_overview
+
 Get a structured overview of a Regen repository including description, key files, and documentation links.
 
 **Inputs:**
@@ -110,6 +111,7 @@ Get a structured overview of a Regen repository including description, key files
 ---
 
 ### get_tech_stack
+
 Get technical stack information including languages, frameworks, dependencies, and build tools.
 
 **Inputs:**
@@ -122,6 +124,7 @@ Get technical stack information including languages, frameworks, dependencies, a
 ## Utility Tools
 
 ### get_stats
+
 Get knowledge base statistics including document counts by source and type.
 
 **Inputs:**
@@ -130,6 +133,7 @@ Get knowledge base statistics including document counts by source and type.
 ---
 
 ### generate_weekly_digest
+
 Generate a markdown summary of Regen Network activity over a date range.
 
 **Inputs:**
@@ -143,7 +147,19 @@ Generate a markdown summary of Regen Network activity over a date range.
 
 ---
 
+### get_notebooklm_export
+
+Get a full content export for NotebookLM including complete forum posts and Notion pages.
+
+**Inputs:**
+- `output_path` (string) — custom file path for saving
+
+**Best for:** Creating comprehensive knowledge exports for external tools
+
+---
+
 ### get_mcp_metrics
+
 Get production performance metrics including query latencies, cache hit rates, error counts, and circuit breaker states.
 
 **Inputs:** None
@@ -159,8 +175,21 @@ Get production performance metrics including query latencies, cache hit rates, e
 
 ---
 
+## Authentication
+
+### regen_koi_authenticate
+
+Authenticate with your @regen.network email to access internal documentation.
+
+**Inputs:** None (opens browser for OAuth)
+
+**Best for:** Accessing private Notion workspace content
+
+---
+
 ## Notes
 
-- **Natural language dates:** Phrases like "past week", "last month", "yesterday" automatically set date ranges
-- **Graph vs Vector:** Entity queries (specific Msg/Keeper/Event names) work best with `query_code_graph`; conceptual queries work best with `search_knowledge`
-- **Auto-routing:** Use `hybrid_search` when unsure — it detects query type automatically
+- **Natural language dates:** Phrases like "past week", "last month", "yesterday" automatically set date ranges in the `search` tool
+- **Hybrid RAG:** The `search` tool automatically uses the backend's hybrid retrieval system - no need to choose between vector and entity search
+- **Graph queries:** For specific code entity relationships (Keeper/Msg/Event), use `query_code_graph` for precise results
+- **Entity boost:** Queries mentioning known entities (like "Regen Network", "ecocredit") automatically get boosted results from entity-chunk links

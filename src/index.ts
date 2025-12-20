@@ -23,9 +23,6 @@ import dotenv from 'dotenv';
 import { TOOLS } from './tools.js';
 // Use enhanced SPARQL client with focused retrieval
 import { SPARQLClient } from './sparql-client-enhanced.js';
-import HybridSearchClient from './hybrid-client.js';
-import { QueryRouter } from './query_router.js';
-import { UnifiedSearch } from './unified_search.js';
 import { executeGraphTool } from './graph_tool.js';
 // Production hardening modules
 import { logger } from './logger.js';
@@ -88,44 +85,15 @@ apiClient.interceptors.request.use((config) => {
 class KOIServer {
   private server: Server;
   private sparqlClient: SPARQLClient;
-  private hybridClient: HybridSearchClient;
-  private queryRouter: QueryRouter | null = null;
-  private unifiedSearch: UnifiedSearch | null = null;
 
   constructor() {
     this.sparqlClient = new SPARQLClient();
-    this.hybridClient = new HybridSearchClient();
 
-    // Initialize QueryRouter and UnifiedSearch if database config is available
-    try {
-      if (process.env.GRAPH_DB_HOST && process.env.GRAPH_DB_NAME) {
-        this.queryRouter = new QueryRouter({
-          host: process.env.GRAPH_DB_HOST,
-          port: parseInt(process.env.GRAPH_DB_PORT || '5432'),
-          database: process.env.GRAPH_DB_NAME,
-          user: process.env.GRAPH_DB_USER,
-          password: process.env.GRAPH_DB_PASSWORD,
-          entitySimilarityThreshold: parseFloat(process.env.ENTITY_SIMILARITY_THRESHOLD || '0.15'),
-        });
-
-        this.unifiedSearch = new UnifiedSearch({
-          host: process.env.GRAPH_DB_HOST,
-          port: parseInt(process.env.GRAPH_DB_PORT || '5432'),
-          database: process.env.GRAPH_DB_NAME,
-          user: process.env.GRAPH_DB_USER,
-          password: process.env.GRAPH_DB_PASSWORD,
-          graphName: process.env.GRAPH_NAME || 'regen_graph',
-          embeddingDimension: parseInt(process.env.EMBEDDING_DIM || '1536') as any,
-          rrfConstant: parseInt(process.env.RRF_K || '60'),
-        });
-
-        console.error(`[${SERVER_NAME}] Initialized QueryRouter and UnifiedSearch`);
-      } else {
-        console.error(`[${SERVER_NAME}] Graph database configuration not found - hybrid_search and query_code_graph tools will be unavailable`);
-      }
-    } catch (error) {
-      console.error(`[${SERVER_NAME}] Failed to initialize graph components:`, error);
+    // Check for graph database configuration (only for logging)
+    if (!(process.env.GRAPH_DB_HOST && process.env.GRAPH_DB_NAME)) {
+      console.error(`[${SERVER_NAME}] Graph database configuration not found - query_code_graph tool will rely on fallback`);
     }
+
     this.server = new Server(
       {
         name: SERVER_NAME,
@@ -172,7 +140,7 @@ class KOIServer {
 
       try {
         // Input validation for applicable tools
-        const validationRequired = ['search_knowledge', 'hybrid_search', 'search_github_docs', 'get_repo_overview', 'get_tech_stack', 'generate_weekly_digest'];
+        const validationRequired = ['search', 'search_github_docs', 'get_repo_overview', 'get_tech_stack', 'generate_weekly_digest'];
         if (validationRequired.includes(name)) {
           const validation = validateToolInput(name, args);
           if (!validation.success) {
@@ -197,11 +165,8 @@ class KOIServer {
           case 'query_code_graph':
             result = await executeGraphTool(args);
             break;
-          case 'hybrid_search':
-            result = await this.handleHybridSearch(args);
-            break;
-          case 'search_knowledge':
-            result = await this.searchKnowledge(args);
+          case 'search':
+            result = await this.search(args);
             break;
           case 'get_stats':
             result = await this.getStats(args);
@@ -436,8 +401,8 @@ class KOIServer {
     }
   }
 
-  private async searchKnowledge(args: any) {
-    const { query, limit = 5, published_from, published_to, include_undated = false, useHybrid = false } = args || {};
+  private async search(args: any) {
+    const { query, limit = 10, published_from, published_to, include_undated = false } = args || {};
     const vectorFilters: any = {};
 
     // Respect explicit date filter
@@ -461,32 +426,7 @@ class KOIServer {
       vectorFilters.include_undated = true;
     }
 
-    // Use true hybrid search if enabled
-    if (useHybrid) {
-      try {
-        const results = await this.hybridClient.hybridSearch(query, {
-          sparqlLimit: limit * 2,
-          vectorLimit: limit,
-          fusionStrategy: 'rrf',
-          filters: vectorFilters
-        });
-
-        const formattedResults = this.hybridClient.formatResults(results);
-
-        return {
-          content: [
-            {
-              type: 'text',
-              text: formattedResults,
-            },
-          ],
-        };
-      } catch (error) {
-        console.error('Hybrid search failed, falling back to vector-only:', error);
-      }
-    }
-
-    // Fallback to original vector search
+    // Call the KOI API (which handles hybrid search with entity boosting)
     try {
       const body: any = { question: query, limit };
       if (Object.keys(vectorFilters).length > 0) body.filters = vectorFilters;
@@ -762,8 +702,6 @@ class KOIServer {
     output += `\n## System Health\n\n`;
     output += `- **Graph DB Configured:** ${!!(process.env.GRAPH_DB_HOST && process.env.GRAPH_DB_NAME)}\n`;
     output += `- **KOI API Endpoint:** ${KOI_API_ENDPOINT}\n`;
-    output += `- **Query Router Available:** ${!!this.queryRouter}\n`;
-    output += `- **Unified Search Available:** ${!!this.unifiedSearch}\n`;
 
     // Add raw JSON for programmatic access
     const jsonData = JSON.stringify({
@@ -771,9 +709,7 @@ class KOIServer {
       cache: cacheStats,
       config: {
         api_endpoint: KOI_API_ENDPOINT,
-        graph_db_configured: !!(process.env.GRAPH_DB_HOST && process.env.GRAPH_DB_NAME),
-        query_router_available: !!this.queryRouter,
-        unified_search_available: !!this.unifiedSearch
+        graph_db_configured: !!(process.env.GRAPH_DB_HOST && process.env.GRAPH_DB_NAME)
       }
     }, null, 2);
 
@@ -1071,7 +1007,7 @@ class KOIServer {
           console.error(`[${SERVER_NAME}] API weekly-digest endpoint failed, using search fallback:`, apiError);
 
           // Final fallback: use search
-          const searchResults = await this.searchKnowledge({
+          const searchResults = await this.search({
             query: 'Regen Network activity updates discussions governance',
             limit: 100,
             published_from: startDate,
@@ -2065,188 +2001,8 @@ class KOIServer {
     return formatted;
   }
 
-  /**
-   * Handle hybrid search - intelligent routing based on query classification
-   */
-  private async handleHybridSearch(args: any) {
-    const { query, limit = 10 } = args;
 
-    // Check if hybrid search is available
-    if (!this.queryRouter || !this.unifiedSearch) {
-      console.error(`[${SERVER_NAME}] Hybrid search not available - falling back to vector search`);
-      return await this.searchKnowledge({ query, limit });
-    }
 
-    try {
-      const startTime = Date.now();
-
-      // Step 1: Classify query
-      const classification = await this.queryRouter.classifyQuery(query);
-      console.error(`[${SERVER_NAME}] Query classified as: ${classification.intent} (route: ${classification.recommended_route})`);
-
-      let results: any[] = [];
-      let searchMetadata: any = {};
-
-      // Step 2: Execute appropriate search based on classification
-      if (classification.recommended_route === 'graph' && classification.detected_entities.length > 0) {
-        // Graph-only search for entity queries
-        const entityNames = classification.detected_entities.map(e => e.name);
-        const graphResults = await this.unifiedSearch.graphSearch(entityNames, limit);
-
-        results = graphResults.map(hit => ({
-          id: hit.id,
-          title: hit.title,
-          content: hit.content || '',
-          source: 'graph',
-          entity_type: hit.entity_type,
-          file_path: hit.file_path,
-          line_number: hit.line_number,
-          score: hit.final_score,
-        }));
-
-        searchMetadata = {
-          route: 'graph',
-          entities_detected: entityNames,
-        };
-
-      } else if (classification.recommended_route === 'vector') {
-        // Vector-only search for conceptual queries - use KOI API
-        const response = await apiClient.post('/query', {
-          question: query,
-          limit: limit
-        });
-
-        const data = response.data as any;
-        results = (data.results || []).map((r: any) => ({
-          id: r.rid || r.id,
-          title: r.title || 'Document',
-          content: r.content || '',
-          source: 'vector',
-          score: r.score || 0,
-          metadata: r.metadata,
-        }));
-
-        searchMetadata = {
-          route: 'vector',
-        };
-
-      } else {
-        // Unified/hybrid search - combine graph and vector
-        // For now, use vector search as we don't have embedding service integrated
-        console.error(`[${SERVER_NAME}] Unified search requested but falling back to vector search (embedding service not integrated)`);
-        const response = await apiClient.post('/query', {
-          question: query,
-          limit: limit
-        });
-
-        const data = response.data as any;
-        results = (data.results || []).map((r: any) => ({
-          id: r.rid || r.id,
-          title: r.title || 'Document',
-          content: r.content || '',
-          source: 'vector',
-          score: r.score || 0,
-          metadata: r.metadata,
-        }));
-
-        searchMetadata = {
-          route: 'hybrid_fallback_to_vector',
-          entities_detected: classification.detected_entities.map(e => e.name),
-          note: 'Embedding service not available - using vector search only',
-        };
-      }
-
-      const duration = Date.now() - startTime;
-
-      // Step 3: Format results
-      const markdown = this.formatHybridResults(results, classification, searchMetadata);
-
-      // MCP only supports type: 'text' - embed JSON as code block
-      const jsonData = JSON.stringify({
-        hits: results,
-        classification,
-        metadata: {
-          query,
-          route: classification.recommended_route,
-          duration_ms: duration,
-          total_results: results.length,
-          ...searchMetadata,
-        },
-      }, null, 2);
-
-      return {
-        content: [
-          {
-            type: 'text',
-            text: markdown + '\n\n---\n\n<details>\n<summary>Raw JSON (for eval harness)</summary>\n\n```json\n' + jsonData + '\n```\n</details>',
-          },
-        ],
-      };
-
-    } catch (error) {
-      console.error(`[${SERVER_NAME}] Hybrid search error:`, error);
-      // Fallback to basic search
-      return await this.searchKnowledge({ query, limit });
-    }
-  }
-
-  /**
-   * Format hybrid search results as markdown
-   */
-  private formatHybridResults(results: any[], classification: any, metadata: any): string {
-    let output = `## Hybrid Search Results\n\n`;
-    output += `**Query Route:** ${metadata.route} (intent: ${classification.intent})\n`;
-
-    if (classification.detected_entities.length > 0) {
-      output += `**Detected Entities:** ${classification.detected_entities.map((e: any) => e.name).join(', ')}\n`;
-    }
-
-    output += `**Confidence:** ${(classification.confidence * 100).toFixed(1)}%\n`;
-    output += `**Results:** ${results.length}\n\n`;
-
-    if (classification.reasoning) {
-      output += `*${classification.reasoning}*\n\n`;
-    }
-
-    if (metadata.note) {
-      output += `> **Note:** ${metadata.note}\n\n`;
-    }
-
-    output += `---\n\n`;
-
-    results.forEach((hit, i) => {
-      output += `### ${i + 1}. ${hit.title || hit.id}\n`;
-
-      if (hit.entity_type) {
-        output += `**Type:** ${hit.entity_type} | `;
-      }
-
-      output += `**Source:** ${hit.source}`;
-
-      if (hit.score !== undefined) {
-        output += ` | **Score:** ${hit.score.toFixed(3)}`;
-      }
-
-      output += `\n\n`;
-
-      if (hit.file_path) {
-        output += `📁 \`${hit.file_path}\``;
-        if (hit.line_number) {
-          output += `:${hit.line_number}`;
-        }
-        output += `\n\n`;
-      }
-
-      if (hit.content) {
-        const preview = hit.content.substring(0, 300);
-        output += `${preview}${hit.content.length > 300 ? '...' : ''}\n\n`;
-      }
-
-      output += `---\n\n`;
-    });
-
-    return output;
-  }
 
   async run() {
     const transport = new StdioServerTransport();
