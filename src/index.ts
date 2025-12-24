@@ -192,6 +192,15 @@ class KOIServer {
           case 'regen_koi_authenticate':
             result = await this.authenticateUser();
             break;
+          case 'resolve_entity':
+            result = await this.resolveEntity(args);
+            break;
+          case 'get_entity_neighborhood':
+            result = await this.getEntityNeighborhood(args);
+            break;
+          case 'get_entity_documents':
+            result = await this.getEntityDocuments(args);
+            break;
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
@@ -1963,6 +1972,287 @@ class KOIServer {
     output += `*Use \`search_github_docs\` to explore specific dependency or configuration files.*\n`;
 
     return output;
+  }
+
+  /**
+   * Resolve an ambiguous label to canonical KOI entities
+   * Calls GET /entity/resolve
+   */
+  private async resolveEntity(args: any) {
+    const { label, type_hint, limit = 5 } = args || {};
+
+    if (!label) {
+      return {
+        content: [{
+          type: 'text',
+          text: '**Error:** `label` parameter is required.'
+        }]
+      };
+    }
+
+    const startTime = Date.now();
+    console.error(`[${SERVER_NAME}] Tool=resolve_entity Label="${label}" TypeHint=${type_hint || 'none'}`);
+
+    try {
+      const params: any = { label, limit };
+      if (type_hint) params.type_hint = type_hint;
+
+      const response = await apiClient.get('/entity/resolve', { params });
+      const data = response.data as any;
+      const candidates = data.candidates || [];
+      const duration = Date.now() - startTime;
+
+      console.error(`[${SERVER_NAME}] Tool=resolve_entity Found=${candidates.length} Duration=${duration}ms`);
+
+      // Format markdown output
+      let md = `## Entity Resolution: "${label}"\n\n`;
+
+      if (candidates.length === 0) {
+        md += `No entities found matching "${label}".\n\n`;
+        md += `**Suggestions:**\n`;
+        md += `- Try a different spelling or alias\n`;
+        md += `- Use a more specific label\n`;
+        md += `- Omit type_hint to broaden search\n`;
+      } else {
+        md += `Found **${candidates.length}** candidate${candidates.length > 1 ? 's' : ''}:\n\n`;
+
+        candidates.forEach((c: any, i: number) => {
+          const confidence = c.confidence ? ` (${(c.confidence * 100).toFixed(0)}% confidence)` : '';
+          md += `### ${i + 1}. ${c.label || c.name || 'Unknown'}${confidence}\n`;
+          md += `- **URI:** \`${c.uri}\`\n`;
+          if (c.type) md += `- **Type:** ${c.type}\n`;
+          if (c.aliases?.length) md += `- **Aliases:** ${c.aliases.join(', ')}\n`;
+          if (c.description) md += `- **Description:** ${c.description.substring(0, 200)}${c.description.length > 200 ? '...' : ''}\n`;
+          md += `\n`;
+        });
+      }
+
+      // Add raw JSON in details block
+      md += `\n---\n\n<details>\n<summary>Raw JSON</summary>\n\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\`\n</details>`;
+
+      return {
+        content: [{
+          type: 'text',
+          text: md
+        }]
+      };
+
+    } catch (error) {
+      console.error(`[${SERVER_NAME}] Tool=resolve_entity Error:`, error);
+      return {
+        content: [{
+          type: 'text',
+          text: `**Error resolving entity:** ${error instanceof Error ? error.message : 'Unknown error'}`
+        }]
+      };
+    }
+  }
+
+  /**
+   * Get the graph neighborhood of an entity
+   * Calls GET /entity/neighborhood
+   */
+  private async getEntityNeighborhood(args: any) {
+    const { label, uri, type_hint, direction = 'both', limit = 20 } = args || {};
+
+    if (!label && !uri) {
+      return {
+        content: [{
+          type: 'text',
+          text: '**Error:** Either `label` or `uri` parameter is required.'
+        }]
+      };
+    }
+
+    const startTime = Date.now();
+    const identifier = uri || label;
+    console.error(`[${SERVER_NAME}] Tool=get_entity_neighborhood Identifier="${identifier}" Direction=${direction}`);
+
+    try {
+      const params: any = { limit, direction };
+      if (uri) params.uri = uri;
+      else if (label) params.label = label;
+      if (type_hint) params.type_hint = type_hint;
+
+      const response = await apiClient.get('/entity/neighborhood', { params });
+      const data = response.data as any;
+      const duration = Date.now() - startTime;
+
+      const entity = data.entity || {};
+      const edges = data.edges || [];
+      const neighbors = data.neighbors || [];
+
+      console.error(`[${SERVER_NAME}] Tool=get_entity_neighborhood Edges=${edges.length} Neighbors=${neighbors.length} Duration=${duration}ms`);
+
+      // Format markdown output
+      let md = `## Entity Neighborhood: ${entity.label || identifier}\n\n`;
+
+      if (entity.uri) md += `**URI:** \`${entity.uri}\`\n`;
+      if (entity.type) md += `**Type:** ${entity.type}\n`;
+      md += `\n`;
+
+      if (edges.length === 0) {
+        md += `No relationships found for this entity.\n`;
+      } else {
+        md += `### Relationships (${edges.length})\n\n`;
+
+        // Group edges by predicate
+        const byPredicate: { [key: string]: any[] } = {};
+        edges.forEach((e: any) => {
+          const pred = e.predicate || e.relationship || 'related_to';
+          if (!byPredicate[pred]) byPredicate[pred] = [];
+          byPredicate[pred].push(e);
+        });
+
+        for (const [predicate, edgeList] of Object.entries(byPredicate)) {
+          md += `**${predicate}** (${edgeList.length}):\n`;
+          edgeList.slice(0, 10).forEach((e: any) => {
+            const target = e.target_label || e.target || e.neighbor || 'unknown';
+            const dir = e.direction === 'in' ? '←' : '→';
+            md += `- ${dir} ${target}`;
+            if (e.weight || e.count) md += ` (${e.weight || e.count})`;
+            md += `\n`;
+          });
+          if (edgeList.length > 10) {
+            md += `- ... and ${edgeList.length - 10} more\n`;
+          }
+          md += `\n`;
+        }
+      }
+
+      if (neighbors.length > 0) {
+        md += `### Connected Entities (${neighbors.length})\n\n`;
+        neighbors.slice(0, 15).forEach((n: any) => {
+          md += `- **${n.label || n.name}**`;
+          if (n.type) md += ` (${n.type})`;
+          md += `\n`;
+        });
+        if (neighbors.length > 15) {
+          md += `- ... and ${neighbors.length - 15} more\n`;
+        }
+      }
+
+      // Add raw JSON
+      md += `\n---\n\n<details>\n<summary>Raw JSON</summary>\n\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\`\n</details>`;
+
+      return {
+        content: [{
+          type: 'text',
+          text: md
+        }]
+      };
+
+    } catch (error) {
+      console.error(`[${SERVER_NAME}] Tool=get_entity_neighborhood Error:`, error);
+      return {
+        content: [{
+          type: 'text',
+          text: `**Error getting entity neighborhood:** ${error instanceof Error ? error.message : 'Unknown error'}`
+        }]
+      };
+    }
+  }
+
+  /**
+   * Get documents associated with an entity
+   * Calls GET /entity/documents
+   * Respects privacy: auth token is passed automatically via apiClient interceptor
+   */
+  private async getEntityDocuments(args: any) {
+    const { label, uri, type_hint, limit = 10 } = args || {};
+
+    if (!label && !uri) {
+      return {
+        content: [{
+          type: 'text',
+          text: '**Error:** Either `label` or `uri` parameter is required.'
+        }]
+      };
+    }
+
+    const startTime = Date.now();
+    const identifier = uri || label;
+    console.error(`[${SERVER_NAME}] Tool=get_entity_documents Identifier="${identifier}"`);
+
+    try {
+      const params: any = { limit };
+      if (uri) params.uri = uri;
+      else if (label) params.label = label;
+      if (type_hint) params.type_hint = type_hint;
+
+      const response = await apiClient.get('/entity/documents', { params });
+      const data = response.data as any;
+      const duration = Date.now() - startTime;
+
+      const entity = data.entity || {};
+      const documents = data.documents || [];
+      const isAuthenticated = await isUserAuthenticated();
+
+      console.error(`[${SERVER_NAME}] Tool=get_entity_documents Documents=${documents.length} Auth=${isAuthenticated} Duration=${duration}ms`);
+
+      // Format markdown output
+      let md = `## Documents for: ${entity.label || identifier}\n\n`;
+
+      if (entity.uri) md += `**Entity URI:** \`${entity.uri}\`\n`;
+      if (!isAuthenticated) {
+        md += `**Note:** Showing public documents only. Use \`regen_koi_authenticate\` to access private content.\n`;
+      }
+      md += `\n`;
+
+      if (documents.length === 0) {
+        md += `No documents found for this entity.\n`;
+        if (!isAuthenticated) {
+          md += `\n*Private documents may exist but require authentication.*\n`;
+        }
+      } else {
+        md += `### Documents (${documents.length})\n\n`;
+
+        documents.forEach((doc: any, i: number) => {
+          const title = doc.title || doc.rid?.split('/').pop() || `Document ${i + 1}`;
+          const score = doc.relevance ? ` (${(doc.relevance * 100).toFixed(0)}% relevance)` : '';
+
+          md += `#### ${i + 1}. ${title}${score}\n`;
+          if (doc.rid) md += `- **RID:** \`${doc.rid}\`\n`;
+          if (doc.source) md += `- **Source:** ${doc.source}\n`;
+          if (doc.published_at) md += `- **Published:** ${doc.published_at}\n`;
+          if (doc.content) {
+            const preview = doc.content.substring(0, 300);
+            md += `- **Preview:** ${preview}${doc.content.length > 300 ? '...' : ''}\n`;
+          }
+          md += `\n`;
+        });
+      }
+
+      // Add raw JSON
+      md += `\n---\n\n<details>\n<summary>Raw JSON</summary>\n\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\`\n</details>`;
+
+      return {
+        content: [{
+          type: 'text',
+          text: md
+        }]
+      };
+
+    } catch (error) {
+      console.error(`[${SERVER_NAME}] Tool=get_entity_documents Error:`, error);
+
+      // Check for auth-related errors
+      if ((error as any).response?.status === 401) {
+        return {
+          content: [{
+            type: 'text',
+            text: `**Authentication Required**\n\nThis entity's documents require authentication.\n\nUse the \`regen_koi_authenticate\` tool to sign in with your @regen.network email.`
+          }]
+        };
+      }
+
+      return {
+        content: [{
+          type: 'text',
+          text: `**Error getting entity documents:** ${error instanceof Error ? error.message : 'Unknown error'}`
+        }]
+      };
+    }
   }
 
   private formatSearchResults(results: any[], query: string): string {

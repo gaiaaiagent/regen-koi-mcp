@@ -6,6 +6,9 @@
 |------------|-----------|---------|
 | General knowledge search | `search` | "What is regenerative agriculture?" |
 | Entity-specific queries | `query_code_graph` | "What Keeper handles MsgCreateBatch?" |
+| **Resolve entity name** | `resolve_entity` | Find canonical URI for "ethereum" |
+| **Entity relationships** | `get_entity_neighborhood` | Graph neighbors of an entity |
+| **Entity documents** | `get_entity_documents` | Docs mentioning an entity |
 | GitHub documentation | `search_github_docs` | "ecocredit module architecture" |
 | Repository overview | `get_repo_overview` | Get structure of regen-ledger |
 | Tech stack info | `get_tech_stack` | Languages/frameworks used |
@@ -80,6 +83,97 @@ What messages does the ecocredit Keeper handle?
 
 What docs mention MsgRetire?
 → query_type: "docs_mentioning", entity_name: "MsgRetire"
+```
+
+---
+
+## Entity Resolution & Graph Context Tools
+
+These tools provide access to the KOI entity graph for disambiguation and context retrieval.
+
+### resolve_entity
+
+Resolve an ambiguous label to canonical KOI entities. Returns ranked candidates with URIs, types, and confidence scores.
+
+**Inputs:**
+- `label` (string, required) — the label to resolve (e.g., "ethereum", "notion", "regen commons")
+- `type_hint` (string, optional) — narrow results by type (e.g., "TECHNOLOGY", "ORGANIZATION", "PERSON")
+- `limit` (1–20, default 5) — maximum candidates to return
+
+**Best for:** Disambiguating entity names before querying relationships or documents
+
+**Examples:**
+```
+resolve_entity label="ethereum"
+→ Returns: Ethereum (TECHNOLOGY), Ethereum Foundation (ORGANIZATION), etc.
+
+resolve_entity label="ethereum" type_hint="TECHNOLOGY"
+→ Returns: Ethereum blockchain technology only
+
+resolve_entity label="regen commons"
+→ Returns: Multiple candidates if ambiguous
+```
+
+---
+
+### get_entity_neighborhood
+
+Get the graph neighborhood of an entity — its direct relationships and connected entities.
+
+**Inputs:**
+- `label` (string) — entity label (will be resolved if ambiguous)
+- `uri` (string) — entity URI (preferred if known from resolve_entity)
+- `type_hint` (string, optional) — for disambiguation when using label
+- `direction` (string, default "both") — edge direction: "out", "in", or "both"
+- `limit` (1–100, default 20) — maximum edges to return
+
+**Note:** Either `label` or `uri` is required.
+
+**Best for:** Understanding entity context, finding related concepts, exploring the knowledge graph
+
+**Examples:**
+```
+get_entity_neighborhood label="ethereum"
+→ Returns: edges like "mentions", "relates_to" with connected entities
+
+get_entity_neighborhood uri="koi:entity/ethereum" direction="out"
+→ Returns: only outgoing relationships from Ethereum
+
+get_entity_neighborhood label="regen network" limit=50
+→ Returns: up to 50 relationships for Regen Network
+```
+
+---
+
+### get_entity_documents
+
+Get documents associated with an entity. Respects privacy: unauthenticated requests return only public documents.
+
+**Inputs:**
+- `label` (string) — entity label
+- `uri` (string) — entity URI (preferred if known)
+- `type_hint` (string, optional) — for disambiguation
+- `limit` (1–50, default 10) — maximum documents to return
+
+**Note:** Either `label` or `uri` is required.
+
+**Privacy:**
+- Without authentication: returns public documents only
+- With `regen_koi_authenticate`: includes private Notion workspace content
+
+**Best for:** Finding source documents that mention an entity, research, citation
+
+**Examples:**
+```
+get_entity_documents label="ethereum"
+→ Returns: public docs mentioning Ethereum
+
+get_entity_documents uri="koi:entity/ethereum" limit=20
+→ Returns: up to 20 documents for the specific Ethereum entity
+
+# After authentication:
+get_entity_documents label="KOI"
+→ Returns: public + private docs about KOI infrastructure
 ```
 
 ---

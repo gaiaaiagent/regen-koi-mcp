@@ -174,5 +174,92 @@ export const TOOLS: Tool[] = [
       type: 'object',
       properties: {}
     }
+  },
+  {
+    name: 'resolve_entity',
+    description: 'Resolve an ambiguous label to a canonical KOI entity. Returns ranked matches with URIs, types, and confidence scores. Use this when you have a label (like "ethereum" or "regen commons") and need to find the exact entity in the knowledge graph.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        label: {
+          type: 'string',
+          description: 'The label to resolve (e.g., "ethereum", "notion", "regen commons")'
+        },
+        type_hint: {
+          type: 'string',
+          description: 'Optional type hint to narrow results (e.g., "TECHNOLOGY", "ORGANIZATION", "PERSON")'
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum number of candidates to return (default: 5)',
+          minimum: 1,
+          maximum: 20,
+          default: 5
+        }
+      },
+      required: ['label']
+    }
+  },
+  {
+    name: 'get_entity_neighborhood',
+    description: 'Get the graph neighborhood of an entity - its direct relationships and connected entities. Returns edges with predicates (like "mentions", "relates_to") and neighboring nodes. Useful for understanding context and connections.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        label: {
+          type: 'string',
+          description: 'Entity label to look up (will be resolved if ambiguous)'
+        },
+        uri: {
+          type: 'string',
+          description: 'Entity URI (preferred if known, e.g., from resolve_entity)'
+        },
+        type_hint: {
+          type: 'string',
+          description: 'Optional type hint for disambiguation'
+        },
+        direction: {
+          type: 'string',
+          enum: ['out', 'in', 'both'],
+          description: 'Edge direction: "out" (entity→neighbors), "in" (neighbors→entity), or "both" (default)',
+          default: 'both'
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum number of edges to return (default: 20)',
+          minimum: 1,
+          maximum: 100,
+          default: 20
+        }
+      }
+    }
+  },
+  {
+    name: 'get_entity_documents',
+    description: 'Get documents associated with an entity. Returns document references (chunks) that mention or relate to the entity. Respects privacy: unauthenticated requests only see public documents.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        label: {
+          type: 'string',
+          description: 'Entity label to look up'
+        },
+        uri: {
+          type: 'string',
+          description: 'Entity URI (preferred if known)'
+        },
+        type_hint: {
+          type: 'string',
+          description: 'Optional type hint for disambiguation'
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum number of documents to return (default: 10)',
+          minimum: 1,
+          maximum: 50,
+          default: 10
+        }
+      }
+    }
   }
 ];
