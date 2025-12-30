@@ -18,8 +18,9 @@ The simplest and most secure way to install for supported clients:
 claude mcp add regen-koi npx regen-koi-mcp@latest
 ```
 
-**Codex:**
+**Codex:** (requires manual config - see [Codex section](#codex) for full instructions)
 ```bash
+# CLI adds the server, but you must manually add startup_timeout_sec = 30
 codex mcp add regen-koi npx "-y regen-koi-mcp@latest"
 ```
 
@@ -683,24 +684,26 @@ Use the `/mcp` command in Factory to add the server interactively.
 
 ### Codex
 
-**Recommended: One-line command**
-```bash
-codex mcp add regen-koi npx "-y regen-koi-mcp@latest"
-```
+**Recommended: Manual configuration**
 
-Then manually add the environment variable to `~/.codex/config.toml`:
+Edit `~/.codex/config.toml` directly:
 ```toml
 [[mcp.servers]]
 name = "regen-koi"
 command = "npx"
-args = ["regen-koi-mcp@latest"]
+args = ["-y", "regen-koi-mcp@latest"]
+startup_timeout_sec = 30
 [mcp.servers.env]
 KOI_API_ENDPOINT = "https://regen.gaiaai.xyz/api/koi"
 ```
 
-**Alternative: Manual configuration**
+**Note:** The `startup_timeout_sec = 30` is required because the MCP server takes longer than Codex's default 10-second timeout to initialize (especially on first run when npx downloads the package).
 
-Edit `~/.codex/config.toml` directly with the complete config above.
+**Alternative: CLI command + manual edit**
+```bash
+codex mcp add regen-koi npx "-y regen-koi-mcp@latest"
+```
+Then edit `~/.codex/config.toml` to add `startup_timeout_sec = 30` under the `[mcp_servers.regen-koi]` section.
 
 ---
 
