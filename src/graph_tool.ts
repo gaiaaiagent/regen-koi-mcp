@@ -113,6 +113,17 @@ interface Hit {
   };
 }
 
+function dedupeResults<T>(items: T[], getKey: (item: T) => string | undefined): T[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = getKey(item);
+    if (!key) return true;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 // Configuration for timeouts
 const API_TIMEOUT_MS = parseInt(process.env.GRAPH_API_TIMEOUT || '30000');
 const API_MAX_RETRIES = parseInt(process.env.GRAPH_API_MAX_RETRIES || '3');
@@ -362,8 +373,8 @@ export async function executeGraphTool(args: any) {
       const duration_ms = Date.now() - startTime;
 
       // Format API results
-      const results = apiResult.results || [];
-      const total_results = results.length;
+      let results = apiResult.results || [];
+      let total_results = results.length;
 
       let markdownSummary = '';
       let hits: Hit[] = [];
@@ -413,6 +424,17 @@ export async function executeGraphTool(args: any) {
           break;
 
         case 'search_entities':
+          results = dedupeResults(results, (r: any) => {
+            const entity = r.entity || r.result || r;
+            // Check multiple locations for entity_rid
+            const entityRid = entity.entity_rid ||
+              entity.provenance?.entity_rid ||
+              r.provenance?.entity_rid ||
+              r.entity_rid;
+            // Fallback to composite key from identifying fields
+            return entityRid || `${entity.repo || r.repo || ''}:${entity.file_path || r.file_path || ''}:${entity.line_number || r.line_number || ''}:${entity.name || entity.entity_name || r.entity_name || ''}`;
+          });
+          total_results = results.length;
           markdownSummary = `# Search Results: "${entity_name}"\n\nFound **${total_results}** matching entities:\n\n`;
           results.forEach((r: any, i: number) => {
             const entity = r.entity || r.result || r;

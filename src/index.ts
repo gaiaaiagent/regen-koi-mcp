@@ -39,7 +39,7 @@ dotenv.config();
 const KOI_API_ENDPOINT = process.env.KOI_API_ENDPOINT || 'https://regen.gaiaai.xyz/api/koi';
 const KOI_API_KEY = process.env.KOI_API_KEY || '';
 const SERVER_NAME = process.env.MCP_SERVER_NAME || 'regen-koi';
-const SERVER_VERSION = process.env.MCP_SERVER_VERSION || '1.0.0';
+const SERVER_VERSION = process.env.MCP_SERVER_VERSION || '1.4.1';
 
 console.error(`[${SERVER_NAME}] User email for auth: ${USER_EMAIL}`);
 
@@ -1999,7 +1999,24 @@ class KOIServer {
 
       const response = await apiClient.get('/entity/resolve', { params });
       const data = response.data as any;
-      const candidates = data.candidates || [];
+
+      // Normalize candidates from various API response formats
+      let candidates: any[] = [];
+
+      // First try direct candidates array
+      if (Array.isArray(data.candidates) && data.candidates.length > 0) {
+        candidates = data.candidates;
+      } else {
+        // Fall back to winner/alternatives format
+        if (data.winner) {
+          candidates.push({ ...data.winner, is_winner: true });
+        }
+        if (Array.isArray(data.alternatives)) {
+          data.alternatives.forEach((alt: any) => candidates.push({ ...alt, is_winner: false }));
+        }
+      }
+
+      console.error(`[${SERVER_NAME}] resolve_entity: data.winner=${!!data.winner}, data.alternatives=${Array.isArray(data.alternatives) ? data.alternatives.length : 'none'}, normalized=${candidates.length}`);
       const duration = Date.now() - startTime;
 
       console.error(`[${SERVER_NAME}] Tool=resolve_entity Found=${candidates.length} Duration=${duration}ms`);
@@ -2017,11 +2034,17 @@ class KOIServer {
         md += `Found **${candidates.length}** candidate${candidates.length > 1 ? 's' : ''}:\n\n`;
 
         candidates.forEach((c: any, i: number) => {
+          const labelValue = c.label || c.name || c.entity_text || 'Unknown';
+          const typeValue = c.type || c.entity_type;
           const confidence = c.confidence ? ` (${(c.confidence * 100).toFixed(0)}% confidence)` : '';
-          md += `### ${i + 1}. ${c.label || c.name || 'Unknown'}${confidence}\n`;
+          const score = c.score != null ? ` (score ${c.score})` : '';
+          const winnerTag = c.is_winner ? ' (winner)' : '';
+          md += `### ${i + 1}. ${labelValue}${winnerTag}${confidence || score}\n`;
           md += `- **URI:** \`${c.uri}\`\n`;
-          if (c.type) md += `- **Type:** ${c.type}\n`;
+          if (typeValue) md += `- **Type:** ${typeValue}\n`;
           if (c.aliases?.length) md += `- **Aliases:** ${c.aliases.join(', ')}\n`;
+          if (c.occurrence_count != null) md += `- **Occurrences:** ${c.occurrence_count}\n`;
+          if (c.relationship_count != null) md += `- **Relationships:** ${c.relationship_count}\n`;
           if (c.description) md += `- **Description:** ${c.description.substring(0, 200)}${c.description.length > 200 ? '...' : ''}\n`;
           md += `\n`;
         });
@@ -2078,28 +2101,69 @@ class KOIServer {
       const data = response.data as any;
       const duration = Date.now() - startTime;
 
-      const entity = data.entity || {};
-      const edges = data.edges || [];
-      const neighbors = data.neighbors || [];
+      const edges = Array.isArray(data.edges) ? data.edges : [];
+      const nodes = Array.isArray(data.nodes) ? data.nodes : (Array.isArray(data.neighbors) ? data.neighbors : []);
+      const neighbors = Array.isArray(data.neighbors) ? data.neighbors : [];
+      const entity = data.entity || {
+        uri: data.resolved_uri || data.query_uri,
+        label: data.resolved_entity_text || data.query_label,
+        type: data.resolved_entity_type
+      };
+      const resolvedUri = entity.uri || data.resolved_uri || uri;
+      const resolvedId = entity.id || data.resolved_entity_id;
+      const resolvedLabel = entity.label || entity.name || identifier;
+      const resolvedType = entity.type || data.resolved_entity_type;
+      // Build lookup maps for nodes by URI and by ID
+      const nodesByUri = new Map<string, any>();
+      const nodesById = new Map<number, any>();
+      nodes.forEach((n: any) => {
+        if (n?.uri) nodesByUri.set(n.uri, n);
+        if (n?.id != null) nodesById.set(n.id, n);
+      });
 
-      console.error(`[${SERVER_NAME}] Tool=get_entity_neighborhood Edges=${edges.length} Neighbors=${neighbors.length} Duration=${duration}ms`);
+      console.error(`[${SERVER_NAME}] get_entity_neighborhood: Built ${nodesByUri.size} URI mappings, ${nodesById.size} ID mappings from ${nodes.length} nodes`);
+
+      const normalizedEdges = edges.map((e: any) => {
+        const predicate = e.predicate || e.relationship || 'related_to';
+        const direction = e.direction === 'in' ? 'in' : 'out';
+        const subjectUri = e.subject_uri || e.subject || e.source_uri || e.source;
+        const objectUri = e.object_uri || e.object || e.target_uri || e.target;
+        const targetUri = direction === 'in' ? subjectUri : objectUri;
+
+        // Try URI lookup first, then ID lookup
+        let targetNode = targetUri ? nodesByUri.get(targetUri) : null;
+        if (!targetNode && e.target_id != null) {
+          targetNode = nodesById.get(e.target_id);
+        }
+        if (!targetNode && direction === 'in' && e.subject_id != null) {
+          targetNode = nodesById.get(e.subject_id);
+        }
+        if (!targetNode && direction === 'out' && e.object_id != null) {
+          targetNode = nodesById.get(e.object_id);
+        }
+
+        const targetLabel = e.target_label || e.neighbor_label || targetNode?.text || targetNode?.label || targetNode?.name || 'unknown';
+        return { ...e, predicate, direction, target_label: targetLabel, target_uri: targetUri };
+      });
+
+      console.error(`[${SERVER_NAME}] Tool=get_entity_neighborhood Edges=${edges.length} Nodes=${nodes.length} Duration=${duration}ms`);
 
       // Format markdown output
-      let md = `## Entity Neighborhood: ${entity.label || identifier}\n\n`;
+      let md = `## Entity Neighborhood: ${resolvedLabel}\n\n`;
 
-      if (entity.uri) md += `**URI:** \`${entity.uri}\`\n`;
-      if (entity.type) md += `**Type:** ${entity.type}\n`;
+      if (resolvedUri) md += `**URI:** \`${resolvedUri}\`\n`;
+      if (resolvedType) md += `**Type:** ${resolvedType}\n`;
       md += `\n`;
 
-      if (edges.length === 0) {
+      if (normalizedEdges.length === 0) {
         md += `No relationships found for this entity.\n`;
       } else {
-        md += `### Relationships (${edges.length})\n\n`;
+        md += `### Relationships (${normalizedEdges.length})\n\n`;
 
         // Group edges by predicate
         const byPredicate: { [key: string]: any[] } = {};
-        edges.forEach((e: any) => {
-          const pred = e.predicate || e.relationship || 'related_to';
+        normalizedEdges.forEach((e: any) => {
+          const pred = e.predicate || 'related_to';
           if (!byPredicate[pred]) byPredicate[pred] = [];
           byPredicate[pred].push(e);
         });
@@ -2110,7 +2174,8 @@ class KOIServer {
             const target = e.target_label || e.target || e.neighbor || 'unknown';
             const dir = e.direction === 'in' ? '←' : '→';
             md += `- ${dir} ${target}`;
-            if (e.weight || e.count) md += ` (${e.weight || e.count})`;
+            const edgeCount = e.weight || e.count || e.occurrence_count;
+            if (edgeCount != null) md += ` (${edgeCount})`;
             md += `\n`;
           });
           if (edgeList.length > 10) {
@@ -2120,15 +2185,30 @@ class KOIServer {
         }
       }
 
-      if (neighbors.length > 0) {
-        md += `### Connected Entities (${neighbors.length})\n\n`;
-        neighbors.slice(0, 15).forEach((n: any) => {
-          md += `- **${n.label || n.name}**`;
-          if (n.type) md += ` (${n.type})`;
-          md += `\n`;
+      const neighborPool = neighbors.length > 0 ? neighbors : nodes;
+      if (neighborPool.length > 0) {
+        const seen = new Set<string>();
+        const dedupedNeighbors = neighborPool.filter((n: any) => {
+          if (resolvedUri && n.uri && n.uri === resolvedUri) return false;
+          if (resolvedId && n.id && n.id === resolvedId) return false;
+          const key = n.uri || n.id || n.text || n.label || n.name;
+          if (!key) return true;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
         });
-        if (neighbors.length > 15) {
-          md += `- ... and ${neighbors.length - 15} more\n`;
+
+        if (dedupedNeighbors.length > 0) {
+          md += `### Connected Entities (${dedupedNeighbors.length})\n\n`;
+          dedupedNeighbors.slice(0, 15).forEach((n: any) => {
+            const label = n.label || n.name || n.text || 'unknown';
+            md += `- **${label}**`;
+            if (n.type) md += ` (${n.type})`;
+            md += `\n`;
+          });
+          if (dedupedNeighbors.length > 15) {
+            md += `- ... and ${dedupedNeighbors.length - 15} more\n`;
+          }
         }
       }
 
