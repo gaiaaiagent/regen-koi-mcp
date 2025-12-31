@@ -40,6 +40,18 @@ import {
   ModuleEntity,
 } from './graph_client.js';
 
+function unwrapKoiEnvelope<T>(payload: unknown): T {
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    'data' in payload &&
+    'request_id' in payload
+  ) {
+    return (payload as { data: T }).data;
+  }
+  return payload as T;
+}
+
 // Check if we should use API mode
 const KOI_API_ENDPOINT = process.env.KOI_API_ENDPOINT || 'https://regen.gaiaai.xyz/api/koi';
 const USE_GRAPH_API = !!KOI_API_ENDPOINT;
@@ -204,7 +216,7 @@ async function executeViaApi(args: any): Promise<any> {
                 duration_ms: duration
               }, `Graph API request completed`);
 
-              return response.data;
+              return unwrapKoiEnvelope(response.data);
             } catch (error: any) {
               // Check for Auth Required
               if (error.response && error.response.status === 401 && error.response.data.auth_url) {
@@ -216,7 +228,7 @@ async function executeViaApi(args: any): Promise<any> {
                   headers: buildHeaders(),
                   timeout: API_TIMEOUT_MS,
                 });
-                return response.data;
+                return unwrapKoiEnvelope(response.data);
               }
               throw error;
             }

@@ -71,6 +71,18 @@ const apiClient = axios.create({
   }
 });
 
+function unwrapKoiEnvelope<T>(payload: unknown): T {
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    'data' in payload &&
+    'request_id' in payload
+  ) {
+    return (payload as { data: T }).data;
+  }
+  return payload as T;
+}
+
 // Add request interceptor to dynamically include access token
 apiClient.interceptors.request.use((config) => {
   const token = getAccessToken();
@@ -78,6 +90,12 @@ apiClient.interceptors.request.use((config) => {
     config.headers['Authorization'] = `Bearer ${token}`;
   }
   return config;
+});
+
+// Unwrap KOI HTTP canonical response envelope if present
+apiClient.interceptors.response.use((response) => {
+  response.data = unwrapKoiEnvelope(response.data);
+  return response;
 });
 
 // Tool definitions are imported from tools.ts
