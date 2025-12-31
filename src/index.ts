@@ -38,6 +38,7 @@ dotenv.config();
 // Configuration
 const KOI_API_ENDPOINT = process.env.KOI_API_ENDPOINT || 'https://regen.gaiaai.xyz/api/koi';
 const KOI_API_KEY = process.env.KOI_API_KEY || '';
+const KOI_INTERNAL_API_KEY = process.env.KOI_INTERNAL_API_KEY || ''; // For MCP-only metadata endpoints
 const SERVER_NAME = process.env.MCP_SERVER_NAME || 'regen-koi';
 const SERVER_VERSION = process.env.MCP_SERVER_VERSION || '1.4.1';
 
@@ -83,12 +84,18 @@ function unwrapKoiEnvelope<T>(payload: unknown): T {
   return payload as T;
 }
 
-// Add request interceptor to dynamically include access token
+// Add request interceptor to dynamically include access token and internal API key
 apiClient.interceptors.request.use((config) => {
   const token = getAccessToken();
   if (token && config.headers) {
     config.headers['Authorization'] = `Bearer ${token}`;
   }
+
+  // Add internal API key for MCP-only metadata endpoints
+  if (config.url?.includes('/metadata/') && KOI_INTERNAL_API_KEY && config.headers) {
+    config.headers['X-Internal-API-Key'] = KOI_INTERNAL_API_KEY;
+  }
+
   return config;
 });
 
@@ -218,6 +225,12 @@ class KOIServer {
             break;
           case 'get_entity_documents':
             result = await this.getEntityDocuments(args);
+            break;
+          case 'resolve_metadata_iri':
+            result = await this.resolveMetadataIri(args);
+            break;
+          case 'derive_offchain_hectares':
+            result = await this.deriveOffchainHectares(args);
             break;
           default:
             throw new Error(`Unknown tool: ${name}`);
@@ -2348,6 +2361,189 @@ class KOIServer {
         content: [{
           type: 'text',
           text: `**Error getting entity documents:** ${error instanceof Error ? error.message : 'Unknown error'}`
+        }]
+      };
+    }
+  }
+
+  // =============================================================================
+  // Anchored Metadata Tools (Session E: Off-chain Metadata Resolution)
+  // =============================================================================
+
+  /**
+   * Resolve a Regen metadata IRI via the allowlisted resolver
+   * Calls POST /metadata/resolve
+   */
+  private async resolveMetadataIri(args: any) {
+    const { iri, force_refresh = false } = args || {};
+
+    if (!iri) {
+      return {
+        content: [{
+          type: 'text',
+          text: '**Error:** `iri` parameter is required.\n\nExample: `regen:13toVfvfM5B7yuJqq8h3iVRHp3PKUJ4ABxHyvn4MeUMwwv1pWQGL295.rdf`'
+        }]
+      };
+    }
+
+    const startTime = Date.now();
+    console.error(`[${SERVER_NAME}] Tool=resolve_metadata_iri IRI="${iri}" ForceRefresh=${force_refresh}`);
+
+    try {
+      const response = await apiClient.post('/metadata/resolve', {
+        iri,
+        force_refresh
+      });
+      const data = response.data as any;
+      const duration = Date.now() - startTime;
+
+      console.error(`[${SERVER_NAME}] Tool=resolve_metadata_iri Success Duration=${duration}ms`);
+
+      // Format markdown output
+      let md = `## Metadata Resolution: Success\n\n`;
+      md += `**IRI:** \`${data.iri}\`\n`;
+      md += `**Resolver URL:** ${data.resolver_url}\n`;
+      md += `**Content Hash:** \`${data.content_hash}\`\n`;
+      md += `**Record ID:** ${data.rid}\n`;
+      md += `**Resolved At:** ${data.resolved_at}\n`;
+      md += `**From Cache:** ${data.from_cache ? 'Yes' : 'No'}\n`;
+      md += `\n---\n`;
+      md += `*Resolution completed in ${duration}ms*`;
+
+      return {
+        content: [{
+          type: 'text',
+          text: md
+        }]
+      };
+
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      console.error(`[${SERVER_NAME}] Tool=resolve_metadata_iri Error:`, error);
+
+      // Check if this is a blocked resolution (no citation, no metric)
+      const errorData = error.response?.data;
+      const isBlocked = errorData?.blocked === true;
+      const errorCode = errorData?.error?.code || 'UNKNOWN_ERROR';
+      const errorMessage = errorData?.error?.message || (error instanceof Error ? error.message : 'Unknown error');
+
+      let md = `## Metadata Resolution: Failed\n\n`;
+      md += `**IRI:** \`${iri}\`\n`;
+      md += `**Error Code:** ${errorCode}\n`;
+      md += `**Error:** ${errorMessage}\n`;
+
+      if (isBlocked) {
+        md += `\n**⚠️ Blocked:** This IRI cannot be resolved. The metadata may not exist or may be malformed.\n`;
+      }
+
+      md += `\n---\n`;
+      md += `*Failed after ${duration}ms*`;
+
+      return {
+        content: [{
+          type: 'text',
+          text: md
+        }]
+      };
+    }
+  }
+
+  /**
+   * Derive hectares from a Regen metadata IRI with full citation
+   * Enforces "no citation, no metric" policy
+   * Calls POST /metadata/hectares
+   */
+  private async deriveOffchainHectares(args: any) {
+    const { iri, force_refresh = false } = args || {};
+
+    if (!iri) {
+      return {
+        content: [{
+          type: 'text',
+          text: '**Error:** `iri` parameter is required.\n\nExample: `regen:13toVfvfM5B7yuJqq8h3iVRHp3PKUJ4ABxHyvn4MeUMwwv1pWQGL295.rdf`'
+        }]
+      };
+    }
+
+    const startTime = Date.now();
+    console.error(`[${SERVER_NAME}] Tool=derive_offchain_hectares IRI="${iri}" ForceRefresh=${force_refresh}`);
+
+    try {
+      const response = await apiClient.post('/metadata/hectares', {
+        iri,
+        force_refresh
+      });
+      const data = response.data as any;
+      const duration = Date.now() - startTime;
+
+      console.error(`[${SERVER_NAME}] Tool=derive_offchain_hectares Success Hectares=${data.hectares} Duration=${duration}ms`);
+
+      // Format markdown output with full derivation provenance
+      let md = `## Hectares Derivation: Success\n\n`;
+      md += `### Result\n`;
+      md += `**Hectares:** ${data.hectares} ${data.unit}\n\n`;
+
+      md += `### Derivation Provenance\n`;
+      md += `| Field | Value |\n`;
+      md += `|-------|-------|\n`;
+      md += `| IRI | \`${data.derivation.iri}\` |\n`;
+      md += `| Record ID | ${data.derivation.rid} |\n`;
+      md += `| Resolver URL | ${data.derivation.resolver_url} |\n`;
+      md += `| Content Hash | \`${data.derivation.content_hash}\` |\n`;
+      md += `| JSON Pointer | \`${data.derivation.json_pointer}\` |\n`;
+      md += `| Expected Unit | ${data.derivation.expected_unit} |\n\n`;
+
+      if (data.citations && data.citations.length > 0) {
+        const c = data.citations[0];
+        md += `### Citation\n`;
+        md += `- **Title:** ${c.title}\n`;
+        md += `- **Excerpt:** ${c.excerpt}\n`;
+        md += `- **Type:** ${c.citation_type}\n`;
+        md += `- **Resolved At:** ${c.resolved_at}\n`;
+      }
+
+      md += `\n---\n`;
+      md += `*Derivation completed in ${duration}ms*`;
+
+      return {
+        content: [{
+          type: 'text',
+          text: md
+        }]
+      };
+
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      console.error(`[${SERVER_NAME}] Tool=derive_offchain_hectares Error:`, error);
+
+      // Check if this is a blocked derivation (no citation, no metric)
+      const errorData = error.response?.data;
+      const isBlocked = errorData?.blocked === true;
+      const errorCode = errorData?.error?.code || 'UNKNOWN_ERROR';
+      const errorMessage = errorData?.error?.message || (error instanceof Error ? error.message : 'Unknown error');
+
+      let md = `## Hectares Derivation: Failed\n\n`;
+      md += `**IRI:** \`${iri}\`\n`;
+      md += `**Error Code:** ${errorCode}\n`;
+      md += `**Error:** ${errorMessage}\n`;
+
+      if (isBlocked) {
+        md += `\n**⚠️ Blocked (No Citation, No Metric):**\n`;
+        md += `This metric cannot be derived because no valid citation can be constructed.\n`;
+        md += `Possible reasons:\n`;
+        md += `- The metadata IRI does not exist or cannot be resolved\n`;
+        md += `- The metadata does not contain hectares information\n`;
+        md += `- The unit is not the expected \`unit:HA\`\n`;
+        md += `- The value fails validation (negative, too large, etc.)\n`;
+      }
+
+      md += `\n---\n`;
+      md += `*Failed after ${duration}ms*`;
+
+      return {
+        content: [{
+          type: 'text',
+          text: md
         }]
       };
     }

@@ -261,5 +261,46 @@ export const TOOLS: Tool[] = [
         }
       }
     }
+  },
+  // =============================================================================
+  // Anchored Metadata Tools (Session E: Off-chain Metadata Resolution)
+  // =============================================================================
+  {
+    name: 'resolve_metadata_iri',
+    description: 'Resolve a Regen metadata IRI via the allowlisted resolver (api.regen.network). Caches results for efficient repeated lookups. Returns resolution details including content hash for integrity verification. Use this to verify metadata exists before deriving metrics.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        iri: {
+          type: 'string',
+          description: 'The Regen metadata IRI to resolve (e.g., "regen:13toVfvfM5B7yuJqq8h3iVRHp3PKUJ4ABxHyvn4MeUMwwv1pWQGL295.rdf")'
+        },
+        force_refresh: {
+          type: 'boolean',
+          description: 'If true, bypass cache and fetch fresh from resolver. Default: false',
+          default: false
+        }
+      },
+      required: ['iri']
+    }
+  },
+  {
+    name: 'derive_offchain_hectares',
+    description: 'Derive project hectares from a Regen metadata IRI with full citation and derivation provenance. Enforces "no citation, no metric" policy - returns blocked=true if derivation is not possible. Only returns hectares when a valid citation can be constructed. Use this for accurate, citeable project size metrics.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        iri: {
+          type: 'string',
+          description: 'The Regen metadata IRI to derive hectares from (e.g., "regen:13toVfvfM5B7yuJqq8h3iVRHp3PKUJ4ABxHyvn4MeUMwwv1pWQGL295.rdf")'
+        },
+        force_refresh: {
+          type: 'boolean',
+          description: 'If true, bypass cache and re-derive from fresh metadata. Default: false',
+          default: false
+        }
+      },
+      required: ['iri']
+    }
   }
 ];
