@@ -263,6 +263,43 @@ export const TOOLS: Tool[] = [
     }
   },
   // =============================================================================
+  // SPARQL Power Tools (MCP-only)
+  // =============================================================================
+  {
+    name: 'sparql_query',
+    description: 'Execute raw SPARQL queries against the Regen Knowledge Graph (Apache Jena). Power tool for advanced graph investigations. Use for complex queries not covered by other tools. Prefer /api/koi/graph for simple entity lookups or /api/koi/entity for resolving labels.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'The SPARQL query to execute. Must be a valid SELECT query. PREFIX declarations are optional (common prefixes auto-added).'
+        },
+        format: {
+          type: 'string',
+          enum: ['json', 'table'],
+          description: 'Output format: "json" for structured data, "table" for human-readable rendering. Default: json',
+          default: 'json'
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum number of result rows to return (default: 100, max: 1000). Overrides LIMIT in query if lower.',
+          minimum: 1,
+          maximum: 1000,
+          default: 100
+        },
+        timeout_ms: {
+          type: 'number',
+          description: 'Query timeout in milliseconds (default: 30000, max: 60000)',
+          minimum: 1000,
+          maximum: 60000,
+          default: 30000
+        }
+      },
+      required: ['query']
+    }
+  },
+  // =============================================================================
   // Anchored Metadata Tools (Session E: Off-chain Metadata Resolution)
   // =============================================================================
   {

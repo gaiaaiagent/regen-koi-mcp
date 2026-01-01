@@ -19,6 +19,7 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import axios from 'axios';
+import crypto from 'crypto';
 import dotenv from 'dotenv';
 import { TOOLS } from './tools.js';
 // Use enhanced SPARQL client with focused retrieval
@@ -165,7 +166,7 @@ class KOIServer {
 
       try {
         // Input validation for applicable tools
-        const validationRequired = ['search', 'search_github_docs', 'get_repo_overview', 'get_tech_stack', 'generate_weekly_digest'];
+        const validationRequired = ['search', 'search_github_docs', 'get_repo_overview', 'get_tech_stack', 'generate_weekly_digest', 'sparql_query'];
         if (validationRequired.includes(name)) {
           const validation = validateToolInput(name, args);
           if (!validation.success) {
@@ -231,6 +232,9 @@ class KOIServer {
             break;
           case 'derive_offchain_hectares':
             result = await this.deriveOffchainHectares(args);
+            break;
+          case 'sparql_query':
+            result = await this.executeSparqlQuery(args);
             break;
           default:
             throw new Error(`Unknown tool: ${name}`);
@@ -439,6 +443,197 @@ class KOIServer {
     } catch (e) {
       return { content: [{ type: 'text', text: `Error: ${e instanceof Error ? e.message : String(e)}` }] };
     }
+  }
+
+  /**
+   * Execute a raw SPARQL query with safety features
+   * MCP-only power tool for advanced graph investigations
+   */
+  private async executeSparqlQuery(args: any) {
+    const { query, format = 'json', limit = 100, timeout_ms = 30000 } = args || {};
+
+    // Safety: compute query hash for logging (don't log raw query)
+    const queryHash = crypto.createHash('sha256').update(query).digest('hex').slice(0, 12);
+    const queryType = this.detectSparqlQueryType(query);
+
+    logger.info({
+      action: 'sparql_query_start',
+      query_hash: queryHash,
+      query_type: queryType,
+      limit,
+      timeout_ms
+    }, `SPARQL query: ${queryType} (hash: ${queryHash})`);
+
+    // Common prefixes to auto-add if not present
+    const commonPrefixes = `
+PREFIX regen: <https://regen.network/ontology/experimental#>
+PREFIX regx: <https://regen.network/ontology/experimental#>
+PREFIX prov: <http://www.w3.org/ns/prov#>
+PREFIX schema: <http://schema.org/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+`;
+
+    // Add prefixes if query doesn't have them
+    let fullQuery = query.trim();
+    if (!fullQuery.toLowerCase().includes('prefix ')) {
+      fullQuery = commonPrefixes + fullQuery;
+    }
+
+    // Enforce result limit - find and replace or add LIMIT clause
+    const limitRegex = /LIMIT\s+(\d+)/i;
+    const existingLimitMatch = fullQuery.match(limitRegex);
+    if (existingLimitMatch) {
+      const existingLimit = parseInt(existingLimitMatch[1]);
+      if (existingLimit > limit) {
+        fullQuery = fullQuery.replace(limitRegex, `LIMIT ${limit}`);
+      }
+    } else {
+      // Add LIMIT if not present
+      fullQuery = fullQuery.trimEnd() + `\nLIMIT ${limit}`;
+    }
+
+    const startTime = Date.now();
+
+    try {
+      // Execute with timeout
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error(`Query timed out after ${timeout_ms}ms`)), timeout_ms);
+      });
+
+      const queryPromise = this.sparqlClient.executeQuery(fullQuery);
+      const result = await Promise.race([queryPromise, timeoutPromise]) as any;
+
+      const duration_ms = Date.now() - startTime;
+      const bindings = result?.results?.bindings || [];
+      const columns = result?.head?.vars || [];
+
+      logger.info({
+        action: 'sparql_query_success',
+        query_hash: queryHash,
+        result_count: bindings.length,
+        column_count: columns.length,
+        duration_ms
+      }, `SPARQL query completed: ${bindings.length} results in ${duration_ms}ms`);
+
+      // Format output based on requested format
+      if (format === 'table') {
+        const tableOutput = this.formatSparqlAsTable(columns, bindings, queryHash, duration_ms);
+        return { content: [{ type: 'text', text: tableOutput }] };
+      }
+
+      // JSON format
+      const jsonOutput = {
+        query_hash: queryHash,
+        query_type: queryType,
+        columns,
+        result_count: bindings.length,
+        duration_ms,
+        results: bindings.map((binding: any) => {
+          const row: Record<string, any> = {};
+          columns.forEach((col: string) => {
+            if (binding[col]) {
+              row[col] = {
+                type: binding[col].type,
+                value: binding[col].value,
+                // Extract readable label from URIs
+                label: binding[col].type === 'uri'
+                  ? binding[col].value.split('/').pop()?.split('#').pop() || binding[col].value
+                  : undefined
+              };
+            }
+          });
+          return row;
+        })
+      };
+
+      return {
+        content: [{
+          type: 'text',
+          text: `# SPARQL Query Results\n\n` +
+                `- **Query Hash:** \`${queryHash}\`\n` +
+                `- **Type:** ${queryType}\n` +
+                `- **Results:** ${bindings.length}\n` +
+                `- **Duration:** ${duration_ms}ms\n\n` +
+                `\`\`\`json\n${JSON.stringify(jsonOutput, null, 2)}\n\`\`\``
+        }]
+      };
+
+    } catch (error) {
+      const duration_ms = Date.now() - startTime;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      logger.error({
+        action: 'sparql_query_error',
+        query_hash: queryHash,
+        error: errorMessage,
+        duration_ms
+      }, `SPARQL query failed: ${errorMessage}`);
+
+      return {
+        content: [{
+          type: 'text',
+          text: `# SPARQL Query Error\n\n` +
+                `- **Query Hash:** \`${queryHash}\`\n` +
+                `- **Duration:** ${duration_ms}ms\n\n` +
+                `**Error:** ${errorMessage}`
+        }]
+      };
+    }
+  }
+
+  /**
+   * Detect the type of SPARQL query for logging
+   */
+  private detectSparqlQueryType(query: string): string {
+    const q = query.trim().toLowerCase();
+    if (q.includes('select')) return 'SELECT';
+    if (q.includes('construct')) return 'CONSTRUCT';
+    if (q.includes('ask')) return 'ASK';
+    if (q.includes('describe')) return 'DESCRIBE';
+    return 'UNKNOWN';
+  }
+
+  /**
+   * Format SPARQL results as a markdown table
+   */
+  private formatSparqlAsTable(columns: string[], bindings: any[], queryHash: string, duration_ms: number): string {
+    let output = `# SPARQL Query Results\n\n`;
+    output += `- **Query Hash:** \`${queryHash}\`\n`;
+    output += `- **Results:** ${bindings.length}\n`;
+    output += `- **Duration:** ${duration_ms}ms\n\n`;
+
+    if (bindings.length === 0) {
+      output += `*No results found.*\n`;
+      return output;
+    }
+
+    // Table header
+    output += `| ${columns.join(' | ')} |\n`;
+    output += `| ${columns.map(() => '---').join(' | ')} |\n`;
+
+    // Table rows (limit to first 50 for readability)
+    const maxRows = Math.min(bindings.length, 50);
+    for (let i = 0; i < maxRows; i++) {
+      const binding = bindings[i];
+      const cells = columns.map((col: string) => {
+        if (!binding[col]) return '';
+        const val = binding[col].value;
+        // Extract readable part from URIs
+        if (binding[col].type === 'uri') {
+          const label = val.split('/').pop()?.split('#').pop() || val;
+          return label.length > 50 ? label.slice(0, 47) + '...' : label;
+        }
+        return val.length > 50 ? val.slice(0, 47) + '...' : val;
+      });
+      output += `| ${cells.join(' | ')} |\n`;
+    }
+
+    if (bindings.length > 50) {
+      output += `\n*... and ${bindings.length - 50} more results (truncated for readability)*\n`;
+    }
+
+    return output;
   }
 
   private async search(args: any) {

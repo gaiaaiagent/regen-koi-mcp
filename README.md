@@ -341,7 +341,12 @@ Once you've installed the MCP server, try these queries in Claude to explore wha
 ### Code Knowledge Graph
 | Tool | Description | Key Inputs |
 |------|-------------|-----------|
-| `query_code_graph` | Query relationships between Keepers, Messages, Events, and Documentation | `query_type` (enum: keeper_for_msg, msgs_for_keeper, docs_mentioning, entities_in_doc, related_entities), `entity_name` (string), `doc_path` (string) |
+| `query_code_graph` | Query relationships between Keepers, Messages, Events, and Documentation | `query_type` (enum: keeper_for_msg, msgs_for_keeper, docs_mentioning, entities_in_doc, related_entities, list_keepers, list_messages), `entity_name` (string), `doc_path` (string), `limit` (1-200, default 50), `offset` (pagination offset, default 0) |
+
+### SPARQL Power Tools (Advanced)
+| Tool | Description | Key Inputs |
+|------|-------------|-----------|
+| `sparql_query` | Execute raw SPARQL queries against the Regen Knowledge Graph (Apache Jena). Power tool for advanced graph investigations. | `query` (string, SPARQL SELECT query), `format` ('json' or 'table', default: json), `limit` (1-1000, default: 100), `timeout_ms` (1000-60000, default: 30000) |
 
 ### GitHub Documentation
 | Tool | Description | Key Inputs |
@@ -367,6 +372,8 @@ This table helps you understand which tool to use for different tasks. Just ask 
 | See what repositories are available                      | "What repositories are indexed?"                         | `list_repos`             |
 | See what types of code entities exist                    | "What entity types are available?"                       | `list_entity_types`      |
 | Get comprehensive statistics                             | "Show me statistics about the knowledge base"            | `get_entity_stats`       |
+| List all Keepers                                         | "Show me all Keepers"                                    | `list_keepers`           |
+| List all Messages                                        | "List all message types"                                 | `list_messages`          |
 | **Find specific code**                                   |                                                          |                          |
 | Find all entities of a type                              | "Show me all Keepers in regen-ledger"                    | `find_by_type`           |
 | Search for entities by name                              | "Find entities related to MsgCreateBatch"                | `search_entities`        |
@@ -391,6 +398,8 @@ This table helps you understand which tool to use for different tasks. Just ask 
 | **Get activity summaries**                               |                                                          |                          |
 | Generate weekly digest summary                           | "Create a weekly digest of Regen activity"               | `generate_weekly_digest` |
 | Get full content for NotebookLM                          | "Get the full NotebookLM export with all forum posts"    | `get_notebooklm_export`  |
+| **Advanced graph queries (SPARQL)**                      |                                                          |                          |
+| Run custom SPARQL query                                  | "Run this SPARQL: SELECT ?s ?p ?o WHERE {...}"           | `sparql_query`           |
 
 ### Query Type Reference
 
@@ -400,6 +409,8 @@ The `query_code_graph` tool supports these query types:
 - **`list_repos`** - Show all indexed repositories with entity counts
 - **`list_entity_types`** - Show all entity types (Function, Class, Keeper, Message, etc.) with counts
 - **`get_entity_stats`** - Comprehensive statistics: entities by type, language, repository
+- **`list_keepers`** - List all Keeper entities with pagination (supports `limit` and `offset`)
+- **`list_messages`** - List all Message entities with pagination (supports `limit` and `offset`)
 - **`list_modules`** - Show all modules across repositories
 
 #### Entity Queries
@@ -418,6 +429,69 @@ The `query_code_graph` tool supports these query types:
 - **`search_modules`** - Search modules by keyword (requires `entity_name` parameter)
 - **`module_entities`** - Get entities in a module (requires `module_name` parameter)
 - **`module_for_entity`** - Find which module contains an entity (requires `entity_name` parameter)
+
+---
+
+### When to Use Which Tool
+
+| Use Case | Recommended Tool | Why |
+|----------|------------------|-----|
+| Find a specific entity by name | `resolve_entity` or `search_entities` | Fast label-to-URI resolution |
+| Get entity relationships | `get_entity_neighborhood` | Pre-built relationship queries |
+| List all Keepers/Messages | `list_keepers` / `list_messages` | Optimized paginated listing |
+| Complex relationship patterns | `sparql_query` | Full SPARQL expressiveness |
+| Aggregate statistics | `sparql_query` with GROUP BY | Custom aggregations |
+| Cross-entity analysis | `sparql_query` | Join across entity types |
+
+**Rule of thumb:**
+- Use **`query_code_graph`** for common queries (keepers, messages, relationships)
+- Use **`resolve_entity`** / **`get_entity_neighborhood`** for entity lookups
+- Use **`sparql_query`** for complex queries not covered by other tools
+
+---
+
+### SPARQL Query Examples
+
+The `sparql_query` tool executes raw SPARQL against the Apache Jena knowledge graph. Common prefixes are auto-added if not specified.
+
+#### Example 1: Simple SELECT - Find all Organizations
+```sparql
+SELECT ?org ?label WHERE {
+  ?org a schema:Organization .
+  OPTIONAL { ?org rdfs:label ?label }
+}
+```
+
+#### Example 2: Relationship Lookup - Find statements about a topic
+```sparql
+SELECT ?stmt ?predicate ?object WHERE {
+  ?stmt regen:subject ?subject .
+  ?stmt regen:predicate ?predicate .
+  ?stmt regen:object ?object .
+  FILTER(CONTAINS(LCASE(STR(?subject)), "carbon credit"))
+}
+```
+
+#### Example 3: Find All Messages/Keepers with Relationships
+```sparql
+SELECT ?keeper ?msg ?msgName WHERE {
+  ?keeper a <Keeper> .
+  ?keeper <HANDLES> ?msg .
+  ?msg rdfs:label ?msgName .
+}
+ORDER BY ?keeper
+```
+
+#### Safety Features
+
+The `sparql_query` tool enforces several safety measures:
+- **Max query length:** 5,000 characters
+- **Result row cap:** 1,000 rows (configurable via `limit` parameter)
+- **Timeout:** Default 30s, max 60s
+- **Read-only:** Only SELECT queries allowed (no DELETE, INSERT, DROP)
+- **Privacy:** Raw queries are never logged; only query hash + summary are recorded
+
+---
 
 ### What's Currently Indexed
 

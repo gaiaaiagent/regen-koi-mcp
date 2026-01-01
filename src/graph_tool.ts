@@ -70,10 +70,12 @@ export const GRAPH_TOOL: Tool = {
           'related_entities', 'find_by_type', 'search_entities', 'list_repos',
           // Discovery queries
           'list_entity_types', 'get_entity_stats',
+          // Convenience listing queries
+          'list_keepers', 'list_messages',
           // RAPTOR module queries
           'list_modules', 'get_module', 'search_modules', 'module_entities', 'module_for_entity'
         ],
-        description: 'Type of graph query: find_by_type (get all Sensors, Handlers, etc.), search_entities (search by name), list_repos (show indexed repositories), list_entity_types (show all entity types with counts), get_entity_stats (comprehensive graph statistics), list_modules (show all modules), search_modules (search modules by keyword)'
+        description: 'Type of graph query: find_by_type (get all Sensors, Handlers, etc.), search_entities (search by name), list_repos (show indexed repositories), list_entity_types (show all entity types with counts), get_entity_stats (comprehensive graph statistics), list_keepers (show all Keeper entities), list_messages (show all Msg entities), list_modules (show all modules), search_modules (search modules by keyword)'
       },
       entity_name: {
         type: 'string',
@@ -94,6 +96,19 @@ export const GRAPH_TOOL: Tool = {
       module_name: {
         type: 'string',
         description: 'Module name for module-related queries (e.g., "ecocredit", "cli", "sensors")'
+      },
+      limit: {
+        type: 'number',
+        description: 'Maximum number of results to return (default: 50, max: 200)',
+        minimum: 1,
+        maximum: 200,
+        default: 50
+      },
+      offset: {
+        type: 'number',
+        description: 'Number of results to skip for pagination (default: 0)',
+        minimum: 0,
+        default: 0
       }
     },
     required: ['query_type']
@@ -512,6 +527,50 @@ export async function executeGraphTool(args: any) {
           });
           break;
 
+        case 'list_keepers':
+          markdownSummary = `# All Keepers\n\nFound **${total_results}** Keeper(s):\n\n`;
+          markdownSummary += '| Name | File Path | Line |\n|------|-----------|------|\n';
+          results.forEach((r: any) => {
+            const keeper = r.entity || r.keeper || r.result || r;
+            const name = keeper.name || 'unknown';
+            const filePath = keeper.file_path || 'N/A';
+            const line = keeper.line_number || '';
+            markdownSummary += `| ${name} | \`${filePath}\` | ${line} |\n`;
+            hits.push({
+              entity_type: 'Keeper',
+              entity_name: name,
+              file_path: filePath,
+              line_number: keeper.line_number,
+              content_preview: keeper.docstring || `Keeper: ${name}`
+            });
+          });
+          if (args.offset !== undefined || results.length >= (args.limit || 50)) {
+            markdownSummary += `\n*Showing results ${(args.offset || 0) + 1}-${(args.offset || 0) + results.length}. Use \`offset\` and \`limit\` params for pagination.*\n`;
+          }
+          break;
+
+        case 'list_messages':
+          markdownSummary = `# All Messages\n\nFound **${total_results}** Message(s):\n\n`;
+          markdownSummary += '| Name | Package | File Path |\n|------|---------|----------|\n';
+          results.forEach((r: any) => {
+            const msg = r.entity || r.message || r.result || r;
+            const name = msg.name || 'unknown';
+            const pkg = msg.package || msg.msg_package || 'N/A';
+            const filePath = msg.file_path || 'N/A';
+            markdownSummary += `| ${name} | ${pkg} | \`${filePath}\` |\n`;
+            hits.push({
+              entity_type: 'Msg',
+              entity_name: name,
+              file_path: filePath,
+              line_number: msg.line_number,
+              content_preview: `${name} (${pkg})`
+            });
+          });
+          if (args.offset !== undefined || results.length >= (args.limit || 50)) {
+            markdownSummary += `\n*Showing results ${(args.offset || 0) + 1}-${(args.offset || 0) + results.length}. Use \`offset\` and \`limit\` params for pagination.*\n`;
+          }
+          break;
+
         default:
           // Generic formatting for other query types
           markdownSummary = `# ${query_type} Results\n\nFound **${total_results}** results:\n\n`;
@@ -767,6 +826,62 @@ export async function executeGraphTool(args: any) {
           content_preview: `${r.entity_count} entities`
         }));
         break;
+
+      // ============= Convenience Listing Queries =============
+
+      case 'list_keepers': {
+        const allKeepers = await client.getAllKeepers();
+        const keeperLimitVal = args.limit || 50;
+        const keeperOffsetVal = args.offset || 0;
+        const paginatedKeepers = allKeepers.slice(keeperOffsetVal, keeperOffsetVal + keeperLimitVal);
+        total_results = paginatedKeepers.length;
+
+        markdownSummary = `# All Keepers\n\nFound **${allKeepers.length}** Keeper(s), showing ${keeperOffsetVal + 1}-${keeperOffsetVal + paginatedKeepers.length}:\n\n`;
+        markdownSummary += '| Name | File Path | Line |\n|------|-----------|------|\n';
+        paginatedKeepers.forEach(k => {
+          markdownSummary += `| ${k.name} | \`${k.file_path || 'N/A'}\` | ${k.line_number || ''} |\n`;
+        });
+
+        if (allKeepers.length > keeperOffsetVal + keeperLimitVal) {
+          markdownSummary += `\n*Use \`offset: ${keeperOffsetVal + keeperLimitVal}\` to see more results.*\n`;
+        }
+
+        hits = paginatedKeepers.map(k => ({
+          entity_type: 'Keeper',
+          entity_name: k.name,
+          file_path: k.file_path,
+          line_number: k.line_number,
+          content_preview: k.docstring || `Keeper: ${k.name}`
+        }));
+        break;
+      }
+
+      case 'list_messages': {
+        const allMsgs = await client.getAllMsgs();
+        const msgLimitVal = args.limit || 50;
+        const msgOffsetVal = args.offset || 0;
+        const paginatedMsgs = allMsgs.slice(msgOffsetVal, msgOffsetVal + msgLimitVal);
+        total_results = paginatedMsgs.length;
+
+        markdownSummary = `# All Messages\n\nFound **${allMsgs.length}** Message(s), showing ${msgOffsetVal + 1}-${msgOffsetVal + paginatedMsgs.length}:\n\n`;
+        markdownSummary += '| Name | Package | File Path |\n|------|---------|----------|\n';
+        paginatedMsgs.forEach(m => {
+          markdownSummary += `| ${m.name} | ${m.package || 'N/A'} | \`${m.file_path || 'N/A'}\` |\n`;
+        });
+
+        if (allMsgs.length > msgOffsetVal + msgLimitVal) {
+          markdownSummary += `\n*Use \`offset: ${msgOffsetVal + msgLimitVal}\` to see more results.*\n`;
+        }
+
+        hits = paginatedMsgs.map(m => ({
+          entity_type: 'Msg',
+          entity_name: m.name,
+          file_path: m.file_path,
+          line_number: m.line_number,
+          content_preview: `${m.name} (${m.package || 'N/A'})`
+        }));
+        break;
+      }
 
       // ============= RAPTOR Module Queries =============
 

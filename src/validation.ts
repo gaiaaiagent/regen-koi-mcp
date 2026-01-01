@@ -58,6 +58,10 @@ const QueryTypeEnum = z.enum([
   'list_repos',
   'list_entity_types',
   'get_entity_stats',
+  // Convenience listing queries
+  'list_keepers',
+  'list_messages',
+  // RAPTOR module queries
   'list_modules',
   'get_module',
   'search_modules',
@@ -212,6 +216,73 @@ export const GenerateWeeklyDigestSchema = z.object({
 });
 
 /**
+ * Schema for sparql_query tool
+ * Note: We don't over-restrict the query string to allow valid SPARQL syntax
+ */
+export const SparqlQuerySchema = z.object({
+  query: z.string()
+    .min(10, 'Query too short (min 10 characters)')
+    .max(5000, 'Query too long (max 5000 characters)')
+    .refine(
+      (q) => {
+        const lower = q.toLowerCase();
+
+        // Hard block query federation and update/mutation operations.
+        // NOTE: We keep this conservative because SPARQL SERVICE can trigger server-side network access.
+        const forbiddenKeywords = [
+          'delete',
+          'insert',
+          'drop',
+          'create',
+          'clear',
+          'load',
+          'service',
+          'add',
+          'move',
+          'copy'
+        ];
+        for (const kw of forbiddenKeywords) {
+          if (lower.includes(kw)) return false;
+        }
+
+        // Enforce SELECT-only (allow PREFIX/BASE/comment lines before the SELECT).
+        const lines = q
+          .split(/\r?\n/)
+          .map((l) => l.trim())
+          .filter((l) => l.length > 0 && !l.startsWith('#'));
+
+        // Drop leading PREFIX/BASE declarations.
+        let i = 0;
+        while (i < lines.length) {
+          const l = lines[i].toLowerCase();
+          if (l.startsWith('prefix ') || l.startsWith('base ')) {
+            i += 1;
+            continue;
+          }
+          break;
+        }
+
+        const firstNonPrefix = (lines[i] || '').toLowerCase();
+        return firstNonPrefix.startsWith('select ');
+      },
+      'Only SELECT queries are allowed. Forbidden: SERVICE/LOAD and any mutation keywords (DELETE, INSERT, DROP, CREATE, CLEAR, ADD, MOVE, COPY).'
+    ),
+  format: z.enum(['json', 'table']).optional().default('json'),
+  limit: z.number()
+    .int()
+    .min(1, 'Limit must be at least 1')
+    .max(1000, 'Limit cannot exceed 1000')
+    .optional()
+    .default(100),
+  timeout_ms: z.number()
+    .int()
+    .min(1000, 'Timeout must be at least 1000ms')
+    .max(60000, 'Timeout cannot exceed 60000ms')
+    .optional()
+    .default(30000)
+});
+
+/**
  * Validation result type
  */
 export interface ValidationResult<T> {
@@ -276,7 +347,8 @@ export const ToolSchemas: Record<string, z.ZodSchema<any>> = {
   get_repo_overview: GetRepoOverviewSchema,
   get_tech_stack: GetTechStackSchema,
   get_stats: GetStatsSchema,
-  generate_weekly_digest: GenerateWeeklyDigestSchema
+  generate_weekly_digest: GenerateWeeklyDigestSchema,
+  sparql_query: SparqlQuerySchema
 };
 
 /**
@@ -339,5 +411,6 @@ export default {
   GetRepoOverviewSchema,
   GetTechStackSchema,
   GetStatsSchema,
-  GenerateWeeklyDigestSchema
+  GenerateWeeklyDigestSchema,
+  SparqlQuerySchema
 };
