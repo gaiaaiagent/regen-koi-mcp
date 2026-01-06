@@ -45,9 +45,39 @@ const SERVER_VERSION = process.env.MCP_SERVER_VERSION || '1.4.1';
 
 console.error(`[${SERVER_NAME}] User email for auth: ${USER_EMAIL}`);
 
+/**
+ * Ensure token is synced from file storage to in-memory storage.
+ * This fixes the auth propagation bug where file-based tokens weren't
+ * being loaded into memory on fresh MCP sessions.
+ */
+function ensureTokenSynced(): string | null {
+  // First check in-memory
+  let token = getAccessToken();
+  if (token) return token;
+
+  // Fallback: check file-based storage and sync to memory
+  try {
+    // Dynamic import to avoid circular dependency
+    const { loadAuthState, hasValidAccessToken } = require('./auth-store.js');
+    const state = loadAuthState();
+
+    if (hasValidAccessToken(state) && state.accessToken) {
+      // Sync file token to in-memory storage
+      setAccessToken(state.accessToken, state.accessTokenExpiresAt);
+      console.error(`[${SERVER_NAME}] Synced auth token from file to memory for user: ${state.userEmail}`);
+      return state.accessToken;
+    }
+  } catch (err) {
+    console.error(`[${SERVER_NAME}] Failed to sync auth token from file:`, err);
+  }
+
+  return null;
+}
+
 // Check if user is authenticated (with caching)
 async function isUserAuthenticated(): Promise<boolean> {
-  const token = getAccessToken();
+  // Ensure token is synced from file to memory first
+  const token = ensureTokenSynced();
   if (!token) return false;
 
   // Validate token with server
@@ -87,7 +117,8 @@ function unwrapKoiEnvelope<T>(payload: unknown): T {
 
 // Add request interceptor to dynamically include access token and internal API key
 apiClient.interceptors.request.use((config) => {
-  const token = getAccessToken();
+  // Use ensureTokenSynced to check both in-memory and file storage
+  const token = ensureTokenSynced();
   if (token && config.headers) {
     config.headers['Authorization'] = `Bearer ${token}`;
   }
@@ -1898,6 +1929,12 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
       // Check 1: Already authenticated?
       if (hasValidAccessToken(state)) {
         console.error(`[${SERVER_NAME}] Tool=regen_koi_authenticate Event=already_authenticated User=${state.userEmail}`);
+
+        // FIX: Sync file token to in-memory storage so other tools can use it
+        if (state.accessToken) {
+          setAccessToken(state.accessToken, state.accessTokenExpiresAt);
+          console.error(`[${SERVER_NAME}] Synced existing auth token to memory for user: ${state.userEmail}`);
+        }
 
         return {
           content: [{
