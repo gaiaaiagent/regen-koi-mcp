@@ -117,7 +117,7 @@ apiClient.interceptors.request.use((config) => {
   }
 
   // Add internal API key for MCP-only metadata endpoints
-  if (config.url?.includes('/metadata/') && KOI_INTERNAL_API_KEY && config.headers) {
+  if ((config.url?.includes('/metadata/') || config.url?.includes('/stats')) && KOI_INTERNAL_API_KEY && config.headers) {
     config.headers['X-Internal-API-Key'] = KOI_INTERNAL_API_KEY;
   }
 
@@ -2665,7 +2665,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
   /**
    * Resolve a Regen metadata IRI via the allowlisted resolver
-   * Calls POST /metadata/resolve
+   * Calls POST /metadata/') || config.url?.includes('/statsresolve
    */
   private async resolveMetadataIri(args: any) {
     const { iri, force_refresh = false } = args || {};
@@ -2683,7 +2683,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
     console.error(`[${SERVER_NAME}] Tool=resolve_metadata_iri IRI="${iri}" ForceRefresh=${force_refresh}`);
 
     try {
-      const response = await apiClient.post('/metadata/resolve', {
+      const response = await apiClient.post('/metadata/') || config.url?.includes('/statsresolve', {
         iri,
         force_refresh
       });
@@ -2744,7 +2744,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
   /**
    * Derive hectares from a Regen metadata IRI with full citation
    * Enforces "no citation, no metric" policy
-   * Calls POST /metadata/hectares
+   * Calls POST /metadata/') || config.url?.includes('/statshectares
    */
   private async deriveOffchainHectares(args: any) {
     const { iri, force_refresh = false } = args || {};
@@ -2762,7 +2762,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
     console.error(`[${SERVER_NAME}] Tool=derive_offchain_hectares IRI="${iri}" ForceRefresh=${force_refresh}`);
 
     try {
-      const response = await apiClient.post('/metadata/hectares', {
+      const response = await apiClient.post('/metadata/') || config.url?.includes('/statshectares', {
         iri,
         force_refresh
       });
