@@ -38,6 +38,12 @@ export const TOOLS: Tool[] = [
           type: 'boolean',
           description: 'When using a date filter, also include documents with no known publication date',
           default: false
+        },
+        sort_by: {
+          type: 'string',
+          enum: ['relevance', 'date_desc', 'date_asc'],
+          description: "Sort order: 'relevance' (default) for weighted hybrid score, 'date_desc' for newest first, 'date_asc' for oldest first. Documents with null dates appear last when sorting by date.",
+          default: 'relevance'
         }
       },
       required: ['query']

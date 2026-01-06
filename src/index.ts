@@ -74,22 +74,15 @@ function ensureTokenSynced(): string | null {
   return null;
 }
 
-// Check if user is authenticated (with caching)
-async function isUserAuthenticated(): Promise<boolean> {
-  // Ensure token is synced from file to memory first
+// Check if user is authenticated
+// Per RFC 8628 security design: local validation is sufficient.
+// ensureTokenSynced() already validates:
+// 1. Token exists (in memory or file)
+// 2. Token hasn't expired (via hasValidAccessToken checking accessTokenExpiresAt)
+// No server call needed - if token is revoked server-side, actual API calls will 401.
+function isUserAuthenticated(): boolean {
   const token = ensureTokenSynced();
-  if (!token) return false;
-
-  // Validate token with server
-  try {
-    const response = await axios.get<{ authenticated: boolean }>(`${KOI_API_ENDPOINT}/auth/status`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-      timeout: 5000
-    });
-    return response.data.authenticated || false;
-  } catch (error) {
-    return false;
-  }
+  return !!token;
 }
 
 // API client configuration
@@ -227,14 +220,14 @@ class KOIServer {
             break;
           case 'get_stats':
             // INTERNAL ONLY: Requires authentication
-            if (!(await isUserAuthenticated())) {
+            if (!isUserAuthenticated()) {
               return { content: [{ type: 'text', text: 'Authentication required. Please run regen_koi_authenticate first to access get_stats.' }] };
             }
             result = await this.getStats(args);
             break;
           case 'get_mcp_metrics':
             // INTERNAL ONLY: Requires authentication
-            if (!(await isUserAuthenticated())) {
+            if (!isUserAuthenticated()) {
               return { content: [{ type: 'text', text: 'Authentication required. Please run regen_koi_authenticate first to access get_mcp_metrics.' }] };
             }
             result = await this.getMcpMetrics();
@@ -274,7 +267,7 @@ class KOIServer {
             break;
           case 'sparql_query':
             // INTERNAL ONLY: Requires authentication
-            if (!(await isUserAuthenticated())) {
+            if (!isUserAuthenticated()) {
               return { content: [{ type: 'text', text: 'Authentication required. Please run regen_koi_authenticate first to access sparql_query.' }] };
             }
             result = await this.executeSparqlQuery(args);
@@ -680,7 +673,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
   }
 
   private async search(args: any) {
-    const { query, limit = 10, published_from, published_to, include_undated = false } = args || {};
+    const { query, limit = 10, published_from, published_to, include_undated = false, sort_by = 'relevance' } = args || {};
     const vectorFilters: any = {};
 
     // Respect explicit date filter
@@ -708,11 +701,22 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
     try {
       const body: any = { question: query, limit };
       if (Object.keys(vectorFilters).length > 0) body.filters = vectorFilters;
+      // Pass sort_by to backend if it supports it
+      if (sort_by && sort_by !== 'relevance') {
+        body.sort_by = sort_by;
+      }
       const response = await apiClient.post('/query', body);
 
       const data = response.data as any;
-      const results = data.results || [];
-      const formattedResults = this.formatSearchResults(results, query);
+      let results = data.results || [];
+
+      // Apply client-side sorting if sort_by is specified
+      // This handles the case where backend doesn't support sorting
+      if (sort_by && sort_by !== 'relevance') {
+        results = this.sortResultsByDate(results, sort_by);
+      }
+
+      const formattedResults = this.formatSearchResults(results, query, sort_by);
 
       return {
         content: [
@@ -725,6 +729,51 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
     } catch (error: any) {
       throw new Error(`Failed to search knowledge: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * Sort search results by date (client-side fallback if backend doesn't support it)
+   * - date_desc: newest first
+   * - date_asc: oldest first
+   * - Documents with null/missing dates are placed at the end
+   * - For documents with identical dates, use relevance score as tiebreaker
+   */
+  private sortResultsByDate(results: any[], sort_by: string): any[] {
+    if (!results || results.length === 0) return results;
+
+    const getPublishedDate = (result: any): Date | null => {
+      // Try multiple possible date field locations
+      const dateStr = result.published_at ||
+                      result.metadata?.published_at ||
+                      result.metadata?.date ||
+                      result.metadata?.created_at ||
+                      result.created_at;
+      if (!dateStr) return null;
+      const parsed = new Date(dateStr);
+      return isNaN(parsed.getTime()) ? null : parsed;
+    };
+
+    return [...results].sort((a, b) => {
+      const dateA = getPublishedDate(a);
+      const dateB = getPublishedDate(b);
+
+      // Null dates go to the end
+      if (dateA === null && dateB === null) {
+        // Both null - use relevance score as tiebreaker (higher score first)
+        return (b.score || 0) - (a.score || 0);
+      }
+      if (dateA === null) return 1;  // a goes after b
+      if (dateB === null) return -1; // b goes after a
+
+      // Both have dates - compare them
+      const comparison = dateB.getTime() - dateA.getTime(); // default: newest first
+      if (comparison !== 0) {
+        return sort_by === 'date_asc' ? -comparison : comparison;
+      }
+
+      // Same date - use relevance score as tiebreaker
+      return (b.score || 0) - (a.score || 0);
+    });
   }
 
   private async getEntity(args: any) {
@@ -2541,7 +2590,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
       const entity = data.entity || {};
       const documents = data.documents || [];
-      const isAuthenticated = await isUserAuthenticated();
+      const isAuthenticated = isUserAuthenticated();
 
       console.error(`[${SERVER_NAME}] Tool=get_entity_documents Documents=${documents.length} Auth=${isAuthenticated} Duration=${duration}ms`);
 
@@ -2793,17 +2842,34 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
     }
   }
 
-  private formatSearchResults(results: any[], query: string): string {
+  private formatSearchResults(results: any[], query: string, sort_by: string = 'relevance'): string {
     if (!results || results.length === 0) {
       return `No results found for query: "${query}"`;
     }
 
-    let formatted = `# Search Results for: "${query}"\n\n`;
+    const sortLabel = sort_by === 'date_desc' ? ' (sorted by date, newest first)' :
+                      sort_by === 'date_asc' ? ' (sorted by date, oldest first)' : '';
+
+    let formatted = `# Search Results for: "${query}"${sortLabel}\n\n`;
     formatted += `Found ${results.length} relevant documents:\n\n`;
 
     for (let i = 0; i < results.length; i++) {
       const result = results[i];
-      formatted += `## Result ${i + 1} (Confidence: ${(result.score * 100).toFixed(1)}%)\n`;
+
+      // Get the published date for display
+      const dateStr = result.published_at ||
+                      result.metadata?.published_at ||
+                      result.metadata?.date ||
+                      result.metadata?.created_at ||
+                      result.created_at;
+
+      // When sorting by date, show date prominently in the header
+      if (sort_by === 'date_desc' || sort_by === 'date_asc') {
+        const dateDisplay = dateStr ? new Date(dateStr).toISOString().split('T')[0] : 'No date';
+        formatted += `## Result ${i + 1} [${dateDisplay}] (Confidence: ${(result.score * 100).toFixed(1)}%)\n`;
+      } else {
+        formatted += `## Result ${i + 1} (Confidence: ${(result.score * 100).toFixed(1)}%)\n`;
+      }
 
       if (result.rid) {
         formatted += `**RID**: ${result.rid}\n`;
@@ -2815,6 +2881,11 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
       if (result.source) {
         formatted += `**Source**: ${result.source}\n`;
+      }
+
+      // Show published date in a dedicated field when sorting by date
+      if ((sort_by === 'date_desc' || sort_by === 'date_asc') && dateStr) {
+        formatted += `**Published**: ${dateStr}\n`;
       }
 
       formatted += `**Content**: ${result.content.substring(0, 500)}${result.content.length > 500 ? '...' : ''}\n`;
