@@ -59,33 +59,33 @@ export const TOOLS: Tool[] = [
   },
   {
     name: 'generate_weekly_digest',
-    description: 'Generate a weekly digest SUMMARY of Regen Network activity. Returns a curated markdown brief with executive summary, governance analysis, community discussions, and on-chain metrics. This is a condensed overview - use get_notebooklm_export for full content with complete forum posts and Notion pages.',
+    description: 'Generate a weekly digest SUMMARY of Regen Network activity. **Sources aggregated:** Discourse forum discussions, GitHub activity (commits, PRs, issues), on-chain governance proposals and votes, credit issuance/retirement metrics, and community channels (Discord, Telegram summaries). **Output:** Curated markdown brief with executive summary, governance analysis, community discussions, and on-chain metrics. **Use cases:** Weekly team updates, stakeholder briefings, catching up on ecosystem activity, monitoring governance. This is a condensed overview - use get_notebooklm_export for full content with complete forum posts and Notion pages.',
     inputSchema: {
       type: 'object',
       properties: {
         start_date: {
           type: 'string',
           format: 'date',
-          description: 'Start date for digest period (YYYY-MM-DD). Defaults to 7 days ago.'
+          description: 'Start date for digest period (YYYY-MM-DD). Defaults to 7 days ago. Use with end_date to specify custom date ranges (e.g., monthly digest, quarterly review).'
         },
         end_date: {
           type: 'string',
           format: 'date',
-          description: 'End date for digest period (YYYY-MM-DD). Defaults to today.'
+          description: 'End date for digest period (YYYY-MM-DD). Defaults to today. Typically used with start_date for custom ranges.'
         },
         save_to_file: {
           type: 'boolean',
-          description: 'Whether to save the digest to a file on disk. Default: false',
+          description: 'Whether to save the digest to a file on disk. Useful for archiving or sharing. Default: false',
           default: false
         },
         output_path: {
           type: 'string',
-          description: 'Custom file path for saving (only used if save_to_file is true). Defaults to timestamped filename in current directory.'
+          description: 'Custom file path for saving (only used if save_to_file is true). Defaults to timestamped filename (weekly_digest_YYYY-MM-DD.md) in current directory.'
         },
         format: {
           type: 'string',
           enum: ['markdown', 'json'],
-          description: 'Output format. Default: markdown',
+          description: 'Output format. markdown: Human-readable report with sections. json: Structured data for programmatic use. Default: markdown',
           default: 'markdown'
         }
       }
