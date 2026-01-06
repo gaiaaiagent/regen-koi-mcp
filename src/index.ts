@@ -2665,7 +2665,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
   /**
    * Resolve a Regen metadata IRI via the allowlisted resolver
-   * Calls POST /metadata/') || config.url?.includes('/statsresolve
+   * Calls POST /metadata/resolve
    */
   private async resolveMetadataIri(args: any) {
     const { iri, force_refresh = false } = args || {};
@@ -2683,7 +2683,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
     console.error(`[${SERVER_NAME}] Tool=resolve_metadata_iri IRI="${iri}" ForceRefresh=${force_refresh}`);
 
     try {
-      const response = await apiClient.post('/metadata/') || config.url?.includes('/statsresolve', {
+      const response = await apiClient.post('/metadata/resolve', {
         iri,
         force_refresh
       });
@@ -2744,7 +2744,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
   /**
    * Derive hectares from a Regen metadata IRI with full citation
    * Enforces "no citation, no metric" policy
-   * Calls POST /metadata/') || config.url?.includes('/statshectares
+   * Calls POST /metadata/hectares
    */
   private async deriveOffchainHectares(args: any) {
     const { iri, force_refresh = false } = args || {};
@@ -2762,7 +2762,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
     console.error(`[${SERVER_NAME}] Tool=derive_offchain_hectares IRI="${iri}" ForceRefresh=${force_refresh}`);
 
     try {
-      const response = await apiClient.post('/metadata/') || config.url?.includes('/statshectares', {
+      const response = await apiClient.post('/metadata/hectares', {
         iri,
         force_refresh
       });
