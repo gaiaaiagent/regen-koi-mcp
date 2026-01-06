@@ -195,9 +195,17 @@ class KOIServer {
             result = await this.search(args);
             break;
           case 'get_stats':
+            // INTERNAL ONLY: Requires authentication
+            if (!(await isUserAuthenticated())) {
+              return { content: [{ type: 'text', text: 'Authentication required. Please run regen_koi_authenticate first to access get_stats.' }] };
+            }
             result = await this.getStats(args);
             break;
           case 'get_mcp_metrics':
+            // INTERNAL ONLY: Requires authentication
+            if (!(await isUserAuthenticated())) {
+              return { content: [{ type: 'text', text: 'Authentication required. Please run regen_koi_authenticate first to access get_mcp_metrics.' }] };
+            }
             result = await this.getMcpMetrics();
             break;
           case 'generate_weekly_digest':
@@ -234,6 +242,10 @@ class KOIServer {
             result = await this.deriveOffchainHectares(args);
             break;
           case 'sparql_query':
+            // INTERNAL ONLY: Requires authentication
+            if (!(await isUserAuthenticated())) {
+              return { content: [{ type: 'text', text: 'Authentication required. Please run regen_koi_authenticate first to access sparql_query.' }] };
+            }
             result = await this.executeSparqlQuery(args);
             break;
           default:
