@@ -110,7 +110,7 @@ function unwrapKoiEnvelope<T>(payload: unknown): T {
   return payload as T;
 }
 
-// Add request interceptor to dynamically include access token and internal API key
+// Add request interceptor to dynamically include session token
 apiClient.interceptors.request.use((config) => {
   // Use ensureTokenSynced to check both in-memory and file storage
   const token = ensureTokenSynced();
@@ -118,8 +118,8 @@ apiClient.interceptors.request.use((config) => {
     config.headers['Authorization'] = `Bearer ${token}`;
   }
 
-  // Add internal API key for MCP-only metadata endpoints
-  if ((config.url?.includes('/metadata/') || config.url?.includes('/stats')) && KOI_INTERNAL_API_KEY && config.headers) {
+  // Add internal API key for metadata resolution endpoints only (server-to-server)
+  if (config.url?.includes('/metadata/') && KOI_INTERNAL_API_KEY && config.headers) {
     config.headers['X-Internal-API-Key'] = KOI_INTERNAL_API_KEY;
   }
 
@@ -221,10 +221,7 @@ class KOIServer {
             result = await this.search(args);
             break;
           case 'get_stats':
-            // INTERNAL ONLY: Requires authentication
-            if (!isUserAuthenticated()) {
-              return { content: [{ type: 'text', text: 'Authentication required. Please run regen_koi_authenticate first to access get_stats.' }] };
-            }
+            // Server handles authentication - will return 401 if not authenticated
             result = await this.getStats(args);
             break;
           case 'get_mcp_metrics':
@@ -2605,9 +2602,10 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
       const entity = data.entity || {};
       const documents = data.documents || [];
-      const isAuthenticated = isUserAuthenticated();
+      // Use server's auth status (falls back to client check for backwards compatibility)
+      const isAuthenticated = data.is_authenticated ?? isUserAuthenticated();
 
-      console.error(`[${SERVER_NAME}] Tool=get_entity_documents Documents=${documents.length} Auth=${isAuthenticated} Duration=${duration}ms`);
+      console.error(`[${SERVER_NAME}] Tool=get_entity_documents Documents=${documents.length} Auth=${isAuthenticated} ServerAuth=${data.is_authenticated} Duration=${duration}ms`);
 
       // Format markdown output
       let md = `## Documents for: ${entity.label || identifier}\n\n`;
