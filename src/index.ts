@@ -680,6 +680,58 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
     return output;
   }
 
+  /**
+   * Detect query intent from natural language patterns.
+   * This ensures the server uses the correct retrieval profile even if
+   * Claude simplifies the query before passing it to the MCP.
+   */
+  private detectQueryIntent(query: string): string | null {
+    const q = (query || '').toLowerCase();
+
+    // Person activity patterns: "what is X working on", "what is X doing", etc.
+    const personActivityPatterns = [
+      /what\s+(?:is|are)\s+\w+\s+(?:working\s+on|doing|focusing\s+on|leading)/i,
+      /what\s+(?:is|are)\s+\w+\s+\w+\s+(?:working\s+on|doing|focusing\s+on|leading)/i,
+      /what\s+(?:has|have)\s+\w+\s+(?:been\s+working\s+on|done|accomplished|achieved)/i,
+      /what\s+projects?\s+(?:is|are)\s+\w+/i,
+      /what\s+(?:is|are)\s+\w+(?:\s+\w+)?\s+(?:involved\s+in|contributing\s+to)/i,
+      /tell\s+me\s+(?:what|about)\s+\w+(?:\s+\w+)?\s+(?:is|are)\s+(?:working|doing)/i,
+    ];
+
+    for (const pattern of personActivityPatterns) {
+      if (pattern.test(query)) {
+        return 'person_activity';
+      }
+    }
+
+    // Person bio patterns: "who is X", "tell me about X"
+    const personBioPatterns = [
+      /^who\s+is\s+\w+/i,
+      /^tell\s+me\s+about\s+\w+(?:\s+\w+)?$/i,
+      /^what\s+(?:do\s+you\s+know\s+about|can\s+you\s+tell\s+me\s+about)\s+\w+/i,
+    ];
+
+    for (const pattern of personBioPatterns) {
+      if (pattern.test(query)) {
+        return 'person_bio';
+      }
+    }
+
+    // Technical howto patterns
+    const technicalPatterns = [
+      /^how\s+(?:do\s+i|can\s+i|to)\s+/i,
+      /^how\s+does\s+\w+\s+work/i,
+    ];
+
+    for (const pattern of technicalPatterns) {
+      if (pattern.test(query)) {
+        return 'technical_howto';
+      }
+    }
+
+    return null; // Let server decide
+  }
+
   private async search(args: any) {
     const { query, source, limit = 10, published_from, published_to, include_undated = false, sort_by = 'relevance' } = args || {};
     const vectorFilters: any = {};
@@ -716,6 +768,11 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
       // Pass source filter to backend for source-specific queries
       if (source) {
         body.source = source;
+      }
+      // Detect and pass intent to enable intent-aware retrieval (e.g., author search for person_activity)
+      const detectedIntent = this.detectQueryIntent(query);
+      if (detectedIntent) {
+        body.intent = detectedIntent;
       }
       const response = await apiClient.post('/query', body);
 
