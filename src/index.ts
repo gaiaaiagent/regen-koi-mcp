@@ -34,6 +34,8 @@ import { queryCache } from './cache.js';
 import { USER_EMAIL, getAccessToken, setAccessToken, clearAuthCache } from './auth.js';
 // RID utilities
 import { parseRID, isValidRID, extractSourceFromRID, normalizeRID, getRegisteredRIDTypes } from './rid-utils.js';
+// Auth store for file-based token persistence (ESM-compatible)
+import { loadAuthState, hasValidAccessToken } from './auth-store.js';
 
 // Load environment variables
 dotenv.config();
@@ -59,8 +61,7 @@ function ensureTokenSynced(): string | null {
 
   // Fallback: check file-based storage and sync to memory
   try {
-    // Dynamic import to avoid circular dependency
-    const { loadAuthState, hasValidAccessToken } = require('./auth-store.js');
+    // Uses ESM import from top of file (Node 22 compatible)
     const state = loadAuthState();
 
     if (hasValidAccessToken(state) && state.accessToken) {
