@@ -344,7 +344,7 @@ Once you've installed the MCP server, try these queries in Claude to explore wha
 ### Knowledge Base Search
 | Tool | Description | Key Inputs |
 |------|-------------|-----------|
-| `search` | Hybrid search (vectors + graph with RRF) | `query` (string), `source` (filter by source: notion, github, discourse, etc.), `sort_by` (relevance, date_desc, date_asc), `limit` (1–50, default 10), `published_from` (YYYY‑MM‑DD), `published_to` (YYYY‑MM‑DD), `include_undated` (bool, default false) |
+| `search` | Hybrid search (vectors + graph with RRF) | `query` (string), `intent` (enum: general, person_activity, person_bio, technical_howto - use `person_activity` for "what is X working on" queries), `source` (filter by source: notion, github, discourse, etc.), `sort_by` (relevance, date_desc, date_asc), `limit` (1–50, default 10), `published_from` (YYYY‑MM‑DD), `published_to` (YYYY‑MM‑DD), `include_undated` (bool, default false) |
 | `get_stats` | Knowledge base statistics | `detailed` (boolean) |
 | `generate_weekly_digest` | Generate weekly digest SUMMARY of Regen Network activity | `start_date` (YYYY-MM-DD, default: 7 days ago), `end_date` (YYYY-MM-DD, default: today), `save_to_file` (bool, default false), `output_path` (string), `format` ('markdown' or 'json', default: 'markdown') |
 | `get_notebooklm_export` | Get FULL NotebookLM export with complete forum posts, Notion pages, and source material | `save_to_file` (bool, default false), `output_path` (string) |

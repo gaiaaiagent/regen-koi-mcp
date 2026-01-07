@@ -1,9 +1,9 @@
 # KOI MCP Server - API Reference
 
-**Version:** 1.4.8
-**Last Updated:** 2026-01-06
+**Version:** 1.5.3
+**Last Updated:** 2026-01-07
 
-Complete reference for all 9 MCP tools provided by the Regen KOI server.
+Complete reference for all MCP tools provided by the Regen KOI server.
 
 ---
 
@@ -144,12 +144,34 @@ Semantic search across 59,000+ document embeddings using vector similarity with 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `query` | string | **Yes** | - | Search query (natural language) |
+| `intent` | enum | No | `general` | Query intent for optimized retrieval. See Intent Types below. |
 | `source` | string | No | - | Filter by data source (e.g., `notion`, `github`, `discourse`). Supports prefix matching: `discourse` matches `discourse:forum.regen.network`. Use `get_stats` to see available sources. |
 | `sort_by` | enum | No | `relevance` | Sort order: `relevance` (default), `date_desc` (newest first), `date_asc` (oldest first) |
 | `limit` | number | No | 10 | Max results to return (1-50) |
 | `published_from` | string | No | - | Filter: published after date (YYYY-MM-DD) |
 | `published_to` | string | No | - | Filter: published before date (YYYY-MM-DD) |
 | `include_undated` | boolean | No | false | Include docs with no publication date |
+
+### Intent Types
+
+The `intent` parameter enables intent-aware retrieval for better results on specific query types:
+
+| Intent | Use When | Effect |
+|--------|----------|--------|
+| `general` | Default searches | Standard hybrid search |
+| `person_activity` | "What is X working on?", "What has X done?" | Triggers author search - finds docs **authored by** the person |
+| `person_bio` | "Who is X?", biography questions | Prioritizes biographical content |
+| `technical_howto` | "How do I...?", implementation questions | Prioritizes code and technical docs |
+| `concept_explain` | "What is X?", conceptual questions | Prioritizes explanatory content |
+
+**Example:** To find what Gregory Landua is working on:
+```json
+{
+  "query": "Gregory Landua",
+  "intent": "person_activity",
+  "limit": 15
+}
+```
 
 ### Available Sources
 
