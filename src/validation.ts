@@ -127,26 +127,33 @@ export const QueryCodeGraphSchema = z.object({
 );
 
 /**
- * Schema for search_knowledge tool
+ * Schema for search tool
  */
-export const SearchKnowledgeSchema = z.object({
+export const SearchSchema = z.object({
   query: z.string()
     .min(1, 'Query cannot be empty')
     .max(500, 'Query too long (max 500 characters)'),
+  source: z.string()
+    .max(100, 'Source too long (max 100 characters)')
+    .optional(),
   limit: z.number()
     .int()
     .min(1, 'Limit must be at least 1')
-    .max(20, 'Limit cannot exceed 20')
+    .max(50, 'Limit cannot exceed 50')
     .optional()
-    .default(5),
+    .default(10),
   published_from: z.string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format. Use YYYY-MM-DD')
     .optional(),
   published_to: z.string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format. Use YYYY-MM-DD')
     .optional(),
-  include_undated: z.boolean().optional().default(false)
+  include_undated: z.boolean().optional().default(false),
+  sort_by: z.enum(['relevance', 'date_desc', 'date_asc']).optional().default('relevance')
 });
+
+// Alias for backwards compatibility
+export const SearchKnowledgeSchema = SearchSchema;
 
 /**
  * Schema for hybrid_search tool
@@ -341,7 +348,8 @@ export function validateInput<T>(
  */
 export const ToolSchemas: Record<string, z.ZodSchema<any>> = {
   query_code_graph: QueryCodeGraphSchema,
-  search_knowledge: SearchKnowledgeSchema,
+  search: SearchSchema,
+  search_knowledge: SearchKnowledgeSchema, // Alias for backwards compatibility
   hybrid_search: HybridSearchSchema,
   search_github_docs: SearchGithubDocsSchema,
   get_repo_overview: GetRepoOverviewSchema,
@@ -405,6 +413,7 @@ export default {
   sanitizeString,
   detectInjection,
   QueryCodeGraphSchema,
+  SearchSchema,
   SearchKnowledgeSchema,
   HybridSearchSchema,
   SearchGithubDocsSchema,

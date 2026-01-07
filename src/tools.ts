@@ -9,13 +9,26 @@ export const TOOLS: Tool[] = [
   GRAPH_TOOL,
   {
     name: 'search',
-    description: 'Search the Regen Network knowledge base. Automatically uses hybrid search (vector + graph + keyword) with entity boosting. Supports date filtering. NOT for live blockchain queries - use Ledger MCP for on-chain state.',
+    description: `Search the Regen Network knowledge base. Supports:
+- Hybrid search (vector + graph + keyword) with entity boosting
+- Date filtering with published_from/published_to
+- Source filtering (notion, github, discourse, etc.)
+- Date sorting (relevance, date_desc, date_asc)
+
+Example: Get latest 5 Notion docs:
+  search(query="*", source="notion", sort_by="date_desc", limit=5)
+
+NOT for live blockchain queries - use Ledger MCP for on-chain state.`,
     inputSchema: {
       type: 'object',
       properties: {
         query: {
           type: 'string',
           description: 'The search query (e.g., "carbon credits", "Regen Registry governance")'
+        },
+        source: {
+          type: 'string',
+          description: "Filter by source type (e.g., 'notion', 'github', 'discourse'). Supports partial matching - 'discourse' matches 'discourse:forum.regen.network'. Use get_stats to see available sources."
         },
         limit: {
           type: 'number',

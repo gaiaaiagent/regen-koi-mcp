@@ -673,7 +673,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
   }
 
   private async search(args: any) {
-    const { query, limit = 10, published_from, published_to, include_undated = false, sort_by = 'relevance' } = args || {};
+    const { query, source, limit = 10, published_from, published_to, include_undated = false, sort_by = 'relevance' } = args || {};
     const vectorFilters: any = {};
 
     // Respect explicit date filter
@@ -704,6 +704,10 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
       // Pass sort_by to backend if it supports it
       if (sort_by && sort_by !== 'relevance') {
         body.sort_by = sort_by;
+      }
+      // Pass source filter to backend for source-specific queries
+      if (source) {
+        body.source = source;
       }
       const response = await apiClient.post('/query', body);
 
