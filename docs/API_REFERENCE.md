@@ -1,7 +1,7 @@
 # KOI MCP Server - API Reference
 
-**Version:** 1.0.6
-**Last Updated:** 2025-11-27
+**Version:** 1.4.8
+**Last Updated:** 2026-01-06
 
 Complete reference for all 9 MCP tools provided by the Regen KOI server.
 
@@ -137,17 +137,33 @@ Search the code knowledge graph with 14 different query types for exploring enti
 
 ## search_knowledge
 
-Semantic search across 34,000+ document embeddings using vector similarity.
+Semantic search across 59,000+ document embeddings using vector similarity with source filtering and date sorting.
 
 ### Parameters
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `query` | string | **Yes** | - | Search query (natural language) |
-| `limit` | number | No | 5 | Max results to return (1-20) |
+| `source` | string | No | - | Filter by data source (e.g., `notion`, `github`, `discourse`). Supports prefix matching: `discourse` matches `discourse:forum.regen.network`. Use `get_stats` to see available sources. |
+| `sort_by` | enum | No | `relevance` | Sort order: `relevance` (default), `date_desc` (newest first), `date_asc` (oldest first) |
+| `limit` | number | No | 10 | Max results to return (1-50) |
 | `published_from` | string | No | - | Filter: published after date (YYYY-MM-DD) |
 | `published_to` | string | No | - | Filter: published before date (YYYY-MM-DD) |
 | `include_undated` | boolean | No | false | Include docs with no publication date |
+
+### Available Sources
+
+Use `get_stats` with `detailed: true` to see all available sources. Common sources include:
+
+| Source | Description | Example Count |
+|--------|-------------|---------------|
+| `github` | GitHub repos (PRs, issues, code) | ~34,000 |
+| `notion` | Notion workspace pages | ~5,000 |
+| `discourse` | Forum.regen.network posts | ~1,800 |
+| `gitlab` | GitLab repositories | ~2,000 |
+| `web` | Various websites (guides, docs, registry) | ~3,700 |
+| `youtube` | YouTube video transcripts | ~114 |
+| `podcast` | Podcast episode transcripts | ~6,000 |
 
 ### Return Format
 
@@ -197,10 +213,51 @@ Semantic search across 34,000+ document embeddings using vector similarity.
 
 **Returns:** Recent governance documentation
 
+#### Example 4: Filter by source
+
+```json
+{
+  "query": "*",
+  "source": "notion",
+  "sort_by": "date_desc",
+  "limit": 5
+}
+```
+
+**Returns:** 5 most recent Notion documents
+
+#### Example 5: Latest Discourse posts
+
+```json
+{
+  "query": "governance",
+  "source": "discourse",
+  "sort_by": "date_desc",
+  "limit": 10
+}
+```
+
+**Returns:** 10 most recent Discourse forum posts about governance
+
+#### Example 6: Oldest GitHub docs first
+
+```json
+{
+  "query": "ecocredit",
+  "source": "github",
+  "sort_by": "date_asc",
+  "limit": 5
+}
+```
+
+**Returns:** 5 oldest GitHub documents about ecocredit
+
 ### Validation Rules
 
 - `query`: 1-500 characters
-- `limit`: 1-20 (enforced)
+- `source`: Optional, any valid source string (use `get_stats` to discover)
+- `sort_by`: Optional, one of `relevance`, `date_desc`, `date_asc`
+- `limit`: 1-50 (enforced)
 - `published_from/to`: YYYY-MM-DD format only
 - Date range queries require valid date format
 
@@ -764,6 +821,12 @@ Different query types have different cache TTLs:
 ---
 
 ## Version History
+
+**1.4.8 (2026-01-06):**
+- Added `source` parameter to search tool for filtering by data source (notion, github, discourse, etc.)
+- Added `sort_by` parameter with backend-side date sorting (date_desc, date_asc, relevance)
+- Backend now properly sorts by date before limiting results (fixes date gap issue)
+- Updated document count to 59,000+
 
 **1.0.6 (2025-11-27):**
 - Added `get_mcp_metrics` tool

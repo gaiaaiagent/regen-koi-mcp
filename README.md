@@ -326,6 +326,17 @@ Once you've installed the MCP server, try these queries in Claude to explore wha
 
 **What you'll get:** Summaries of community discussions, forum posts, and activity with source citations.
 
+### 🔎 Source Filtering & Date Sorting
+
+```
+"Get the latest 5 documents from the Notion database"
+"Show me recent Discourse forum posts sorted by date"
+"Search GitHub for ecocredit documentation"
+"Find the newest content from any source"
+```
+
+**What you'll get:** Documents filtered by source (notion, github, discourse, youtube, podcast, web, gitlab) and sorted chronologically. Available sources can be discovered via `get_stats`.
+
 ---
 
 ## 📦 Available Tools
@@ -333,7 +344,7 @@ Once you've installed the MCP server, try these queries in Claude to explore wha
 ### Knowledge Base Search
 | Tool | Description | Key Inputs |
 |------|-------------|-----------|
-| `search` | Hybrid search (vectors + graph with RRF) | `query` (string), `limit` (1–50, default 10), `published_from` (YYYY‑MM‑DD), `published_to` (YYYY‑MM‑DD), `include_undated` (bool, default false) |
+| `search` | Hybrid search (vectors + graph with RRF) | `query` (string), `source` (filter by source: notion, github, discourse, etc.), `sort_by` (relevance, date_desc, date_asc), `limit` (1–50, default 10), `published_from` (YYYY‑MM‑DD), `published_to` (YYYY‑MM‑DD), `include_undated` (bool, default false) |
 | `get_stats` | Knowledge base statistics | `detailed` (boolean) |
 | `generate_weekly_digest` | Generate weekly digest SUMMARY of Regen Network activity | `start_date` (YYYY-MM-DD, default: 7 days ago), `end_date` (YYYY-MM-DD, default: today), `save_to_file` (bool, default false), `output_path` (string), `format` ('markdown' or 'json', default: 'markdown') |
 | `get_notebooklm_export` | Get FULL NotebookLM export with complete forum posts, Notion pages, and source material | `save_to_file` (bool, default false), `output_path` (string) |
@@ -395,6 +406,8 @@ This table helps you understand which tool to use for different tasks. Just ask 
 | **Search everything (hybrid)**                           |                                                          |                          |
 | Semantic search across code and docs                     | "How does credit retirement work?"                       | `search`                 |
 | Advanced filtering by date                               | "Find discussions about tokens from last week"           | `search`                 |
+| Filter by source                                         | "Get the latest 5 Notion documents"                      | `search`                 |
+| Sort by date                                             | "Show newest Discourse posts"                            | `search`                 |
 | **Get activity summaries**                               |                                                          |                          |
 | Generate weekly digest summary                           | "Create a weekly digest of Regen activity"               | `generate_weekly_digest` |
 | Get full content for NotebookLM                          | "Get the full NotebookLM export with all forum posts"    | `get_notebooklm_export`  |
