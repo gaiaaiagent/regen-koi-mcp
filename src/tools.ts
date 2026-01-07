@@ -358,5 +358,95 @@ NOT for live blockchain queries - use Ledger MCP for on-chain state.`,
       },
       required: ['iri']
     }
+  },
+  // =============================================================================
+  // RID Tools (KOI-compatible RID model + KB convenience tools)
+  // - parse_rid: Protocol-aligned RID parsing per rid-lib spec
+  // - kb_rid_lookup, kb_list_rids: KB-specific conveniences (not KOI-net /rids/fetch etc.)
+  // =============================================================================
+  {
+    name: 'parse_rid',
+    description: 'Parse a KOI Resource Identifier (RID) into its components per the rid-lib specification. Stateless - no backend call. Returns: valid (boolean), error (string if invalid), scheme, namespace (null for URI schemes), context (<scheme>:<namespace> for ORN/URN, or just <scheme> for URI schemes like https), reference, rid_type (best-effort heuristic - may be null), uri_components (for HTTP/HTTPS), source_inferred (e.g., "github", "notion" - heuristic).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        rid: {
+          type: 'string',
+          description: 'The RID string to parse (e.g., "orn:regen.document:notion/page-abc123", "orn:slack.message:TEAM/CHANNEL/TS", "https://github.com/regen-network/regen-ledger")'
+        }
+      },
+      required: ['rid']
+    }
+  },
+  {
+    name: 'kb_rid_lookup',
+    description: 'Look up what the Regen KB knows about an RID. Searches indexed documents via /query by RID string match. Optionally queries /entity/neighborhood for graph edges (best-effort, may return empty). Does NOT implement KOI-net dereference or /bundles/fetch - this is a KB convenience tool. Use parse_rid first to validate format.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        rid: {
+          type: 'string',
+          description: 'The RID to look up in the knowledge base'
+        },
+        include: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: ['documents', 'relationships', 'chunks']
+          },
+          default: ['documents'],
+          description: 'What to include: "documents" = indexed doc records matching RID, "relationships" = graph edges referencing RID, "chunks" = text chunks'
+        },
+        limit: {
+          type: 'number',
+          minimum: 1,
+          maximum: 50,
+          default: 10,
+          description: 'Maximum items per category to return'
+        }
+      },
+      required: ['rid']
+    }
+  },
+  {
+    name: 'kb_list_rids',
+    description: 'List RIDs indexed in the Regen KB. Filter by context pattern, source, or date range. Returns aggregation counts. This is a KB discovery tool, NOT KOI-net /rids/fetch (which lists RIDs by type from a node).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        context: {
+          type: 'string',
+          description: 'Filter by RID context pattern (e.g., "orn:regen.document", "https"). Partial match.'
+        },
+        source: {
+          type: 'string',
+          enum: ['notion', 'discourse', 'github', 'slack', 'telegram', 'twitter', 'substack', 'youtube', 'medium'],
+          description: 'Filter by data source'
+        },
+        indexed_after: {
+          type: 'string',
+          format: 'date',
+          description: 'Only RIDs indexed after this date (YYYY-MM-DD)'
+        },
+        indexed_before: {
+          type: 'string',
+          format: 'date',
+          description: 'Only RIDs indexed before this date (YYYY-MM-DD)'
+        },
+        limit: {
+          type: 'number',
+          minimum: 1,
+          maximum: 200,
+          default: 50,
+          description: 'Maximum RIDs to return'
+        },
+        offset: {
+          type: 'number',
+          minimum: 0,
+          default: 0,
+          description: 'Pagination offset'
+        }
+      }
+    }
   }
 ];

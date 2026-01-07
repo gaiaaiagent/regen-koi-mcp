@@ -32,6 +32,8 @@ import { validateToolInput } from './validation.js';
 import { queryCache } from './cache.js';
 // Shared auth module
 import { USER_EMAIL, getAccessToken, setAccessToken, clearAuthCache } from './auth.js';
+// RID utilities
+import { parseRID, isValidRID, extractSourceFromRID, normalizeRID, getRegisteredRIDTypes } from './rid-utils.js';
 
 // Load environment variables
 dotenv.config();
@@ -271,6 +273,15 @@ class KOIServer {
               return { content: [{ type: 'text', text: 'Authentication required. Please run regen_koi_authenticate first to access sparql_query.' }] };
             }
             result = await this.executeSparqlQuery(args);
+            break;
+          case 'parse_rid':
+            result = await this.parseRid(args);
+            break;
+          case 'kb_rid_lookup':
+            result = await this.kbRidLookup(args);
+            break;
+          case 'kb_list_rids':
+            result = await this.kbListRids(args);
             break;
           default:
             throw new Error(`Unknown tool: ${name}`);
@@ -2841,6 +2852,463 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
         content: [{
           type: 'text',
           text: md
+        }]
+      };
+    }
+  }
+
+// =============================================================================
+  // RID Tools (KOI Protocol - Resource Identifiers)
+  // =============================================================================
+
+  /**
+   * Parse a RID into its components.
+   * Stateless - no backend call required.
+   */
+  private async parseRid(args: any) {
+    const { rid } = args || {};
+
+    if (!rid) {
+      return {
+        content: [{
+          type: 'text',
+          text: '**Error:** `rid` parameter is required.\n\nExample: `orn:regen.document:notion/page-abc123`'
+        }]
+      };
+    }
+
+    console.error(`[${SERVER_NAME}] Tool=parse_rid RID="${rid}"`);
+
+    const parsed = parseRID(rid);
+
+    // Format markdown output
+    let md = `## RID Parse Result\n\n`;
+    md += `**Input:** \`${rid}\`\n`;
+    md += `**Valid:** ${parsed.valid ? '✅ Yes' : '❌ No'}\n\n`;
+
+    if (!parsed.valid) {
+      md += `### Error\n`;
+      md += `${parsed.error}\n\n`;
+      md += `### Valid RID Formats\n`;
+      md += `- **ORN:** \`orn:<namespace>:<reference>\` (e.g., \`orn:regen.document:notion/page-123\`)\n`;
+      md += `- **URN:** \`urn:<namespace>:<reference>\` (e.g., \`urn:isbn:0451450523\`)\n`;
+      md += `- **URI:** \`<scheme>:<reference>\` (e.g., \`https://example.com/path\`)\n`;
+    } else {
+      md += `### Components\n\n`;
+      md += `| Component | Value |\n`;
+      md += `|-----------|-------|\n`;
+      md += `| **Scheme** | \`${parsed.scheme}\` |\n`;
+      md += `| **Namespace** | ${parsed.namespace ? `\`${parsed.namespace}\`` : '_none_'} |\n`;
+      md += `| **Context** | \`${parsed.context}\` |\n`;
+      md += `| **Reference** | \`${parsed.reference}\` |\n\n`;
+
+      md += `### Type Identification\n\n`;
+      md += `- **RID Type:** ${parsed.rid_type || '_unknown_'}\n`;
+      md += `- **Type Known:** ${parsed.rid_type_known ? 'Yes (registered)' : 'No (unregistered)'}\n`;
+
+      if (parsed.uri_components) {
+        md += `\n### URI Components\n\n`;
+        md += `| Component | Value |\n`;
+        md += `|-----------|-------|\n`;
+        md += `| **Authority** | ${parsed.uri_components.authority || '_none_'} |\n`;
+        md += `| **Path** | ${parsed.uri_components.path || '_none_'} |\n`;
+        md += `| **Query** | ${parsed.uri_components.query || '_none_'} |\n`;
+        md += `| **Fragment** | ${parsed.uri_components.fragment || '_none_'} |\n`;
+      }
+
+      // Extract source if identifiable
+      const sourceInferred = extractSourceFromRID(rid);
+      if (sourceInferred) {
+        md += `\n### Inferred Source\n`;
+        md += `- **Source:** ${sourceInferred} _(heuristic)_\n`;
+      }
+    }
+
+    // Build output object with all fields
+    const output = {
+      ...parsed,
+      source_inferred: extractSourceFromRID(rid) || null
+    };
+
+    // Add raw JSON
+    md += `\n---\n\n<details>\n<summary>Raw JSON</summary>\n\n\`\`\`json\n${JSON.stringify(output, null, 2)}\n\`\`\`\n</details>`;
+
+    return {
+      content: [{
+        type: 'text',
+        text: md
+      }]
+    };
+  }
+
+  /**
+   * Look up what the Regen KB knows about an RID.
+   * Searches indexed documents by RID string match and graph edges.
+   * This is a KB convenience tool, NOT KOI-net dereference.
+   */
+  private async kbRidLookup(args: any) {
+    const { rid, include = ['documents'], limit = 10 } = args || {};
+
+    if (!rid) {
+      return {
+        content: [{
+          type: 'text',
+          text: '**Error:** `rid` parameter is required.'
+        }]
+      };
+    }
+
+    const startTime = Date.now();
+    console.error(`[${SERVER_NAME}] Tool=kb_rid_lookup RID="${rid}" Include=${include.join(',')} Limit=${limit}`);
+
+    // First parse the RID
+    const parsed = parseRID(rid);
+    if (!parsed.valid) {
+      return {
+        content: [{
+          type: 'text',
+          text: `**Error:** Invalid RID format: ${parsed.error}\n\nUse \`parse_rid\` to validate RID format.`
+        }]
+      };
+    }
+
+    const results: {
+      documents: any[];
+      relationships: any[];
+      chunks: any[];
+    } = {
+      documents: [],
+      relationships: [],
+      chunks: []
+    };
+
+    const errors: string[] = [];
+
+    try {
+      // Query for documents by RID via /query endpoint
+      if (include.includes('documents') || include.includes('chunks')) {
+        try {
+          const response = await apiClient.post('/query', {
+            question: rid,
+            limit: limit,
+            filters: {}
+          });
+          const data = response.data as any;
+
+          if (Array.isArray(data.results)) {
+            // Filter results that match the RID
+            const matching = data.results.filter((r: any) =>
+              r.rid === rid ||
+              r.rid?.includes(parsed.reference || '') ||
+              r.content?.includes(rid)
+            );
+
+            results.documents = matching.slice(0, limit).map((r: any) => ({
+              rid: r.rid,
+              title: r.title || null,
+              source: r.source || extractSourceFromRID(r.rid) || null,
+              url: r.url || r.metadata?.url || null,
+              published_at: r.published_at || r.metadata?.published_at || null,
+              indexed_at: r.indexed_at || r.metadata?.indexed_at || null,
+              content_preview: r.content?.substring(0, 500) || null,
+              score: r.score
+            }));
+
+            if (include.includes('chunks')) {
+              results.chunks = matching.slice(0, limit).map((r: any, i: number) => ({
+                chunk_id: r.id || `chunk-${i}`,
+                chunk_index: r.chunk_index || i,
+                content: r.content || '',
+                has_embedding: true
+              }));
+            }
+          }
+        } catch (err) {
+          errors.push(`Documents: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        }
+      }
+
+      // Query for graph relationships referencing this RID
+      if (include.includes('relationships')) {
+        try {
+          // Use /entity/neighborhood with RID reference to find graph edges
+          const response = await apiClient.get('/entity/neighborhood', {
+            params: { label: parsed.reference || rid, limit, direction: 'both' }
+          });
+          const data = response.data as any;
+
+          if (Array.isArray(data.edges)) {
+            results.relationships = data.edges.slice(0, limit).map((e: any) => ({
+              predicate: e.predicate || e.relationship || 'related_to',
+              direction: e.direction || 'out',
+              target_rid: e.target_uri || e.object_uri || e.target,
+              target_label: e.target_label || null,
+              target_type: e.target_type || null
+            }));
+          }
+        } catch (err) {
+          errors.push(`Relationships: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        }
+      }
+
+    } catch (error) {
+      console.error(`[${SERVER_NAME}] Tool=kb_rid_lookup Error:`, error);
+      return {
+        content: [{
+          type: 'text',
+          text: `**Error looking up RID:** ${error instanceof Error ? error.message : 'Unknown error'}`
+        }]
+      };
+    }
+
+    const duration = Date.now() - startTime;
+    const found = results.documents.length > 0 || results.relationships.length > 0;
+
+    console.error(`[${SERVER_NAME}] Tool=kb_rid_lookup Found=${found} Docs=${results.documents.length} Rels=${results.relationships.length} Duration=${duration}ms`);
+
+    // Format markdown output
+    let md = `## KB RID Lookup: \`${rid}\`\n\n`;
+    md += `**Found in KB:** ${found ? '✅ Yes' : '❌ No'}\n`;
+    md += `_Note: This searches the Regen KB, not KOI-net dereference._\n\n`;
+
+    md += `### Parsed Components\n`;
+    md += `- **Scheme:** \`${parsed.scheme}\`\n`;
+    md += `- **Context:** \`${parsed.context}\`\n`;
+    md += `- **Reference:** \`${parsed.reference}\`\n`;
+    if (parsed.rid_type) md += `- **Type:** ${parsed.rid_type} _(heuristic)_\n`;
+    md += `\n`;
+
+    // Documents section
+    if (include.includes('documents')) {
+      md += `### Documents (${results.documents.length})\n\n`;
+      if (results.documents.length === 0) {
+        md += `_No indexed documents match this RID._\n\n`;
+      } else {
+        results.documents.forEach((doc: any, i: number) => {
+          md += `#### ${i + 1}. ${doc.title || 'Untitled'}\n`;
+          if (doc.rid) md += `- **RID:** \`${doc.rid}\`\n`;
+          if (doc.source) md += `- **Source:** ${doc.source}\n`;
+          if (doc.url) md += `- **URL:** ${doc.url}\n`;
+          if (doc.published_at) md += `- **Published:** ${doc.published_at}\n`;
+          if (doc.content_preview) md += `- **Preview:** ${doc.content_preview}${doc.content_preview.length >= 500 ? '...' : ''}\n`;
+          md += `\n`;
+        });
+      }
+    }
+
+    // Relationships section
+    if (include.includes('relationships')) {
+      md += `### Graph Relationships (${results.relationships.length})\n\n`;
+      if (results.relationships.length === 0) {
+        md += `_No graph edges reference this RID._\n\n`;
+      } else {
+        results.relationships.forEach((r: any) => {
+          const arrow = r.direction === 'in' ? '←' : '→';
+          md += `- ${arrow} **${r.predicate}** → ${r.target_label || r.target_rid || 'unknown'}\n`;
+        });
+        md += `\n`;
+      }
+    }
+
+    // Chunks section
+    if (include.includes('chunks')) {
+      md += `### Chunks (${results.chunks.length})\n\n`;
+      if (results.chunks.length === 0) {
+        md += `_No chunks found for this RID._\n\n`;
+      } else {
+        results.chunks.forEach((c: any, i: number) => {
+          md += `#### Chunk ${i + 1}\n`;
+          md += `\`\`\`\n${c.content.substring(0, 300)}${c.content.length > 300 ? '...' : ''}\n\`\`\`\n\n`;
+        });
+      }
+    }
+
+    // Summary counts
+    md += `### Summary\n\n`;
+    md += `| Category | Count |\n`;
+    md += `|----------|-------|\n`;
+    md += `| Documents | ${results.documents.length} |\n`;
+    md += `| Relationships | ${results.relationships.length} |\n`;
+    md += `| Chunks | ${results.chunks.length} |\n`;
+
+    // Errors if any
+    if (errors.length > 0) {
+      md += `\n### Warnings\n`;
+      errors.forEach(e => md += `- ${e}\n`);
+    }
+
+    // Add raw JSON
+    md += `\n---\n\n<details>\n<summary>Raw JSON</summary>\n\n\`\`\`json\n${JSON.stringify({ parsed, results, found }, null, 2)}\n\`\`\`\n</details>`;
+
+    return {
+      content: [{
+        type: 'text',
+        text: md
+      }]
+    };
+  }
+
+  /**
+   * List RIDs indexed in the Regen KB with filtering.
+   * This is a KB discovery tool, NOT KOI-net /rids/fetch.
+   */
+  private async kbListRids(args: any) {
+    const {
+      context,
+      source,
+      indexed_after,
+      indexed_before,
+      limit = 50,
+      offset = 0
+    } = args || {};
+
+    const startTime = Date.now();
+    console.error(`[${SERVER_NAME}] Tool=kb_list_rids Context=${context || 'all'} Source=${source || 'all'} Limit=${limit} Offset=${offset}`);
+
+    try {
+      // Build query to get RIDs from the KB
+      // Use search API with wildcard to get documents
+      const filters: any = {};
+
+      if (source) {
+        filters.source = source;
+      }
+      if (indexed_after) {
+        filters.published_from = indexed_after;
+      }
+      if (indexed_before) {
+        filters.published_to = indexed_before;
+      }
+
+      const response = await apiClient.post('/query', {
+        question: context || '*',
+        limit: Math.min(limit + offset, 200), // Fetch enough for pagination
+        filters
+      });
+      const data = response.data as any;
+
+      const allResults = Array.isArray(data.results) ? data.results : [];
+
+      // Filter by context if specified
+      let filteredResults = allResults;
+      if (context) {
+        filteredResults = allResults.filter((r: any) => {
+          const parsed = parseRID(r.rid || '');
+          return parsed.context?.includes(context) || r.rid?.includes(context);
+        });
+      }
+
+      // Apply pagination
+      const paginatedResults = filteredResults.slice(offset, offset + limit);
+
+      // Build RID list
+      const rids = paginatedResults.map((r: any) => {
+        const parsed = parseRID(r.rid || '');
+        return {
+          rid: r.rid,
+          context: parsed.context || null,
+          rid_type: parsed.rid_type || null,
+          source: r.source || extractSourceFromRID(r.rid) || null,
+          title: r.title || null,
+          indexed_at: r.indexed_at || r.metadata?.indexed_at || null
+        };
+      });
+
+      // Calculate aggregations
+      const byContext: Record<string, number> = {};
+      const bySource: Record<string, number> = {};
+
+      filteredResults.forEach((r: any) => {
+        const parsed = parseRID(r.rid || '');
+        const ctx = parsed.context || 'unknown';
+        const src = r.source || extractSourceFromRID(r.rid) || 'unknown';
+
+        byContext[ctx] = (byContext[ctx] || 0) + 1;
+        bySource[src] = (bySource[src] || 0) + 1;
+      });
+
+      const duration = Date.now() - startTime;
+      const total = filteredResults.length;
+      const hasMore = offset + limit < total;
+
+      console.error(`[${SERVER_NAME}] Tool=kb_list_rids Total=${total} Returned=${rids.length} Duration=${duration}ms`);
+
+      // Format markdown output
+      let md = `## KB RID List\n\n`;
+      md += `_Note: Lists RIDs indexed in Regen KB, not KOI-net /rids/fetch._\n\n`;
+
+      // Filters applied
+      const filtersApplied = [];
+      if (context) filtersApplied.push(`context: \`${context}\``);
+      if (source) filtersApplied.push(`source: ${source}`);
+      if (indexed_after) filtersApplied.push(`indexed_after: ${indexed_after}`);
+      if (indexed_before) filtersApplied.push(`indexed_before: ${indexed_before}`);
+
+      if (filtersApplied.length > 0) {
+        md += `**Filters:** ${filtersApplied.join(', ')}\n\n`;
+      }
+
+      md += `**Total matching:** ${total}\n`;
+      md += `**Showing:** ${offset + 1}-${Math.min(offset + limit, total)} of ${total}\n\n`;
+
+      // Aggregations
+      md += `### By Context\n`;
+      Object.entries(byContext)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .forEach(([ctx, count]) => {
+          md += `- \`${ctx}\`: ${count}\n`;
+        });
+      md += `\n`;
+
+      md += `### By Source\n`;
+      Object.entries(bySource)
+        .sort((a, b) => b[1] - a[1])
+        .forEach(([src, count]) => {
+          md += `- **${src}**: ${count}\n`;
+        });
+      md += `\n`;
+
+      // RID list
+      md += `### RIDs\n\n`;
+      if (rids.length === 0) {
+        md += `_No RIDs found matching criteria._\n`;
+      } else {
+        md += `| # | RID | Source | Title |\n`;
+        md += `|---|-----|--------|-------|\n`;
+        rids.slice(0, 50).forEach((r: any, i: number) => {
+          const ridDisplay = r.rid?.length > 60 ? r.rid.substring(0, 57) + '...' : r.rid;
+          const titleDisplay = r.title?.length > 30 ? r.title.substring(0, 27) + '...' : (r.title || '-');
+          md += `| ${offset + i + 1} | \`${ridDisplay}\` | ${r.source || '-'} | ${titleDisplay} |\n`;
+        });
+      }
+
+      // Pagination info
+      if (hasMore) {
+        md += `\n**More results available.** Use \`offset: ${offset + limit}\` to see next page.\n`;
+      }
+
+      // Add raw JSON
+      md += `\n---\n\n<details>\n<summary>Raw JSON</summary>\n\n\`\`\`json\n${JSON.stringify({
+        pagination: { total, limit, offset, has_more: hasMore },
+        by_context: byContext,
+        by_source: bySource,
+        rids: rids.slice(0, 20) // Limit raw JSON to first 20
+      }, null, 2)}\n\`\`\`\n</details>`;
+
+      return {
+        content: [{
+          type: 'text',
+          text: md
+        }]
+      };
+
+    } catch (error) {
+      console.error(`[${SERVER_NAME}] Tool=kb_list_rids Error:`, error);
+      return {
+        content: [{
+          type: 'text',
+          text: `**Error listing RIDs:** ${error instanceof Error ? error.message : 'Unknown error'}`
         }]
       };
     }
