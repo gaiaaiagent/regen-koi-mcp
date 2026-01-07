@@ -733,7 +733,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
   }
 
   private async search(args: any) {
-    const { query, source, limit = 10, published_from, published_to, include_undated = false, sort_by = 'relevance' } = args || {};
+    const { query, source, limit = 10, published_from, published_to, include_undated = false, sort_by = 'relevance', intent } = args || {};
     const vectorFilters: any = {};
 
     // Respect explicit date filter
@@ -769,10 +769,15 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
       if (source) {
         body.source = source;
       }
-      // Detect and pass intent to enable intent-aware retrieval (e.g., author search for person_activity)
-      const detectedIntent = this.detectQueryIntent(query);
-      if (detectedIntent) {
-        body.intent = detectedIntent;
+      // Use explicit intent from Claude if provided, otherwise try to detect from query
+      // Priority: explicit intent > detected intent > no intent
+      if (intent && intent !== 'general') {
+        body.intent = intent;
+      } else {
+        const detectedIntent = this.detectQueryIntent(query);
+        if (detectedIntent) {
+          body.intent = detectedIntent;
+        }
       }
       const response = await apiClient.post('/query', body);
 

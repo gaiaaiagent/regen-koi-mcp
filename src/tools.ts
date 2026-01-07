@@ -11,9 +11,19 @@ export const TOOLS: Tool[] = [
     name: 'search',
     description: `Search the Regen Network knowledge base. Supports:
 - Hybrid search (vector + graph + keyword) with entity boosting
+- Intent-aware retrieval for better results on specific query types
 - Date filtering with published_from/published_to
 - Source filtering (notion, github, discourse, etc.)
 - Date sorting (relevance, date_desc, date_asc)
+
+**IMPORTANT - Use the intent parameter for better results:**
+- For "what is X working on" or "what has X done" queries about a person → use intent="person_activity"
+- For "who is X" or biography questions → use intent="person_bio"
+- For "how do I" or technical implementation questions → use intent="technical_howto"
+- For general searches → omit intent or use intent="general"
+
+Example: Get what Gregory Landua is working on:
+  search(query="Gregory Landua", intent="person_activity", limit=15)
 
 Example: Get latest 5 Notion docs:
   search(query="*", source="notion", sort_by="date_desc", limit=5)
@@ -25,6 +35,12 @@ NOT for live blockchain queries - use Ledger MCP for on-chain state.`,
         query: {
           type: 'string',
           description: 'The search query (e.g., "carbon credits", "Regen Registry governance")'
+        },
+        intent: {
+          type: 'string',
+          enum: ['general', 'person_activity', 'person_bio', 'technical_howto', 'concept_explain'],
+          description: 'Query intent for optimized retrieval. Use "person_activity" for "what is X working on" queries (finds docs authored by the person). Use "person_bio" for "who is X" queries. Use "technical_howto" for implementation questions. Default: "general"',
+          default: 'general'
         },
         source: {
           type: 'string',
