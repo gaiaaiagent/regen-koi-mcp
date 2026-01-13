@@ -7,6 +7,7 @@
 
 import { z } from 'zod';
 import { logger } from './logger.js';
+import { GRAPH_QUERY_TYPES } from './graph_query_types.js';
 
 /**
  * Safe string - prevents SQL/Cypher injection
@@ -47,27 +48,7 @@ const SafePath = z.string()
 /**
  * Query type enum
  */
-const QueryTypeEnum = z.enum([
-  'keeper_for_msg',
-  'msgs_for_keeper',
-  'docs_mentioning',
-  'entities_in_doc',
-  'related_entities',
-  'find_by_type',
-  'search_entities',
-  'list_repos',
-  'list_entity_types',
-  'get_entity_stats',
-  // Convenience listing queries
-  'list_keepers',
-  'list_messages',
-  // RAPTOR module queries
-  'list_modules',
-  'get_module',
-  'search_modules',
-  'module_entities',
-  'module_for_entity'
-]);
+const QueryTypeEnum = z.enum(GRAPH_QUERY_TYPES);
 
 /**
  * Repository enum
@@ -96,13 +77,17 @@ export const QueryCodeGraphSchema = z.object({
     const requiresEntityName = [
       'keeper_for_msg',
       'msgs_for_keeper',
-      'docs_mentioning',
       'related_entities',
       'search_entities',
       'search_modules',
-      'module_for_entity'
+      'module_for_entity',
+      'explain_concept',
+      'find_concept_for_query',
+      'find_callers',
+      'find_callees',
+      'find_call_graph'
     ];
-    const requiresDocPath = ['entities_in_doc'];
+    const requiresDocPath: string[] = [];
     const requiresEntityType = ['find_by_type'];
     const requiresModuleName = ['get_module', 'module_entities'];
 
@@ -220,6 +205,17 @@ export const GenerateWeeklyDigestSchema = z.object({
   save_to_file: z.boolean().optional().default(false),
   output_path: SafePath.optional(),
   format: z.enum(['markdown', 'json']).optional().default('markdown')
+});
+
+/**
+ * Schema for submit_feedback tool
+ */
+export const SubmitFeedbackSchema = z.object({
+  rating: z.number().min(1).max(5),
+  category: z.enum(['success', 'partial', 'bug', 'suggestion', 'question', 'other']),
+  task_description: z.string().optional(),
+  notes: z.string().min(1).max(5000),
+  include_session_context: z.boolean().optional().default(true),
 });
 
 /**
@@ -356,7 +352,8 @@ export const ToolSchemas: Record<string, z.ZodSchema<any>> = {
   get_tech_stack: GetTechStackSchema,
   get_stats: GetStatsSchema,
   generate_weekly_digest: GenerateWeeklyDigestSchema,
-  sparql_query: SparqlQuerySchema
+  sparql_query: SparqlQuerySchema,
+  submit_feedback: SubmitFeedbackSchema
 };
 
 /**
@@ -421,5 +418,6 @@ export default {
   GetTechStackSchema,
   GetStatsSchema,
   GenerateWeeklyDigestSchema,
-  SparqlQuerySchema
+  SparqlQuerySchema,
+  SubmitFeedbackSchema
 };

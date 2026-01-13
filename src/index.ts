@@ -193,7 +193,7 @@ class KOIServer {
 
       try {
         // Input validation for applicable tools
-        const validationRequired = ['search', 'search_github_docs', 'get_repo_overview', 'get_tech_stack', 'generate_weekly_digest', 'sparql_query'];
+        const validationRequired = ['search', 'search_github_docs', 'get_repo_overview', 'get_tech_stack', 'generate_weekly_digest', 'sparql_query', 'submit_feedback'];
         if (validationRequired.includes(name)) {
           const validation = validateToolInput(name, args);
           if (!validation.success) {
@@ -280,6 +280,15 @@ class KOIServer {
             break;
           case 'kb_list_rids':
             result = await this.kbListRids(args);
+            break;
+          case 'submit_feedback':
+            result = await this.submitFeedback(args as {
+              rating: number;
+              category: string;
+              task_description?: string;
+              notes: string;
+              include_session_context?: boolean;
+            });
             break;
           default:
             throw new Error(`Unknown tool: ${name}`);
@@ -3370,6 +3379,95 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
         content: [{
           type: 'text',
           text: `**Error listing RIDs:** ${error instanceof Error ? error.message : 'Unknown error'}`
+        }]
+      };
+    }
+  }
+
+  /**
+   * Submit user feedback about their KOI MCP experience
+   */
+  private async submitFeedback(args: {
+    rating: number;
+    category: string;
+    task_description?: string;
+    notes: string;
+    include_session_context?: boolean;
+  }): Promise<{ content: Array<{ type: string; text: string }> }> {
+    const { rating, category, task_description, notes, include_session_context = true } = args;
+
+    // Collect session context if requested
+    let sessionContext: Record<string, unknown> = {};
+    if (include_session_context) {
+      const metricsSummary = getMetricsSummary();
+      // Extract recent tool usage from the tools metrics
+      const recentTools = Object.entries(metricsSummary.tools || {}).map(([name, stats]) => ({
+        tool: name,
+        total_queries: stats.total_queries,
+        success_rate: stats.success_rate,
+        error_count: stats.error_count
+      }));
+
+      // Calculate total queries and errors across all tools
+      const totalQueries = recentTools.reduce((sum, t) => sum + t.total_queries, 0);
+      const totalErrors = recentTools.reduce((sum, t) => sum + t.error_count, 0);
+
+      sessionContext = {
+        recent_tools: recentTools,
+        uptime_seconds: metricsSummary.uptime_seconds,
+        total_queries: totalQueries,
+        error_count: totalErrors,
+        cache_hit_rate: metricsSummary.cache?.hit_rate || 0,
+      };
+    }
+
+    const feedbackPayload = {
+      rating,
+      category,
+      task_description: task_description || null,
+      notes,
+      session_context: sessionContext,
+      user_email: USER_EMAIL || 'anonymous',
+      client_version: SERVER_VERSION,
+      timestamp: new Date().toISOString(),
+    };
+
+    try {
+      const response = await apiClient.post('/feedback', feedbackPayload);
+      const responseData = response.data as { id?: string } | undefined;
+
+      logger.info({
+        action: 'feedback_submitted',
+        rating,
+        category,
+        feedback_id: responseData?.id
+      }, 'User feedback submitted');
+
+      return {
+        content: [{
+          type: 'text',
+          text: `Thank you for your feedback!
+
+**Rating:** ${rating}/5
+**Category:** ${category}
+**Feedback ID:** ${responseData?.id || 'recorded'}
+
+Your feedback helps improve KOI for everyone.${
+  category === 'bug'
+    ? '\n\nFor urgent bugs, also consider posting in the Gaia AI Slack channel.'
+    : ''
+}`
+        }]
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error({ action: 'feedback_submit_error', error: errorMessage }, 'Failed to submit feedback');
+
+      // Still acknowledge the feedback even if storage fails
+      return {
+        content: [{
+          type: 'text',
+          text: `Thank you for your feedback. (Note: There was an issue storing it - ${errorMessage}. Consider posting in Slack if urgent.)`
         }]
       };
     }

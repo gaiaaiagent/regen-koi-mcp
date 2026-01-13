@@ -464,5 +464,53 @@ NOT for live blockchain queries - use Ledger MCP for on-chain state.`,
         }
       }
     }
+  },
+  // =============================================================================
+  // Feedback Tool (User Experience Feedback Collection)
+  // =============================================================================
+  {
+    name: 'submit_feedback',
+    description: `Submit feedback about your experience using KOI MCP tools.
+
+Use this after completing a task to share:
+- Whether it worked well or had issues
+- Suggestions for improvement
+- Bugs or unexpected behavior
+
+Your feedback helps improve the system. All feedback is stored anonymously with session context.
+
+Example usage:
+  submit_feedback(rating=5, category="success", notes="Found exactly what I needed about basket tokens")
+  submit_feedback(rating=2, category="bug", notes="search returned no results for 'Registry Agent'")`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        rating: {
+          type: 'number',
+          minimum: 1,
+          maximum: 5,
+          description: 'Rating from 1 (poor) to 5 (excellent)'
+        },
+        category: {
+          type: 'string',
+          enum: ['success', 'partial', 'bug', 'suggestion', 'question', 'other'],
+          description: 'Type of feedback: success (worked great), partial (mostly worked), bug (something broke), suggestion (feature idea), question (need help), other'
+        },
+        task_description: {
+          type: 'string',
+          description: 'Brief description of what you were trying to do (optional but helpful)'
+        },
+        notes: {
+          type: 'string',
+          description: 'Detailed feedback, observations, or suggestions'
+        },
+        include_session_context: {
+          type: 'boolean',
+          description: 'Include recent tool calls for debugging context (default: true)',
+          default: true
+        }
+      },
+      required: ['rating', 'category', 'notes']
+    }
   }
 ];
