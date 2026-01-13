@@ -30,6 +30,12 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Contract test (query_code_graph query_type enum ↔ backend)
+        run: npm run test:contract
+        env:
+          KOI_API_ENDPOINT: ${{ vars.KOI_API_ENDPOINT }}
+          KOI_USER_EMAIL: contract-test@github
+
       - name: Verify build
         run: |
           test -f dist/index.js || (echo "Build failed - dist/index.js not found" && exit 1)

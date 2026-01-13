@@ -56,6 +56,7 @@ const QUERY_TYPE_TO_CATEGORY: Record<string, string> = {
   'get_tech_stack': 'static',
   'get_repo_overview': 'static',
   'list_modules': 'static',
+  'list_concepts': 'static',
 
   // Semi-static (changes occasionally)
   'find_by_type': 'semi_static',
@@ -63,6 +64,7 @@ const QUERY_TYPE_TO_CATEGORY: Record<string, string> = {
   'search_modules': 'semi_static',
   'module_entities': 'semi_static',
   'module_for_entity': 'semi_static',
+  'explain_concept': 'semi_static',
 
   // Dynamic (user queries)
   'search_entities': 'dynamic',
@@ -71,9 +73,11 @@ const QUERY_TYPE_TO_CATEGORY: Record<string, string> = {
   'hybrid_search': 'dynamic',
   'keeper_for_msg': 'dynamic',
   'msgs_for_keeper': 'dynamic',
-  'docs_mentioning': 'dynamic',
-  'entities_in_doc': 'dynamic',
   'related_entities': 'dynamic',
+  'find_concept_for_query': 'dynamic',
+  'find_callers': 'dynamic',
+  'find_callees': 'dynamic',
+  'find_call_graph': 'dynamic',
 
   // Volatile (changes frequently)
   'get_stats': 'volatile',

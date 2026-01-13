@@ -65,7 +65,7 @@ export const GRAPH_TOOL: Tool = {
       query_type: {
         type: 'string',
         enum: [...GRAPH_QUERY_TYPES],
-        description: 'Type of graph query: find_by_type (get all Sensors, Handlers, etc.), search_entities (search by name), list_repos (show indexed repositories), list_entity_types (show all entity types with counts), get_entity_stats (comprehensive graph statistics), list_modules (show all modules), get_module (get specific module), keeper_for_msg (find Keeper handling a Msg), msgs_for_keeper (find Msgs handled by a Keeper), related_entities (find entities sharing docs)'
+        description: 'Type of graph query: find_by_type (get all Sensors, Handlers, etc.), search_entities (search by name), list_repos (show indexed repositories), list_entity_types (show all entity types with counts), get_entity_stats (comprehensive graph statistics), list_modules (show all modules), get_module (get specific module), keeper_for_msg (find Keeper handling a Msg), msgs_for_keeper (find Msgs handled by a Keeper), related_entities (find entities sharing docs), find_callers (find what calls an entity), find_callees (find what an entity calls), find_call_graph (full call graph for an entity)'
       },
       entity_name: {
         type: 'string',

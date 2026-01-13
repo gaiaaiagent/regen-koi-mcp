@@ -9,6 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -25,6 +26,12 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Contract test (query_code_graph query_type enum ↔ backend)
+        run: npm run test:contract
+        env:
+          KOI_API_ENDPOINT: ${{ vars.KOI_API_ENDPOINT }}
+          KOI_USER_EMAIL: contract-test@github
 
       - name: Verify build artifacts
         run: |
