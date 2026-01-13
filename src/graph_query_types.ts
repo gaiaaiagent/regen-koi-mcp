@@ -26,10 +26,12 @@ export const GRAPH_QUERY_TYPES = [
   // Cross-file relationship queries
   'find_importers',
   'find_implementations',
-] as const;
 
-// Query types not yet supported by backend API:
-// - 'list_concepts', 'explain_concept', 'find_concept_for_query' (concept queries - no data)
+  // Concept queries (available but may return empty results)
+  'list_concepts',
+  'explain_concept',
+  'find_concept_for_query',
+] as const;
 
 export type GraphQueryType = (typeof GRAPH_QUERY_TYPES)[number];
 
