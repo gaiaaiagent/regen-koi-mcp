@@ -127,6 +127,15 @@ npm install
 npm run build
 ```
 
+**Contract test (prevents schema drift):**
+```bash
+# Defaults to https://regen.gaiaai.xyz/api/koi
+npm run test:contract
+
+# Or override endpoint
+KOI_API_ENDPOINT=https://regen.gaiaai.xyz/api/koi npm run test:contract
+```
+
 Then manually configure your MCP client to point to the local `dist/index.js`.
 
 **Requirements:**
@@ -370,6 +379,12 @@ Once you've installed the MCP server, try these queries in Claude to explore wha
 | Tool | Description | Key Inputs |
 |------|-------------|-----------|
 | `regen_koi_authenticate` | Authenticate with @regen.network email to access internal documentation | None (opens browser for OAuth login) |
+
+### Feedback & Metrics
+| Tool | Description | Key Inputs |
+|------|-------------|-----------|
+| `submit_feedback` | Submit feedback about your KOI MCP experience | `rating` (1-5), `category` (success, partial, bug, suggestion, question, other), `notes` (string), `task_description` (optional), `include_session_context` (bool, default true) |
+| `get_mcp_metrics` | Get MCP server health and performance metrics | None |
 
 ---
 

@@ -1,7 +1,7 @@
 # KOI MCP Server - API Reference
 
-**Version:** 1.5.3
-**Last Updated:** 2026-01-07
+**Version:** 1.5.6
+**Last Updated:** 2026-01-13
 
 Complete reference for all MCP tools provided by the Regen KOI server.
 
@@ -18,12 +18,13 @@ Complete reference for all MCP tools provided by the Regen KOI server.
 7. [get_stats](#get_stats)
 8. [generate_weekly_digest](#generate_weekly_digest)
 9. [get_mcp_metrics](#get_mcp_metrics)
+10. [submit_feedback](#submit_feedback)
 
 ---
 
 ## query_code_graph
 
-Search the code knowledge graph with 14 different query types for exploring entities, relationships, and dependencies.
+Search the code knowledge graph with supported query types for exploring entities, relationships, modules, concepts, and call graphs.
 
 ### Parameters
 
@@ -32,7 +33,7 @@ Search the code knowledge graph with 14 different query types for exploring enti
 | `query_type` | enum | **Yes** | Type of graph query to execute (see below) |
 | `entity_name` | string | Conditional | Name of entity to search for |
 | `entity_type` | string | Conditional | Type of entity (Function, Struct, Interface, etc.) |
-| `doc_path` | string | Conditional | Path to documentation file |
+| `doc_path` | string | No | Reserved (doc→entity queries not currently supported via `/graph`) |
 | `repo_name` | string | No | Filter by repository name |
 | `module_name` | string | Conditional | Name of module/package |
 
@@ -40,26 +41,25 @@ Search the code knowledge graph with 14 different query types for exploring enti
 
 | query_type | Description | Required Params | Example |
 |------------|-------------|-----------------|---------|
+| `list_repos` | List all indexed repositories | None | What repos are indexed? |
 | `find_by_type` | Find all entities of a specific type | `entity_type` | Find all Handlers |
 | `search_entities` | Search for entities by name | `entity_name` | Find "CreateBatch" |
 | `keeper_for_msg` | Find keeper that handles a message | `entity_name` | What keeper handles MsgRetire? |
 | `msgs_for_keeper` | Find messages handled by keeper | `entity_name` | What messages does Keeper handle? |
-| `docs_mentioning` | Find docs that mention an entity | `entity_name` | What docs mention CreateBatch? |
-| `entities_in_doc` | Find entities mentioned in a doc | `doc_path` | What's in ecocredit/spec/01_concepts.md? |
 | `related_entities` | Find related entities | `entity_name` | What's related to Keeper? |
-| `list_repos` | List all indexed repositories | None | What repos are indexed? |
 | `list_entity_types` | List all entity types with counts | None | What entity types exist? |
 | `get_entity_stats` | Get comprehensive statistics | None | Show me the stats |
+| `list_concepts` | List available high-level concepts (if populated) | None | What concepts exist? |
+| `explain_concept` | Explain a concept (if populated) | `entity_name` | Explain "Credit Retirement" |
+| `find_concept_for_query` | Find relevant concepts for a query (if populated) | `entity_name` | Find concepts for "credits" |
+| `find_callers` | Find all functions that call this entity | `entity_name` | What calls CreateBatch? |
+| `find_callees` | Find all functions called by this entity | `entity_name` | What does CreateBatch call? |
+| `find_call_graph` | Get local call graph (callers + callees) | `entity_name` | Show call graph for CreateBatch |
 | `list_modules` | List all modules in a repo | `repo_name` (optional) | What modules in regen-ledger? |
 | `get_module` | Get details for a specific module | `module_name` | Tell me about x/ecocredit |
 | `search_modules` | Search modules by keyword | `entity_name` | Find modules about credits |
 | `module_entities` | Get entities in a module | `module_name` | What's in x/ecocredit? |
 | `module_for_entity` | Find module containing entity | `entity_name` | What module has CreateBatch? |
-| `find_callers` | Find all functions that call this entity | `entity_name` | What calls CreateBatch? |
-| `find_callees` | Find all functions called by this entity | `entity_name` | What does CreateBatch call? |
-| `find_call_graph` | Get local call graph (callers + callees) | `entity_name` | Show call graph for CreateBatch |
-| `find_orphaned_code` | Find entities with no CALLS edges | None | Find unused functions |
-| `trace_call_chain` | Find call path between two entities | `entity_name` | Path from TestScenario to Invoke |
 
 ### Return Format
 
@@ -764,6 +764,88 @@ None (no parameters required)
 
 ---
 
+## submit_feedback
+
+Submit feedback about your KOI MCP experience directly from Claude Code. Helps improve the system.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `rating` | number | **Yes** | - | Rating from 1 (poor) to 5 (excellent) |
+| `category` | enum | **Yes** | - | Type of feedback (see below) |
+| `notes` | string | **Yes** | - | Detailed feedback, observations, or suggestions (1-5000 chars) |
+| `task_description` | string | No | - | Brief description of what you were trying to do |
+| `include_session_context` | boolean | No | true | Include tool usage stats for debugging context |
+
+### Category Options
+
+| Category | Use When |
+|----------|----------|
+| `success` | Everything worked great |
+| `partial` | Mostly worked but had minor issues |
+| `bug` | Something broke or didn't work as expected |
+| `suggestion` | You have a feature idea or improvement |
+| `question` | You need help or clarification |
+| `other` | Doesn't fit other categories |
+
+### Return Format
+
+```json
+{
+  "content": [{
+    "type": "text",
+    "text": "Thank you for your feedback!\n\n**Rating:** 5/5\n**Category:** success\n**Feedback ID:** 6\n\nYour feedback helps improve KOI for everyone."
+  }]
+}
+```
+
+### Examples
+
+#### Example 1: Positive feedback
+
+```json
+{
+  "rating": 5,
+  "category": "success",
+  "notes": "Found exactly what I needed about basket tokens",
+  "task_description": "Researching basket token implementation"
+}
+```
+
+**Returns:** Confirmation with feedback ID
+
+#### Example 2: Bug report
+
+```json
+{
+  "rating": 2,
+  "category": "bug",
+  "notes": "Search returned no results for 'Registry Agent' even though it exists in the docs",
+  "task_description": "Looking for Registry Agent documentation"
+}
+```
+
+**Returns:** Confirmation, session context included for debugging
+
+### Session Context
+
+When `include_session_context` is true (default), the feedback includes:
+- Recent tool usage statistics
+- MCP uptime
+- Error counts
+- Cache hit rate
+
+This helps debug issues without requiring manual log collection.
+
+### Performance
+
+- **Not cached** (always writes to database)
+- **Typical latency:** 50-150ms
+- **Best for:** End-of-session feedback, bug reports, feature suggestions
+
+---
+
 ## Error Handling
 
 All tools use consistent error format:
@@ -843,6 +925,11 @@ Different query types have different cache TTLs:
 ---
 
 ## Version History
+
+**1.5.6 (2026-01-13):**
+- Added `submit_feedback` tool for in-session feedback collection
+- Captures session context (tool usage, errors) for debugging
+- Backend endpoint at `/api/koi/feedback` with PostgreSQL storage
 
 **1.4.8 (2026-01-06):**
 - Added `source` parameter to search tool for filtering by data source (notion, github, discourse, etc.)

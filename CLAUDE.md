@@ -6,9 +6,9 @@ This file provides guidance to Claude Code when working on the regen-koi-mcp pro
 
 The Regen KOI MCP Server provides AI agents (like Claude) access to Regen Network's Knowledge Organization Infrastructure via the Model Context Protocol. It serves as an interface layer for searching code, documentation, and community discussions.
 
-## Current System State (Dec 3, 2025)
+## Current System State (Jan 13, 2026)
 
-- **10 MCP Tools**: Search, graph queries, weekly digests, auth, metrics
+- **11 MCP Tools**: Search, graph queries, weekly digests, auth, metrics, feedback
 - **48,000+ Documents**: From GitHub, Discourse, Medium, Telegram, Discord, podcasts, Notion
 - **26,768 Code Entities**: Functions, structs, interfaces from 5 repositories
 - **Private Data Access**: OAuth-gated access to internal Regen Notion workspace
