@@ -19,11 +19,17 @@ export const GRAPH_QUERY_TYPES = [
   // Module queries
   'list_modules',
   'get_module',
+  'search_modules',
+  'module_entities',
+  'module_for_entity',
+
+  // Cross-file relationship queries
+  'find_importers',
+  'find_implementations',
 ] as const;
 
 // Query types not yet supported by backend API:
 // - 'list_concepts', 'explain_concept', 'find_concept_for_query' (concept queries - no data)
-// - 'search_modules', 'module_entities', 'module_for_entity' (module queries - not implemented)
 
 export type GraphQueryType = (typeof GRAPH_QUERY_TYPES)[number];
 

@@ -580,24 +580,55 @@ export async function executeGraphTool(args: any) {
         case 'find_callers':
         case 'find_callees':
         case 'find_call_graph': {
-          const label = query_type === 'find_callers'
-            ? 'Callers'
-            : query_type === 'find_callees'
-              ? 'Callees'
-              : 'Call Graph';
-          markdownSummary = `# ${label} for: ${entity_name}\n\nFound **${total_results}** result(s):\n\n`;
+          const isCallers = query_type === 'find_callers';
+          const isCallees = query_type === 'find_callees';
+          const label = isCallers ? 'Callers' : isCallees ? 'Callees' : 'Call Graph';
+          const verb = isCallers ? 'is called by' : isCallees ? 'calls' : 'has relationships with';
+
+          markdownSummary = `# ${label} of: ${entity_name}\n\n`;
+
           if (total_results === 0) {
             markdownSummary += '_No results found._\n';
             break;
           }
+
+          markdownSummary += `${entity_name} ${verb} **${total_results}** function(s):\n\n`;
+
           results.forEach((r: any, i: number) => {
             const row = r.result || r;
-            markdownSummary += `## ${i + 1}.\n`;
-            markdownSummary += `${JSON.stringify(row)}\n\n`;
+            // Extract entity details - check various field names for compatibility
+            const name = row.caller_name || row.callee_name || row.name || row.entity_name || 'Unknown';
+            const filePath = row.file_path || row.caller_file || row.callee_file || '';
+            const lineStart = row.line_start || row.line_number || row.caller_line || row.callee_line || '';
+            const entityType = row.entity_type || row.caller_type || row.callee_type || '';
+            const receiverType = row.receiver_type || row.caller_receiver || row.callee_receiver || '';
+            const githubUrl = row.github_url || '';
+            const repo = row.repo || row.repository || '';
+
+            // Format location string
+            const location = filePath && lineStart ? `${filePath}:${lineStart}` : filePath || 'N/A';
+
+            // Determine type description
+            let typeDesc = entityType || 'Function';
+            if (receiverType) {
+              typeDesc = `Method on \`${receiverType}\``;
+            }
+
+            markdownSummary += `## ${i + 1}. ${name}\n`;
+            markdownSummary += `- **File:** \`${location}\`\n`;
+            markdownSummary += `- **Type:** ${typeDesc}\n`;
+            if (repo) markdownSummary += `- **Repository:** ${repo}\n`;
+            if (githubUrl) markdownSummary += `- **Source:** [GitHub](${githubUrl})\n`;
+            markdownSummary += '\n';
+
             hits.push({
-              entity_type: label,
-              entity_name: entity_name || 'entity',
-              content_preview: JSON.stringify(row).slice(0, 200),
+              entity_type: entityType || label,
+              entity_name: name,
+              file_path: filePath,
+              line_number: typeof lineStart === 'number' ? lineStart : parseInt(lineStart) || undefined,
+              provenance: githubUrl ? {
+                github_url: githubUrl,
+              } : undefined,
             });
           });
           break;
