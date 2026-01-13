@@ -1,6 +1,6 @@
 {
   "name": "regen-koi-mcp",
-  "version": "1.5.5",
+  "version": "1.5.6",
   "description": "MCP server for accessing Regen Network's KOI (Knowledge Organization Infrastructure) system",
   "main": "dist/index.js",
   "type": "module",
