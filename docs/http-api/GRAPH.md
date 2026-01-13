@@ -463,3 +463,39 @@ curl -X POST 'https://regen.gaiaai.xyz/api/koi/graph' \
 - **Performance**: Graph queries typically complete in < 200ms
 - **Pagination**: Use `limit` parameter to control result size
 
+---
+
+## Known Limitations (as of Jan 2026)
+
+### Data Sparsity Issues
+
+1. **Keeper-Message Relationships**: The `keeper_for_msg` and `msgs_for_keeper` queries may return 0 results because the HANDLES edges between Keepers and Messages have not been fully extracted from the codebase.
+
+2. **Module Data**: The `list_modules` and `get_module` queries currently return 0 results because module metadata (Cosmos SDK modules) has not been indexed.
+
+3. **Related Entities**: The `related_entities` query relies on relationship edges that are currently sparse in the graph.
+
+4. **Entity Type Classification**: ~80% of entities are classified as generic "Entity" type rather than specific types like "Function", "Interface", etc. This is due to regex-based extraction rather than full AST parsing.
+
+### Query Types Not Supported
+
+The following query types are documented but return `400 Unknown query_type` errors from the backend:
+
+- `search_modules`
+- `module_entities`
+- `module_for_entity`
+- `find_callers` / `find_callees` / `find_call_graph`
+- `list_concepts` / `explain_concept` / `find_concept_for_query`
+
+### Reliable Query Types
+
+These query types work reliably:
+
+| Query Type | Notes |
+|------------|-------|
+| `list_repos` | ✅ Returns all indexed repositories with entity counts |
+| `list_entity_types` | ✅ Returns entity type breakdown |
+| `get_entity_stats` | ✅ Returns comprehensive statistics |
+| `find_by_type` | ✅ Works well for: Message, Query, Event, Interface, Keeper |
+| `search_entities` | ✅ Regex search across all entities |
+

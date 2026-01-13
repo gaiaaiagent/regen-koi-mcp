@@ -79,17 +79,10 @@ export const QueryCodeGraphSchema = z.object({
       'msgs_for_keeper',
       'related_entities',
       'search_entities',
-      'search_modules',
-      'module_for_entity',
-      'explain_concept',
-      'find_concept_for_query',
-      'find_callers',
-      'find_callees',
-      'find_call_graph'
     ];
     const requiresDocPath: string[] = [];
     const requiresEntityType = ['find_by_type'];
-    const requiresModuleName = ['get_module', 'module_entities'];
+    const requiresModuleName = ['get_module'];
 
     if (requiresEntityName.includes(data.query_type) && !data.entity_name) {
       return false;

@@ -27,13 +27,12 @@ import { cachedQuery, shouldCache } from './cache.js';
 import { validateToolInput, detectInjection, sanitizeString } from './validation.js';
 // Shared auth module
 import { USER_EMAIL, getAccessToken, setAccessToken } from './auth.js';
+import { GRAPH_QUERY_TYPES } from './graph_query_types.js';
 import {
   GraphClient,
   createGraphClient,
   KeeperForMsgResult,
   MsgForKeeperResult,
-  DocMentioningResult,
-  EntityInDocResult,
   RelatedEntity,
   Module,
   ModuleSearchResult,
@@ -65,17 +64,8 @@ export const GRAPH_TOOL: Tool = {
     properties: {
       query_type: {
         type: 'string',
-        enum: [
-          'keeper_for_msg', 'msgs_for_keeper', 'docs_mentioning', 'entities_in_doc',
-          'related_entities', 'find_by_type', 'search_entities', 'list_repos',
-          // Discovery queries
-          'list_entity_types', 'get_entity_stats',
-          // Convenience listing queries
-          'list_keepers', 'list_messages',
-          // RAPTOR module queries
-          'list_modules', 'get_module', 'search_modules', 'module_entities', 'module_for_entity'
-        ],
-        description: 'Type of graph query: find_by_type (get all Sensors, Handlers, etc.), search_entities (search by name), list_repos (show indexed repositories), list_entity_types (show all entity types with counts), get_entity_stats (comprehensive graph statistics), list_keepers (show all Keeper entities), list_messages (show all Msg entities), list_modules (show all modules), search_modules (search modules by keyword)'
+        enum: [...GRAPH_QUERY_TYPES],
+        description: 'Type of graph query: find_by_type (get all Sensors, Handlers, etc.), search_entities (search by name), list_repos (show indexed repositories), list_entity_types (show all entity types with counts), get_entity_stats (comprehensive graph statistics), list_modules (show all modules), get_module (get specific module), keeper_for_msg (find Keeper handling a Msg), msgs_for_keeper (find Msgs handled by a Keeper), related_entities (find entities sharing docs)'
       },
       entity_name: {
         type: 'string',
@@ -527,49 +517,91 @@ export async function executeGraphTool(args: any) {
           });
           break;
 
-        case 'list_keepers':
-          markdownSummary = `# All Keepers\n\nFound **${total_results}** Keeper(s):\n\n`;
-          markdownSummary += '| Name | File Path | Line |\n|------|-----------|------|\n';
-          results.forEach((r: any) => {
-            const keeper = r.entity || r.keeper || r.result || r;
-            const name = keeper.name || 'unknown';
-            const filePath = keeper.file_path || 'N/A';
-            const line = keeper.line_number || '';
-            markdownSummary += `| ${name} | \`${filePath}\` | ${line} |\n`;
+        case 'list_concepts':
+          markdownSummary = `# Concepts\n\nFound **${total_results}** concept(s):\n\n`;
+          if (total_results === 0) {
+            markdownSummary += '_No concepts found._\n';
+            break;
+          }
+          results.forEach((r: any, i: number) => {
+            const concept = r.concept || r.result || r;
+            const name = concept.name || concept.concept_name || concept.title || 'unknown';
+            const description = concept.description || concept.summary || concept.content_preview;
+            markdownSummary += `## ${i + 1}. ${name}\n`;
+            if (description) markdownSummary += `- ${description}\n`;
+            markdownSummary += '\n';
             hits.push({
-              entity_type: 'Keeper',
+              entity_type: 'Concept',
               entity_name: name,
-              file_path: filePath,
-              line_number: keeper.line_number,
-              content_preview: keeper.docstring || `Keeper: ${name}`
+              content_preview: description ? String(description).slice(0, 200) : undefined,
             });
           });
-          if (args.offset !== undefined || results.length >= (args.limit || 50)) {
-            markdownSummary += `\n*Showing results ${(args.offset || 0) + 1}-${(args.offset || 0) + results.length}. Use \`offset\` and \`limit\` params for pagination.*\n`;
-          }
           break;
 
-        case 'list_messages':
-          markdownSummary = `# All Messages\n\nFound **${total_results}** Message(s):\n\n`;
-          markdownSummary += '| Name | Package | File Path |\n|------|---------|----------|\n';
-          results.forEach((r: any) => {
-            const msg = r.entity || r.message || r.result || r;
-            const name = msg.name || 'unknown';
-            const pkg = msg.package || msg.msg_package || 'N/A';
-            const filePath = msg.file_path || 'N/A';
-            markdownSummary += `| ${name} | ${pkg} | \`${filePath}\` |\n`;
+        case 'explain_concept':
+          markdownSummary = `# Concept Explanation: ${entity_name}\n\n`;
+          if (total_results === 0) {
+            markdownSummary += '_No explanation found._\n';
+            break;
+          }
+          results.forEach((r: any, i: number) => {
+            const explanation = r.explanation || r.result || r;
+            markdownSummary += `## ${i + 1}.\n`;
+            markdownSummary += `${typeof explanation === 'string' ? explanation : JSON.stringify(explanation)}\n\n`;
             hits.push({
-              entity_type: 'Msg',
-              entity_name: name,
-              file_path: filePath,
-              line_number: msg.line_number,
-              content_preview: `${name} (${pkg})`
+              entity_type: 'ConceptExplanation',
+              entity_name: entity_name || 'concept',
+              content_preview: typeof explanation === 'string' ? explanation.slice(0, 200) : JSON.stringify(explanation).slice(0, 200),
             });
           });
-          if (args.offset !== undefined || results.length >= (args.limit || 50)) {
-            markdownSummary += `\n*Showing results ${(args.offset || 0) + 1}-${(args.offset || 0) + results.length}. Use \`offset\` and \`limit\` params for pagination.*\n`;
-          }
           break;
+
+        case 'find_concept_for_query':
+          markdownSummary = `# Concepts for Query: "${entity_name}"\n\nFound **${total_results}** result(s):\n\n`;
+          if (total_results === 0) {
+            markdownSummary += '_No concepts found._\n';
+            break;
+          }
+          results.forEach((r: any, i: number) => {
+            const concept = r.concept || r.result || r;
+            const name = concept.name || concept.concept_name || concept.title || 'unknown';
+            const score = concept.score ?? r.score;
+            markdownSummary += `## ${i + 1}. ${name}\n`;
+            if (score !== undefined) markdownSummary += `- **Score:** ${score}\n`;
+            markdownSummary += '\n';
+            hits.push({
+              entity_type: 'ConceptMatch',
+              entity_name: name,
+              score: typeof score === 'number' ? score : undefined,
+            });
+          });
+          break;
+
+        case 'find_callers':
+        case 'find_callees':
+        case 'find_call_graph': {
+          const label = query_type === 'find_callers'
+            ? 'Callers'
+            : query_type === 'find_callees'
+              ? 'Callees'
+              : 'Call Graph';
+          markdownSummary = `# ${label} for: ${entity_name}\n\nFound **${total_results}** result(s):\n\n`;
+          if (total_results === 0) {
+            markdownSummary += '_No results found._\n';
+            break;
+          }
+          results.forEach((r: any, i: number) => {
+            const row = r.result || r;
+            markdownSummary += `## ${i + 1}.\n`;
+            markdownSummary += `${JSON.stringify(row)}\n\n`;
+            hits.push({
+              entity_type: label,
+              entity_name: entity_name || 'entity',
+              content_preview: JSON.stringify(row).slice(0, 200),
+            });
+          });
+          break;
+        }
 
         default:
           // Generic formatting for other query types
@@ -684,49 +716,6 @@ export async function executeGraphTool(args: any) {
         }));
         break;
 
-      case 'docs_mentioning':
-        if (!entity_name) {
-          return {
-            content: [{
-              type: 'text',
-              text: 'Error: entity_name is required for docs_mentioning query'
-            }]
-          };
-        }
-        const docResults = await client.getDocsMentioning(entity_name);
-        total_results = docResults.length;
-
-        markdownSummary = formatDocsMentioningResults(entity_name, docResults);
-        hits = docResults.map(r => ({
-          entity_type: 'Document',
-          entity_name: r.title,
-          file_path: r.file_path,
-          content_preview: `Document mentions ${entity_name}`,
-          edges: [{ type: 'MENTIONS', target: entity_name }]
-        }));
-        break;
-
-      case 'entities_in_doc':
-        if (!doc_path) {
-          return {
-            content: [{
-              type: 'text',
-              text: 'Error: doc_path is required for entities_in_doc query'
-            }]
-          };
-        }
-        const entityResults = await client.getEntitiesInDoc(doc_path);
-        total_results = entityResults.length;
-
-        markdownSummary = formatEntitiesInDocResults(doc_path, entityResults);
-        hits = entityResults.map(r => ({
-          entity_type: r.type,
-          entity_name: r.name,
-          content_preview: `${r.type}: ${r.name}`,
-          edges: [{ type: 'MENTIONED_IN', target: doc_path }]
-        }));
-        break;
-
       case 'related_entities':
         if (!entity_name) {
           return {
@@ -826,62 +815,6 @@ export async function executeGraphTool(args: any) {
           content_preview: `${r.entity_count} entities`
         }));
         break;
-
-      // ============= Convenience Listing Queries =============
-
-      case 'list_keepers': {
-        const allKeepers = await client.getAllKeepers();
-        const keeperLimitVal = args.limit || 50;
-        const keeperOffsetVal = args.offset || 0;
-        const paginatedKeepers = allKeepers.slice(keeperOffsetVal, keeperOffsetVal + keeperLimitVal);
-        total_results = paginatedKeepers.length;
-
-        markdownSummary = `# All Keepers\n\nFound **${allKeepers.length}** Keeper(s), showing ${keeperOffsetVal + 1}-${keeperOffsetVal + paginatedKeepers.length}:\n\n`;
-        markdownSummary += '| Name | File Path | Line |\n|------|-----------|------|\n';
-        paginatedKeepers.forEach(k => {
-          markdownSummary += `| ${k.name} | \`${k.file_path || 'N/A'}\` | ${k.line_number || ''} |\n`;
-        });
-
-        if (allKeepers.length > keeperOffsetVal + keeperLimitVal) {
-          markdownSummary += `\n*Use \`offset: ${keeperOffsetVal + keeperLimitVal}\` to see more results.*\n`;
-        }
-
-        hits = paginatedKeepers.map(k => ({
-          entity_type: 'Keeper',
-          entity_name: k.name,
-          file_path: k.file_path,
-          line_number: k.line_number,
-          content_preview: k.docstring || `Keeper: ${k.name}`
-        }));
-        break;
-      }
-
-      case 'list_messages': {
-        const allMsgs = await client.getAllMsgs();
-        const msgLimitVal = args.limit || 50;
-        const msgOffsetVal = args.offset || 0;
-        const paginatedMsgs = allMsgs.slice(msgOffsetVal, msgOffsetVal + msgLimitVal);
-        total_results = paginatedMsgs.length;
-
-        markdownSummary = `# All Messages\n\nFound **${allMsgs.length}** Message(s), showing ${msgOffsetVal + 1}-${msgOffsetVal + paginatedMsgs.length}:\n\n`;
-        markdownSummary += '| Name | Package | File Path |\n|------|---------|----------|\n';
-        paginatedMsgs.forEach(m => {
-          markdownSummary += `| ${m.name} | ${m.package || 'N/A'} | \`${m.file_path || 'N/A'}\` |\n`;
-        });
-
-        if (allMsgs.length > msgOffsetVal + msgLimitVal) {
-          markdownSummary += `\n*Use \`offset: ${msgOffsetVal + msgLimitVal}\` to see more results.*\n`;
-        }
-
-        hits = paginatedMsgs.map(m => ({
-          entity_type: 'Msg',
-          entity_name: m.name,
-          file_path: m.file_path,
-          line_number: m.line_number,
-          content_preview: `${m.name} (${m.package || 'N/A'})`
-        }));
-        break;
-      }
 
       // ============= RAPTOR Module Queries =============
 
@@ -1164,61 +1097,6 @@ function formatMsgsForKeeperResults(keeperName: string, results: MsgForKeeperRes
   });
 
   markdown += `\n`;
-  return markdown;
-}
-
-/**
- * Format docs_mentioning results as markdown
- */
-function formatDocsMentioningResults(entityName: string, results: DocMentioningResult[]): string {
-  if (results.length === 0) {
-    return `# Documents Mentioning: ${entityName}\n\nNo documents found that mention **${entityName}**.\n\n` +
-           `This could mean:\n` +
-           `- Documents haven't been indexed yet\n` +
-           `- MENTIONS relationships haven't been created\n` +
-           `- The entity name is incorrect\n`;
-  }
-
-  let markdown = `# Documents Mentioning: ${entityName}\n\n`;
-  markdown += `Found **${results.length}** document(s) that mention **${entityName}**:\n\n`;
-
-  results.forEach((result, index) => {
-    markdown += `${index + 1}. **${result.title}**\n`;
-    markdown += `   - Path: \`${result.file_path}\`\n\n`;
-  });
-
-  return markdown;
-}
-
-/**
- * Format entities_in_doc results as markdown
- */
-function formatEntitiesInDocResults(docPath: string, results: EntityInDocResult[]): string {
-  if (results.length === 0) {
-    return `# Entities in Document: ${docPath}\n\nNo entities found in this document.\n`;
-  }
-
-  let markdown = `# Entities in Document\n\n`;
-  markdown += `**Path:** \`${docPath}\`\n\n`;
-  markdown += `Found **${results.length}** entities mentioned in this document:\n\n`;
-
-  // Group by type
-  const byType: Record<string, string[]> = {};
-  results.forEach(result => {
-    if (!byType[result.type]) {
-      byType[result.type] = [];
-    }
-    byType[result.type].push(result.name);
-  });
-
-  Object.keys(byType).forEach(type => {
-    markdown += `## ${type}s (${byType[type].length})\n\n`;
-    byType[type].forEach(name => {
-      markdown += `- ${name}\n`;
-    });
-    markdown += `\n`;
-  });
-
   return markdown;
 }
 
