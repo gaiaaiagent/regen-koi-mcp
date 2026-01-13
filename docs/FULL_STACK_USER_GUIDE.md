@@ -190,20 +190,21 @@ Your feedback is stored and helps improve the system.
 
 ---
 
-## 8. Known Limitations
+## 8. Code Graph Capabilities
 
-The code graph has some known data gaps (as of Jan 2026):
+The code graph now has rich Cosmos SDK relationship data (as of Jan 2026):
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| `keeper_for_msg` | ⚠️ Limited | Returns 0 results - relationship edges not fully extracted |
-| `msgs_for_keeper` | ⚠️ Limited | Same as above |
-| `list_modules` | ⚠️ Empty | Module metadata not indexed yet |
-| Entity type accuracy | ⚠️ ~80% generic | Many entities typed as "Entity" not specific types |
+| `keeper_for_msg` | ✅ Working | Returns Keeper that handles a Message (40 relationships) |
+| `msgs_for_keeper` | ✅ Working | Returns all Messages a Keeper handles |
+| `list_modules` | ✅ Working | 8 modules: ecocredit, basket, data, marketplace, etc. |
+| `find_by_type` | ✅ Working | Functions, Methods, Structs, Interfaces with GitHub URLs |
+| `find_callees` | ✅ Working | 11,331 CALLS edges for call graph navigation |
 
-**What works great:** `search`, `find_by_type`, `search_entities`, `list_repos` - these cover most developer needs.
+**What works great:** All major query types now work - `search`, `find_by_type`, `search_entities`, `list_repos`, `keeper_for_msg`, `msgs_for_keeper`, `list_modules`.
 
-**For code navigation:** If you have regen-ledger cloned locally, Claude Code's native file reading + Grep often works better than the code graph for deep code exploration. Use KOI for docs, forum, and non-code sources.
+**For code navigation:** If you have regen-ledger cloned locally, Claude Code's native file reading + Grep often works better for deep code exploration. Use KOI for docs, forum, Keeper/Message relationships, and non-code sources.
 
 ---
 

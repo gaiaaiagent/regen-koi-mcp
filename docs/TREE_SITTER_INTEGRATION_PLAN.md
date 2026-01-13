@@ -205,7 +205,20 @@ pm2 restart hybrid-rag-api
 - `list_modules`: ✅ Working (8 modules: ecocredit, basket, data, etc.)
 - `find_callees`: ✅ Working (call graph relationships)
 
-**Note:** `keeper_for_msg` still returns 0 results because HANDLES edges (0) were never populated in regen_graph_v2. The tree-sitter HANDLES edge creation will apply to future extractions.
+### Batch Re-extraction ✅ COMPLETE
+
+**Completed:** Jan 12, 2026
+
+**Actions:**
+1. Created batch extraction scripts on production server
+2. Processed 729 Go files from regen-ledger
+3. Extracted 40 Handlers, 132 Messages, 8 Keepers
+4. Created 41 HANDLES edges and 82 BELONGS_TO edges
+5. Fixed API queries to use correct graph schema
+
+**Results:**
+- `keeper_for_msg`: ✅ Now returns Keeper for any Message (e.g., MsgCreateBatch → Keeper at x/ecocredit/base/keeper/keeper.go)
+- `msgs_for_keeper`: ✅ Now returns all 40 Messages handled by Keeper
 
 ---
 
