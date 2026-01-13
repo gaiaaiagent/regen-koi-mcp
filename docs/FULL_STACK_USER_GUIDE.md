@@ -76,6 +76,43 @@ have been retired on-chain. Compare what the docs say vs actual usage.
 
 ---
 
+## 3b. Developer Scenarios
+
+These prompts are tested and work well for Regen developers:
+
+### "How do I create a credit class?"
+```
+How do I create a credit class on Regen? Show me:
+1. The tutorial/guide (use search)
+2. The MsgCreateClass code location (use query_code_graph)
+3. Example credit classes on chain (use Ledger MCP list_classes)
+```
+**What you get:** Tutorial from docs, code file:line pointers, real on-chain examples (C01, C02, etc.)
+
+### "What messages can I send?"
+```
+Use query_code_graph with find_by_type to list all Message types in regen-ledger.
+```
+**What you get:** All 133 message types with file locations and GitHub links.
+
+### "Show me how credit retirement works"
+```
+Search for documentation about credit retirement and MsgRetire.
+Include both the conceptual explanation and code implementation.
+```
+**What you get:** RFC docs, retirement guides, CLI examples, MsgRetire proto definition.
+
+### "What's the marketplace module architecture?"
+```
+Search for marketplace module architecture and show me:
+1. High-level docs explaining the design
+2. All marketplace-related message types
+3. Example sell orders on chain
+```
+**What you get:** Spec docs, message types, live sell orders from Ledger MCP.
+
+---
+
 ## 4. Access Private Docs (Optional)
 
 If you have a @regen.network email and want to access internal Notion:
@@ -90,16 +127,26 @@ This opens a browser for Google OAuth. After authenticating, you can search inte
 
 ## 5. What You Can Do
 
-| Capability | Tool | Example Query |
-|------------|------|---------------|
-| Search docs/forum/Notion | `search` | "Registry Agent responsibilities" |
-| Navigate codebase | `query_code_graph` | "Find MsgCreateBatch implementation" |
-| Search GitHub docs | `search_github_docs` | "validator upgrade guide" |
-| Weekly ecosystem digest | `generate_weekly_digest` | "What happened last week?" |
-| Entity resolution | `resolve_entity` | "Find info about Gregory Landua" |
-| On-chain balances | Ledger: `get_balance` | "What's in the community pool?" |
-| Governance proposals | Ledger: `list_governance_proposals` | "Show active proposals" |
-| Credit class info | Ledger: `list_classes` | "List all credit classes" |
+### KOI MCP Tools
+| Capability | Tool | Example | Works Well? |
+|------------|------|---------|-------------|
+| Search docs/forum/Notion | `search` | "Registry Agent responsibilities" | ✅ Excellent |
+| List all message types | `query_code_graph` (find_by_type) | "List all Message types" | ✅ Great |
+| Search code entities | `query_code_graph` (search_entities) | "Find MsgRetire" | ✅ Great |
+| List indexed repos | `query_code_graph` (list_repos) | "What repos are indexed?" | ✅ Great |
+| Search GitHub docs | `search_github_docs` | "validator upgrade guide" | ✅ Good |
+| Weekly ecosystem digest | `generate_weekly_digest` | "What happened last week?" | ✅ Good |
+| Entity resolution | `resolve_entity` | "Find info about Gregory Landua" | ✅ Good |
+
+### Ledger MCP Tools (On-Chain State)
+| Capability | Tool | Example |
+|------------|------|---------|
+| Account balances | `get_balance` | "What's in the community pool?" |
+| Governance proposals | `list_governance_proposals` | "Show active proposals" |
+| Credit classes | `list_classes` | "List all credit classes" |
+| Credit batches | `list_credit_batches` | "Show recent credit batches" |
+| Sell orders | `list_sell_orders` | "What's for sale on marketplace?" |
+| Projects | `list_projects` | "List registered projects" |
 
 ---
 
@@ -143,7 +190,24 @@ Your feedback is stored and helps improve the system.
 
 ---
 
-## 8. Troubleshooting
+## 8. Known Limitations
+
+The code graph has some known data gaps (as of Jan 2026):
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| `keeper_for_msg` | ⚠️ Limited | Returns 0 results - relationship edges not fully extracted |
+| `msgs_for_keeper` | ⚠️ Limited | Same as above |
+| `list_modules` | ⚠️ Empty | Module metadata not indexed yet |
+| Entity type accuracy | ⚠️ ~80% generic | Many entities typed as "Entity" not specific types |
+
+**What works great:** `search`, `find_by_type`, `search_entities`, `list_repos` - these cover most developer needs.
+
+**For code navigation:** If you have regen-ledger cloned locally, Claude Code's native file reading + Grep often works better than the code graph for deep code exploration. Use KOI for docs, forum, and non-code sources.
+
+---
+
+## 9. Troubleshooting
 
 ### "Tool not found" or "MCP not connected"
 - Restart Claude Code / your client
@@ -164,7 +228,7 @@ Your feedback is stored and helps improve the system.
 
 ---
 
-## 9. More Resources
+## 10. More Resources
 
 | Resource | Description |
 |----------|-------------|
@@ -175,7 +239,7 @@ Your feedback is stored and helps improve the system.
 
 ---
 
-## Current Stats
+## 11. Current Stats
 
 | Metric | Value |
 |--------|-------|
