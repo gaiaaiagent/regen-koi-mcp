@@ -920,7 +920,43 @@ PATTERNS_PATH=/opt/projects/koi-processor/src/core/predicate_patterns.json
 COMMUNITY_PATH=/opt/projects/koi-processor/src/core/predicate_communities.json
 EMBEDDING_SERVICE_URL=http://localhost:8095
 # OPENAI_API_KEY=your_key  # Optional; template queries used when absent
+
+# Tool Filtering (useful for personal/custom deployments)
+# Whitelist mode - only these tools are available:
+# KOI_ENABLED_TOOLS=search,get_stats,query_code_graph
+
+# Blacklist mode - all tools except these:
+# KOI_DISABLED_TOOLS=regen_koi_authenticate,list_governance_proposals
 ```
+
+### Tool Filtering for Custom Deployments
+
+You can customize which tools are exposed by setting environment variables. This is useful when:
+- Running a personal KOI instance without Regen-specific features
+- Creating a focused deployment with only certain tools
+- Disabling authentication for public-only access
+
+**Blacklist Mode** (disable specific tools):
+```json
+{
+  "env": {
+    "KOI_API_ENDPOINT": "http://localhost:8080/api/koi",
+    "KOI_DISABLED_TOOLS": "regen_koi_authenticate,list_governance_proposals,get_validator_commission"
+  }
+}
+```
+
+**Whitelist Mode** (enable only specific tools):
+```json
+{
+  "env": {
+    "KOI_API_ENDPOINT": "http://localhost:8080/api/koi",
+    "KOI_ENABLED_TOOLS": "search,get_stats,query_code_graph,sparql_query"
+  }
+}
+```
+
+> **Note:** Whitelist mode takes precedence. If `KOI_ENABLED_TOOLS` is set, `KOI_DISABLED_TOOLS` is ignored.
 
 ## 🏗️ Development
 

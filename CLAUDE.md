@@ -81,7 +81,20 @@ npm run dev
 KOI_API_ENDPOINT=https://regen.gaiaai.xyz/api/koi
 KOI_API_KEY=optional-api-key
 REGEN_USER_EMAIL=your@regen.network  # For auth
+
+# Tool filtering (for custom/personal deployments)
+KOI_DISABLED_TOOLS=regen_koi_authenticate,tool2  # Blacklist mode
+KOI_ENABLED_TOOLS=search,get_stats,query_code_graph  # Whitelist mode (takes precedence)
 ```
+
+### Tool Filtering
+
+The server supports filtering which tools are exposed, useful for personal deployments:
+
+- **Blacklist mode**: Set `KOI_DISABLED_TOOLS` to comma-separated tool names to disable
+- **Whitelist mode**: Set `KOI_ENABLED_TOOLS` to comma-separated tool names (only these enabled)
+- Whitelist takes precedence if both are set
+- Example: Personal KOI without auth: `KOI_DISABLED_TOOLS=regen_koi_authenticate`
 
 ## Architecture
 

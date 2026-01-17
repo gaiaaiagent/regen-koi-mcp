@@ -47,7 +47,45 @@ const KOI_INTERNAL_API_KEY = process.env.KOI_INTERNAL_API_KEY || ''; // For MCP-
 const SERVER_NAME = process.env.MCP_SERVER_NAME || 'regen-koi';
 const SERVER_VERSION = process.env.MCP_SERVER_VERSION || '1.4.1';
 
+// Tool filtering configuration
+// Use KOI_ENABLED_TOOLS for whitelist mode (only specified tools available)
+// Use KOI_DISABLED_TOOLS for blacklist mode (all tools except specified)
+// Examples:
+//   KOI_ENABLED_TOOLS=search,get_stats,query_code_graph (whitelist - only these 3 tools)
+//   KOI_DISABLED_TOOLS=regen_koi_authenticate,list_governance_proposals (blacklist - all except these)
+const KOI_ENABLED_TOOLS = process.env.KOI_ENABLED_TOOLS
+  ? process.env.KOI_ENABLED_TOOLS.split(',').map(t => t.trim()).filter(Boolean)
+  : null;
+const KOI_DISABLED_TOOLS = process.env.KOI_DISABLED_TOOLS
+  ? process.env.KOI_DISABLED_TOOLS.split(',').map(t => t.trim()).filter(Boolean)
+  : [];
+
+/**
+ * Check if a tool should be included based on filtering configuration.
+ * Whitelist mode (KOI_ENABLED_TOOLS) takes precedence over blacklist mode.
+ */
+function isToolEnabled(toolName: string): boolean {
+  if (KOI_ENABLED_TOOLS) {
+    // Whitelist mode - only include explicitly enabled tools
+    return KOI_ENABLED_TOOLS.includes(toolName);
+  }
+  // Blacklist mode - include all tools except explicitly disabled ones
+  return !KOI_DISABLED_TOOLS.includes(toolName);
+}
+
+/**
+ * Get filtered list of tools based on configuration
+ */
+function getFilteredTools() {
+  return TOOLS.filter(tool => isToolEnabled(tool.name));
+}
+
 console.error(`[${SERVER_NAME}] User email for auth: ${USER_EMAIL}`);
+if (KOI_ENABLED_TOOLS) {
+  console.error(`[${SERVER_NAME}] Tool whitelist mode: ${KOI_ENABLED_TOOLS.length} tools enabled`);
+} else if (KOI_DISABLED_TOOLS.length > 0) {
+  console.error(`[${SERVER_NAME}] Tool blacklist mode: ${KOI_DISABLED_TOOLS.length} tools disabled`);
+}
 
 /**
  * Ensure token is synced from file storage to in-memory storage.
@@ -175,15 +213,30 @@ class KOIServer {
   }
 
   private setupHandlers() {
-    // Handle tool list requests
+    // Handle tool list requests (filtered based on KOI_ENABLED_TOOLS / KOI_DISABLED_TOOLS)
     this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: TOOLS,
+      tools: getFilteredTools(),
     }));
 
     // Handle tool execution
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
       const startTime = Date.now();
+
+      // Check if tool is enabled (reject calls to disabled tools)
+      if (!isToolEnabled(name)) {
+        logger.warn({
+          action: 'tool_disabled',
+          tool: name
+        }, `Rejected call to disabled tool: ${name}`);
+        return {
+          content: [{
+            type: 'text',
+            text: `Tool "${name}" is not available in this configuration. Check KOI_ENABLED_TOOLS or KOI_DISABLED_TOOLS environment variables.`
+          }],
+          isError: true
+        };
+      }
 
       logger.info({
         action: 'tool_execute_start',
