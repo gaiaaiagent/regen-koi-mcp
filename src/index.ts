@@ -37,7 +37,7 @@ import { parseRID, isValidRID, extractSourceFromRID, normalizeRID, getRegistered
 // Auth store for file-based token persistence (ESM-compatible)
 import { loadAuthState, hasValidAccessToken } from './auth-store.js';
 // Entity registry for local pre-resolution of known Regen entities
-import { preResolveEntity, formatCanonicalResponse, loadRegistry } from './entity-registry.js';
+import { preResolveEntity, preResolveEntityAsync, formatCanonicalResponse, loadRegistry } from './entity-registry.js';
 
 // Load environment variables
 dotenv.config();
@@ -2456,11 +2456,12 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
     const startTime = Date.now();
     console.error(`[${SERVER_NAME}] Tool=resolve_entity Label="${label}" TypeHint=${type_hint || 'none'}`);
 
-    // Pre-resolution: Check local entity registry first
-    const preResolved = preResolveEntity(label, type_hint);
+    // Pre-resolution: Try API-first with local registry fallback
+    // This uses the enhanced entity resolution that supports ledger entities
+    const preResolved = await preResolveEntityAsync(label, type_hint);
     if (preResolved.resolved && preResolved.confidence >= 0.9) {
       const duration = Date.now() - startTime;
-      console.error(`[${SERVER_NAME}] Tool=resolve_entity PRE-RESOLVED from local registry, confidence=${preResolved.confidence}, match_type=${preResolved.match_type}, duration=${duration}ms`);
+      console.error(`[${SERVER_NAME}] Tool=resolve_entity PRE-RESOLVED via ${preResolved.source}, confidence=${preResolved.confidence}, match_type=${preResolved.match_type}, duration=${duration}ms`);
       return formatCanonicalResponse(preResolved);
     }
 

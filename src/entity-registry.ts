@@ -1,14 +1,22 @@
 /**
  * Entity Registry for Regen Network
  *
- * Provides local pre-resolution of known Regen entities (credit classes, projects, organizations)
- * before falling back to the KOI API. This fixes polysemy issues where "City Forest Credits"
- * could resolve to multiple entities.
+ * Provides entity resolution for Regen entities (credit classes, projects, organizations).
+ * Uses a two-tier approach:
+ * 1. KOI API resolution (primary) - Real-time data from the KOI backend
+ * 2. Local registry fallback - Cached JSON file for offline/backup
+ *
+ * This fixes polysemy issues where "City Forest Credits" could resolve to multiple entities.
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+
+// Configuration for API-based resolution
+const KOI_ENTITY_API_ENABLED = process.env.KOI_ENTITY_API_ENABLED !== 'false'; // Default: true
+const KOI_API_ENDPOINT = process.env.KOI_API_ENDPOINT || 'https://regen.gaiaai.xyz/api/koi';
+const KOI_ENTITY_RESOLVE_TIMEOUT = parseInt(process.env.KOI_ENTITY_RESOLVE_TIMEOUT || '5000', 10);
 
 // ESM-compatible __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -73,13 +81,131 @@ export interface PreResolutionResult {
     description?: string;
     administered_classes?: string[];
     metadata_iri?: string;
+    admin_address?: string;
+    jurisdiction?: string;
+    source?: string;
   };
   source: 'registry' | 'api';
-  match_type?: 'exact_id' | 'exact_name' | 'alias' | 'fuzzy';
+  match_type?: 'exact_id' | 'exact_name' | 'alias' | 'fuzzy' | 'ledger_id' | 'normalized_text';
+}
+
+// API response interface
+interface APIEntityResolveResponse {
+  query_label: string;
+  type_hint: string | null;
+  variant_count: number;
+  winner: {
+    uri: string;
+    entity_text: string;
+    entity_type: string;
+    occurrence_count: number;
+    relationship_count: number;
+    match_type: string;
+    ledger_id: string | null;
+    metadata_iri: string | null;
+    admin_address: string | null;
+    aliases: string[] | null;
+    jurisdiction: string | null;
+    class_id: string | null;
+    source: string | null;
+    score: number;
+    score_breakdown: string;
+  } | null;
+  alternatives: Array<any>;
+  is_polysemy: boolean;
+  resolution_method: string;
 }
 
 // Singleton registry instance
 let registryInstance: EntityRegistry | null = null;
+
+/**
+ * Resolve an entity via the KOI API
+ * This provides real-time resolution from the KOI backend
+ */
+export async function resolveEntityViaAPI(
+  label: string,
+  typeHint?: string
+): Promise<PreResolutionResult> {
+  const url = new URL(`${KOI_API_ENDPOINT}/entity/resolve`);
+  url.searchParams.set('label', label);
+  if (typeHint) {
+    url.searchParams.set('type_hint', typeHint);
+  }
+  url.searchParams.set('limit', '1');
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), KOI_ENTITY_RESOLVE_TIMEOUT);
+
+  try {
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      console.error(`[EntityRegistry] API resolution failed: ${response.status} ${response.statusText}`);
+      return { resolved: false, confidence: 0, source: 'api' };
+    }
+
+    const data = await response.json() as APIEntityResolveResponse;
+
+    if (!data.winner) {
+      return { resolved: false, confidence: 0, source: 'api' };
+    }
+
+    const winner = data.winner;
+
+    // Calculate confidence based on match type and score
+    let confidence = 0.9;
+    if (winner.match_type === 'ledger_id') {
+      confidence = 1.0;
+    } else if (winner.match_type === 'normalized_text') {
+      confidence = 0.98;
+    } else if (winner.match_type === 'alias') {
+      confidence = 0.95;
+    }
+
+    // Map match_type to our interface
+    let matchType: PreResolutionResult['match_type'] = 'exact_name';
+    if (winner.match_type === 'ledger_id') {
+      matchType = 'ledger_id';
+    } else if (winner.match_type === 'alias') {
+      matchType = 'alias';
+    } else if (winner.match_type === 'normalized_text') {
+      matchType = 'normalized_text';
+    }
+
+    return {
+      resolved: true,
+      confidence,
+      entity: {
+        uri: winner.uri,
+        label: winner.entity_text,
+        type: winner.entity_type,
+        id: winner.ledger_id || undefined,
+        class_id: winner.class_id || undefined,
+        aliases: winner.aliases || undefined,
+        metadata_iri: winner.metadata_iri || undefined,
+        admin_address: winner.admin_address || undefined,
+        jurisdiction: winner.jurisdiction || undefined,
+        source: winner.source || undefined
+      },
+      source: 'api',
+      match_type: matchType
+    };
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.error(`[EntityRegistry] API resolution timed out after ${KOI_ENTITY_RESOLVE_TIMEOUT}ms`);
+    } else {
+      console.error('[EntityRegistry] API resolution error:', error);
+    }
+    return { resolved: false, confidence: 0, source: 'api' };
+  }
+}
 
 /**
  * Load the entity registry from disk
@@ -384,6 +510,43 @@ export function preResolveEntity(label: string, typeHint?: string): PreResolutio
 }
 
 /**
+ * Pre-resolve an entity using API-first approach with local registry fallback
+ * This is the recommended method for production use
+ *
+ * Resolution order:
+ * 1. Try KOI API (real-time data from the backend)
+ * 2. Fall back to local registry if API fails/unavailable
+ *
+ * @param label - The entity label to resolve
+ * @param typeHint - Optional type hint (e.g., "CREDIT_CLASS", "PROJECT")
+ * @returns Promise<PreResolutionResult>
+ */
+export async function preResolveEntityAsync(
+  label: string,
+  typeHint?: string
+): Promise<PreResolutionResult> {
+  // Try API first if enabled
+  if (KOI_ENTITY_API_ENABLED) {
+    try {
+      const apiResult = await resolveEntityViaAPI(label, typeHint);
+      if (apiResult.resolved) {
+        console.error(`[EntityRegistry] Resolved "${label}" via API (${apiResult.match_type})`);
+        return apiResult;
+      }
+    } catch (error) {
+      console.error(`[EntityRegistry] API resolution failed, falling back to local registry:`, error);
+    }
+  }
+
+  // Fall back to local registry
+  const localResult = preResolveEntity(label, typeHint);
+  if (localResult.resolved) {
+    console.error(`[EntityRegistry] Resolved "${label}" via local registry (${localResult.match_type})`);
+  }
+  return localResult;
+}
+
+/**
  * Get all credit classes from the registry
  */
 export function getAllCreditClasses(): CreditClass[] {
@@ -436,13 +599,14 @@ export function formatCanonicalResponse(result: PreResolutionResult): {
     return {
       content: [{
         type: 'text',
-        text: 'Entity not found in local registry.'
+        text: 'Entity not found in registry or API.'
       }]
     };
   }
 
   const entity = result.entity;
-  let md = `## Entity Resolution (Local Registry)\n\n`;
+  const sourceLabel = result.source === 'api' ? 'KOI API' : 'Local Registry';
+  let md = `## Entity Resolution (${sourceLabel})\n\n`;
   md += `**Canonical Match Found** (${(result.confidence * 100).toFixed(0)}% confidence)\n\n`;
   md += `### ${entity.label}\n`;
   md += `- **URI:** \`${entity.uri}\`\n`;
@@ -453,6 +617,12 @@ export function formatCanonicalResponse(result: PreResolutionResult): {
   }
   if (entity.class_id) {
     md += `- **Credit Class:** ${entity.class_id}\n`;
+  }
+  if (entity.jurisdiction) {
+    md += `- **Jurisdiction:** ${entity.jurisdiction}\n`;
+  }
+  if (entity.admin_address) {
+    md += `- **Admin:** \`${entity.admin_address}\`\n`;
   }
   if (entity.aliases && entity.aliases.length > 0) {
     md += `- **Aliases:** ${entity.aliases.join(', ')}\n`;
@@ -466,9 +636,12 @@ export function formatCanonicalResponse(result: PreResolutionResult): {
   if (entity.metadata_iri) {
     md += `- **Metadata IRI:** \`${entity.metadata_iri}\`\n`;
   }
+  if (entity.source) {
+    md += `- **Data Source:** ${entity.source}\n`;
+  }
 
   md += `\n---\n`;
-  md += `*Source: Local Regen Entity Registry (${result.match_type} match)*`;
+  md += `*Source: ${sourceLabel} (${result.match_type} match)*`;
 
   return {
     content: [{
