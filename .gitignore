@@ -54,6 +54,7 @@ temp/
 # Data files
 data/
 !data/regen_entity_registry.json
+!data/overrides.json
 *.db
 
 # Service files

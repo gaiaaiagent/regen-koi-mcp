@@ -1,32 +1,49 @@
 #!/usr/bin/env npx ts-node
 /**
- * Build Entity Registry Script
+ * Build Entity Registry Script - FULLY AUTOMATED
  *
- * Fetches credit class and project data from the Regen Ledger API
- * and builds the canonical entity registry JSON file.
+ * Fetches credit class and project data from the Regen Ledger API,
+ * resolves metadata IRIs to get canonical names, generates aliases,
+ * and builds organizations from admin address grouping.
+ *
+ * NO HARDCODED DATA - everything is fetched and derived automatically.
  *
  * Usage:
  *   npx ts-node scripts/build_entity_registry.ts
  *
- * Or run via npm script:
+ * Or via npm script:
  *   npm run build:registry
  */
 
 import axios from 'axios';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+// ESM-compatible __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // API configuration
-const LEDGER_API = process.env.LEDGER_API_ENDPOINT || 'https://regen.gaiaai.xyz/regen-api';
+// Use Keplr's public LCD endpoint as default (reliable and maintained)
+const LEDGER_API = process.env.LEDGER_API_ENDPOINT || 'https://lcd-regen.keplr.app';
+const REGEN_DATA_API = 'https://api.regen.network/data/v2/metadata-graph';
 
-interface CreditClass {
+// Rate limiting for metadata resolution
+const METADATA_FETCH_DELAY_MS = 100;
+
+// =============================================================================
+// Types
+// =============================================================================
+
+interface LedgerCreditClass {
   id: string;
   admin: string;
   metadata: string;
   credit_type_abbrev: string;
 }
 
-interface Project {
+interface LedgerProject {
   id: string;
   admin: string;
   class_id: string;
@@ -35,175 +52,247 @@ interface Project {
   reference_id: string;
 }
 
-// Known credit class names and aliases (from documentation and registry standards)
-const CREDIT_CLASS_METADATA: Record<string, {
-  name: string;
-  aliases: string[];
-  description: string;
-}> = {
-  'C01': {
-    name: 'CarbonPlus Grasslands',
-    aliases: ['Grasslands', 'CarbonPlus', 'Grassland Credits'],
-    description: 'Grassland carbon sequestration credits'
-  },
-  'C02': {
-    name: 'City Forest Credits',
-    aliases: ['Urban Forest Carbon', 'CFC', 'City Forest', 'Urban Forest'],
-    description: 'Urban forest carbon credits from City Forest Credits methodology'
-  },
-  'C03': {
-    name: 'TCO2: Toucan Carbon Tokens',
-    aliases: ['Toucan', 'TCO2', 'Toucan Carbon', 'NCT'],
-    description: 'Toucan bridged carbon credits'
-  },
-  'C04': {
-    name: 'Ruuts Soil Carbon',
-    aliases: ['Ruuts', 'Soil Carbon', 'Ruuts Carbon'],
-    description: 'Soil carbon credits from Ruuts methodology'
-  },
-  'C05': {
-    name: 'Biochar Carbon Credits',
-    aliases: ['Biochar', 'Kulshan Biochar', 'Kulshan Carbon'],
-    description: 'Biochar carbon removal credits'
-  },
-  'C06': {
-    name: 'EcoMetric UK Peatland',
-    aliases: ['UK Peatland', 'Peatland', 'EcoMetric Peatland'],
-    description: 'UK peatland restoration carbon credits administered by EcoMetric'
-  },
-  'C07': {
-    name: 'Australian Carbon',
-    aliases: ['ACCU', 'Australian Carbon Credit Units', 'Australia Carbon'],
-    description: 'Australian carbon credit units'
-  },
-  'C08': {
-    name: 'EcoMetric Biodiversity',
-    aliases: ['Biodiversity Credits', 'EcoMetric Bio'],
-    description: 'EcoMetric biodiversity credits'
-  },
-  'C09': {
-    name: 'EcoMetric Soil Health',
-    aliases: ['Soil Health Credits', 'EcoMetric Soil'],
-    description: 'EcoMetric soil health credits'
-  },
-  'BT01': {
-    name: 'BioTerra',
-    aliases: ['Terrasos Protocol', 'Terrasos', 'BioTerra Credits'],
-    description: 'Biodiversity credits from Terrasos methodology in Colombia'
-  },
-  'KSH01': {
-    name: 'Grazing Management',
-    aliases: ['Kilo-Sheep-Hour', 'KSH', 'Grazing Credits', 'Sheep Hour'],
-    description: 'Grazing management credits measured in Kilo-Sheep-Hours'
-  },
-  'MBS01': {
-    name: 'Marine Biodiversity',
-    aliases: ['Marine Bio Stewardship', 'Marine Credits', 'MBS'],
-    description: 'Marine biodiversity stewardship credits'
-  },
-  'USS01': {
-    name: 'Umbrella Species',
-    aliases: ['Umbrella Species Stewardship', 'USS', 'Species Credits'],
-    description: 'Umbrella species stewardship credits for wildlife habitat'
-  }
-};
+interface ResolvedMetadata {
+  name?: string;
+  description?: string;
+  alternateNames?: string[];
+  provider?: {
+    name?: string;
+    type?: string;
+  };
+  [key: string]: any;
+}
 
-// Known project names (from documentation and metadata)
-const PROJECT_METADATA: Record<string, {
-  name: string;
-  aliases: string[];
-  location: string;
-}> = {
-  'BT01-001': {
-    name: 'El Globo Nature Reserve',
-    aliases: ['El Globo', 'Globo Reserve'],
-    location: 'Antioquia, Colombia'
-  },
-  'BT01-002': {
-    name: 'La Pedregoza Reserve',
-    aliases: ['La Pedregoza', 'Pedregoza'],
-    location: 'Cundinamarca, Colombia'
-  },
-  'C02-003': {
-    name: 'Buena Vista Heights',
-    aliases: ['Buena Vista', 'BVH', 'Pennsylvania Forest'],
-    location: 'Pennsylvania, USA'
-  },
-  'C05-001': {
-    name: 'Kulshan Biochar Project',
-    aliases: ['Kulshan', 'Kulshan Biochar', 'Washington Biochar'],
-    location: 'Washington, USA'
-  }
-};
+interface AliasCandidate {
+  alias: string;
+  confidence: number;
+  source: 'metadata' | 'acronym' | 'word_pattern' | 'class_name';
+}
 
-// Organization mappings
-const ORGANIZATIONS = {
-  'city_forest_credits': {
-    name: 'City Forest Credits',
-    aliases: ['CFC', 'City Forest'],
-    administered_classes: ['C02'],
-    description: 'Urban forestry carbon credit methodology developer'
-  },
-  'ecometric': {
-    name: 'EcoMetric',
-    aliases: ['Ecometric', 'EcoMetric Ltd'],
-    administered_classes: ['C06', 'C08', 'C09'],
-    description: 'UK-based environmental credits administrator'
-  },
-  'terrasos': {
-    name: 'Terrasos',
-    aliases: ['Terrasos Foundation', 'BioTerra'],
-    administered_classes: ['BT01'],
-    description: 'Colombian biodiversity credit developer'
-  },
-  'toucan': {
-    name: 'Toucan Protocol',
-    aliases: ['Toucan', 'Toucan Carbon'],
-    administered_classes: ['C03'],
-    description: 'Carbon credit tokenization and bridging protocol'
-  },
-  'kulshan_carbon': {
-    name: 'Kulshan Carbon Trust',
-    aliases: ['Kulshan', 'Kulshan Biochar'],
-    administered_classes: ['C05'],
-    description: 'Biochar carbon removal credit developer'
-  },
-  'ruuts': {
-    name: 'Ruuts',
-    aliases: ['Ruuts Carbon', 'Ruuts Soil'],
-    administered_classes: ['C04'],
-    description: 'Soil carbon credit methodology developer'
-  },
-  'regen_network': {
-    name: 'Regen Network',
-    aliases: ['Regen', 'Regen Network Development'],
-    administered_classes: ['C01', 'C07', 'KSH01', 'MBS01', 'USS01'],
-    description: 'Core development organization for Regen Network blockchain'
-  }
-};
+interface Override {
+  name?: string;
+  aliases?: string[];
+  description?: string;
+  org_name?: string;
+}
 
-async function fetchCreditClasses(): Promise<CreditClass[]> {
+interface Overrides {
+  credit_classes?: Record<string, Override>;
+  projects?: Record<string, Override>;
+  organizations?: Record<string, Override>;
+}
+
+// =============================================================================
+// Metadata Resolution
+// =============================================================================
+
+/**
+ * Resolve a Regen metadata IRI to get the actual metadata content
+ */
+async function resolveMetadataIRI(iri: string): Promise<ResolvedMetadata | null> {
+  if (!iri) return null;
+
   try {
-    const response = await axios.get(`${LEDGER_API}/cosmos/ecocredit/v1/classes`);
-    return response.data.classes || [];
-  } catch (error) {
-    console.error('Failed to fetch credit classes:', error);
-    return [];
+    const encodedIRI = encodeURIComponent(iri);
+    const url = `${REGEN_DATA_API}/${encodedIRI}`;
+
+    const response = await axios.get(url, {
+      timeout: 10000,
+      headers: { 'Accept': 'application/ld+json, application/json' }
+    });
+
+    return parseMetadata(response.data);
+  } catch (error: any) {
+    // Silent fail - metadata resolution is best-effort
+    if (error.response?.status !== 404) {
+      console.error(`  [WARN] Failed to resolve metadata for ${iri.slice(0, 50)}...`);
+    }
+    return null;
   }
 }
 
-async function fetchProjects(): Promise<Project[]> {
-  try {
-    const response = await axios.get(`${LEDGER_API}/cosmos/ecocredit/v1/projects`);
-    return response.data.projects || [];
-  } catch (error) {
-    console.error('Failed to fetch projects:', error);
-    return [];
+/**
+ * Parse metadata from various RDF/JSON-LD formats
+ */
+function parseMetadata(data: any): ResolvedMetadata {
+  const result: ResolvedMetadata = {};
+
+  // Handle array wrapper (some responses are wrapped in an array)
+  if (Array.isArray(data)) {
+    data = data[0] || {};
   }
+
+  // Extract name (try multiple schema variations)
+  result.name =
+    data['schema:name'] ||
+    data['http://schema.org/name'] ||
+    data['rdfs:label'] ||
+    data['http://www.w3.org/2000/01/rdf-schema#label'] ||
+    data['name'] ||
+    data['title'] ||
+    (data['@graph'] && data['@graph'][0]?.['schema:name']);
+
+  // Handle name as array or object
+  if (Array.isArray(result.name)) {
+    result.name = result.name[0];
+  }
+  if (typeof result.name === 'object' && result.name !== null) {
+    result.name = result.name['@value'] || result.name['value'] || String(result.name);
+  }
+
+  // Extract description
+  result.description =
+    data['schema:description'] ||
+    data['http://schema.org/description'] ||
+    data['rdfs:comment'] ||
+    data['description'];
+
+  if (Array.isArray(result.description)) {
+    result.description = result.description[0];
+  }
+  if (typeof result.description === 'object' && result.description !== null) {
+    result.description = result.description['@value'] || String(result.description);
+  }
+
+  // Extract alternate names
+  const altNames =
+    data['schema:alternateName'] ||
+    data['http://schema.org/alternateName'] ||
+    data['skos:altLabel'] ||
+    data['alternateName'] ||
+    [];
+
+  result.alternateNames = Array.isArray(altNames)
+    ? altNames.map(n => typeof n === 'object' ? n['@value'] || String(n) : String(n))
+    : altNames ? [String(altNames)] : [];
+
+  // Extract provider/organization info
+  const provider =
+    data['schema:provider'] ||
+    data['http://schema.org/provider'] ||
+    data['schema:creator'] ||
+    data['http://schema.org/creator'] ||
+    data['schema:sourceOrganization'] ||
+    data['provider'] ||
+    data['creator'];
+
+  if (provider) {
+    result.provider = {
+      name: typeof provider === 'object'
+        ? (provider['schema:name'] || provider['name'] || provider['@value'])
+        : String(provider),
+      type: typeof provider === 'object' ? provider['@type'] : undefined
+    };
+  }
+
+  return result;
 }
 
-function getJurisdictionLocation(jurisdiction: string): string {
-  const jurisdictionMap: Record<string, string> = {
+// =============================================================================
+// Alias Generation
+// =============================================================================
+
+/**
+ * Generate an acronym from a name
+ * "City Forest Credits" → "CFC"
+ */
+function generateAcronym(name: string): string | null {
+  if (!name) return null;
+
+  const words = name.split(/\s+/).filter(w => w.length > 0);
+  if (words.length < 2) return null;
+
+  // Only use capitalized words for acronym
+  const acronym = words
+    .filter(word => /^[A-Z]/.test(word))
+    .map(word => word[0].toUpperCase())
+    .join('');
+
+  // Acronym should be 2-5 characters
+  if (acronym.length >= 2 && acronym.length <= 5) {
+    return acronym;
+  }
+
+  return null;
+}
+
+/**
+ * Generate word pattern aliases from a name
+ * "EcoMetric UK Peatland" → ["UK Peatland", "Peatland"]
+ */
+function generateWordPatterns(name: string): string[] {
+  if (!name) return [];
+
+  const words = name.split(/\s+/).filter(w => w.length > 0);
+  if (words.length < 2) return [];
+
+  const aliases: string[] = [];
+
+  // Drop first word (often org name)
+  if (words.length >= 2) {
+    aliases.push(words.slice(1).join(' '));
+  }
+
+  // Drop common suffixes like "Credits", "Carbon", "Protocol"
+  const suffixes = ['Credits', 'Carbon', 'Protocol', 'Tokens', 'Units'];
+  if (words.length >= 2 && suffixes.includes(words[words.length - 1])) {
+    aliases.push(words.slice(0, -1).join(' '));
+  }
+
+  // Just the last significant word (if it's not a common suffix)
+  if (words.length >= 2 && !suffixes.includes(words[words.length - 1])) {
+    aliases.push(words[words.length - 1]);
+  }
+
+  return aliases.filter(a => a.length >= 3);
+}
+
+/**
+ * Generate all alias candidates for an entity
+ */
+function generateAliases(name: string, metadataAliases: string[] = []): AliasCandidate[] {
+  const candidates: AliasCandidate[] = [];
+  const seen = new Set<string>();
+
+  const addCandidate = (alias: string, confidence: number, source: AliasCandidate['source']) => {
+    const normalized = alias.toLowerCase().trim();
+    if (normalized && !seen.has(normalized) && normalized !== name.toLowerCase()) {
+      seen.add(normalized);
+      candidates.push({ alias, confidence, source });
+    }
+  };
+
+  // Metadata alternate names (highest confidence)
+  for (const alias of metadataAliases) {
+    addCandidate(alias, 1.0, 'metadata');
+  }
+
+  // Acronym
+  const acronym = generateAcronym(name);
+  if (acronym) {
+    addCandidate(acronym, 0.9, 'acronym');
+  }
+
+  // Word patterns
+  for (const pattern of generateWordPatterns(name)) {
+    addCandidate(pattern, 0.8, 'word_pattern');
+  }
+
+  return candidates;
+}
+
+// =============================================================================
+// Jurisdiction Parsing
+// =============================================================================
+
+/**
+ * Parse ISO 3166 jurisdiction codes into human-readable locations
+ */
+function parseJurisdiction(jurisdiction: string): string {
+  if (!jurisdiction) return 'Unknown';
+
+  // ISO 3166-2 subdivision codes
+  const subdivisions: Record<string, string> = {
     'US-WA': 'Washington, USA',
     'US-PA': 'Pennsylvania, USA',
     'US-OH': 'Ohio, USA',
@@ -215,136 +304,478 @@ function getJurisdictionLocation(jurisdiction: string): string {
     'US-IL': 'Illinois, USA',
     'US-CA': 'California, USA',
     'US-WI': 'Wisconsin, USA',
+    'US-NY': 'New York, USA',
+    'US-FL': 'Florida, USA',
     'GB-ENG': 'England, UK',
+    'GB-SCT': 'Scotland, UK',
+    'GB-WLS': 'Wales, UK',
     'AU-NSW': 'New South Wales, Australia',
+    'AU-VIC': 'Victoria, Australia',
+    'AU-QLD': 'Queensland, Australia',
     'CO-ANT': 'Antioquia, Colombia',
     'CO-CUN': 'Cundinamarca, Colombia',
+    'BR-MS': 'Mato Grosso do Sul, Brazil',
+    'BR-PA': 'Pará, Brazil',
+  };
+
+  // ISO 3166-1 country codes
+  const countries: Record<string, string> = {
+    'US': 'United States',
+    'GB': 'United Kingdom',
+    'AU': 'Australia',
     'CO': 'Colombia',
+    'BR': 'Brazil',
     'KE': 'Kenya',
     'CD': 'Democratic Republic of Congo',
-    'CD-MN': 'Democratic Republic of Congo',
-    'PE-MDD': 'Madre de Dios, Peru',
-    'BR': 'Brazil',
-    'BR-MS': 'Mato Grosso do Sul, Brazil',
-    'EC-Y': 'Ecuador',
+    'CG': 'Republic of Congo',
+    'PE': 'Peru',
+    'EC': 'Ecuador',
     'ID': 'Indonesia',
     'KH': 'Cambodia',
     'CN': 'China',
-    'CG': 'Republic of Congo'
+    'IN': 'India',
+    'MX': 'Mexico',
+    'AR': 'Argentina',
   };
 
-  // Try exact match
-  if (jurisdictionMap[jurisdiction]) {
-    return jurisdictionMap[jurisdiction];
+  // Clean up jurisdiction (remove zip codes, etc.)
+  const cleaned = jurisdiction.split(' ')[0].trim();
+
+  // Try exact match on subdivision
+  if (subdivisions[cleaned]) {
+    return subdivisions[cleaned];
   }
 
-  // Try prefix match
-  const prefix = jurisdiction.split(' ')[0];
-  if (jurisdictionMap[prefix]) {
-    return jurisdictionMap[prefix];
+  // Try country code (first 2 chars)
+  const countryCode = cleaned.substring(0, 2).toUpperCase();
+  if (countries[countryCode]) {
+    // If it's a subdivision code, append country
+    if (cleaned.includes('-')) {
+      const subdivision = cleaned.split('-')[1];
+      return `${subdivision}, ${countries[countryCode]}`;
+    }
+    return countries[countryCode];
   }
 
   return jurisdiction;
 }
 
-function buildRegistry(classes: CreditClass[], projects: Project[]): any {
-  const registry: any = {
-    version: '1.0.0',
-    generated: new Date().toISOString(),
-    description: 'Canonical entity registry for Regen Network credit classes and projects',
-    credit_classes: {},
-    projects: {},
-    organizations: ORGANIZATIONS,
-    indexes: {
-      name_to_class: {},
-      name_to_project: {},
-      org_to_classes: {}
-    }
-  };
+// =============================================================================
+// Organization Building
+// =============================================================================
 
-  // Build credit classes
-  for (const cls of classes) {
-    const metadata = CREDIT_CLASS_METADATA[cls.id];
-    registry.credit_classes[cls.id] = {
-      id: cls.id,
-      name: metadata?.name || cls.id,
-      type: 'CREDIT_CLASS',
-      credit_type: cls.credit_type_abbrev,
-      aliases: metadata?.aliases || [],
-      admin: cls.admin,
-      metadata_iri: cls.metadata,
-      description: metadata?.description || `${cls.id} credit class`
-    };
-
-    // Build name-to-class index
-    if (metadata) {
-      registry.indexes.name_to_class[metadata.name.toLowerCase()] = cls.id;
-      for (const alias of metadata.aliases) {
-        registry.indexes.name_to_class[alias.toLowerCase()] = cls.id;
-      }
-    }
-  }
-
-  // Build projects
-  for (const proj of projects) {
-    const metadata = PROJECT_METADATA[proj.id];
-    const location = metadata?.location || getJurisdictionLocation(proj.jurisdiction);
-    const className = registry.credit_classes[proj.class_id]?.name || proj.class_id;
-
-    registry.projects[proj.id] = {
-      id: proj.id,
-      name: metadata?.name || `${className} - ${location}`,
-      type: 'PROJECT',
-      class_id: proj.class_id,
-      jurisdiction: proj.jurisdiction,
-      location: location,
-      aliases: metadata?.aliases || [],
-      ...(proj.reference_id && { reference_id: proj.reference_id }),
-      metadata_iri: proj.metadata
-    };
-
-    // Build name-to-project index
-    if (metadata) {
-      registry.indexes.name_to_project[metadata.name.toLowerCase()] = proj.id;
-      for (const alias of metadata.aliases) {
-        registry.indexes.name_to_project[alias.toLowerCase()] = proj.id;
-      }
-    }
-  }
-
-  // Build org-to-classes index
-  for (const [orgKey, org] of Object.entries(ORGANIZATIONS)) {
-    registry.indexes.org_to_classes[org.name.toLowerCase()] = org.administered_classes;
-    for (const alias of org.aliases) {
-      registry.indexes.org_to_classes[alias.toLowerCase()] = org.administered_classes;
-    }
-  }
-
-  return registry;
+interface OrgData {
+  key: string;
+  name: string;
+  type: 'ORGANIZATION';
+  aliases: string[];
+  administered_classes: string[];
+  description: string;
 }
 
-async function main() {
-  console.log('Building Regen entity registry...');
-  console.log(`Fetching data from: ${LEDGER_API}`);
+/**
+ * Build organizations by grouping classes by admin address
+ * and extracting org names from metadata
+ */
+function buildOrganizations(
+  classes: Array<{ id: string; admin: string; name: string; provider?: { name?: string } }>
+): Record<string, OrgData> {
+  const adminToClasses = new Map<string, string[]>();
+  const adminToOrgName = new Map<string, string>();
 
-  const [classes, projects] = await Promise.all([
+  // Group classes by admin address
+  for (const cls of classes) {
+    const admin = cls.admin;
+    if (!adminToClasses.has(admin)) {
+      adminToClasses.set(admin, []);
+    }
+    adminToClasses.get(admin)!.push(cls.id);
+
+    // Try to extract org name from provider metadata
+    if (cls.provider?.name && !adminToOrgName.has(admin)) {
+      adminToOrgName.set(admin, cls.provider.name);
+    }
+  }
+
+  const organizations: Record<string, OrgData> = {};
+
+  for (const [admin, classIds] of adminToClasses) {
+    // Get org name from metadata, or generate from class names
+    let orgName = adminToOrgName.get(admin);
+    let aliases: string[] = [];
+
+    if (!orgName) {
+      // Try to derive org name from class names by finding distinctive first words
+      const classNames = classIds.map(id =>
+        classes.find(c => c.id === id)?.name || id
+      );
+
+      // Look for distinctive first words (not generic like "Credit", "Class", etc.)
+      const genericWords = new Set([
+        'credit', 'credits', 'class', 'carbon', 'protocol', 'tokens', 'token',
+        'for', 'the', 'and', 'of', 'in', 'a', 'an', 'through', 'with', 'by',
+        'unit', 'units', 'system', 'systems', 'benefits', 'ghg', 'biodiversity'
+      ]);
+
+      const firstWords: string[] = [];
+      for (const name of classNames) {
+        const words = name.split(/\s+/).filter(w => w.length > 2);
+        // Get first non-generic word
+        for (const word of words) {
+          if (!genericWords.has(word.toLowerCase())) {
+            firstWords.push(word);
+            break;
+          }
+        }
+      }
+
+      // Use the most common distinctive first word if consistent
+      const wordCounts = new Map<string, number>();
+      for (const word of firstWords) {
+        wordCounts.set(word, (wordCounts.get(word) || 0) + 1);
+      }
+
+      let bestWord = '';
+      let maxCount = 0;
+      for (const [word, count] of wordCounts) {
+        // Only use if it appears in majority of classes for this admin
+        if (count > maxCount && count >= Math.ceil(classIds.length / 2)) {
+          maxCount = count;
+          bestWord = word;
+        }
+      }
+
+      if (bestWord && bestWord.length > 3) {
+        orgName = bestWord;
+      } else {
+        // Fallback: use admin address short identifier
+        orgName = `Admin_${admin.slice(5, 13)}`;
+      }
+    }
+
+    // Generate org key from name
+    const key = orgName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_|_$/g, '');
+
+    // Generate org aliases
+    const acronym = generateAcronym(orgName);
+    if (acronym) {
+      aliases.push(acronym);
+    }
+
+    // Generate description
+    const classNamesList = classIds.map(id =>
+      classes.find(c => c.id === id)?.name || id
+    ).join(', ');
+
+    organizations[key] = {
+      key,
+      name: orgName,
+      type: 'ORGANIZATION',
+      aliases,
+      administered_classes: classIds.sort(),
+      description: `Administrator of ${classNamesList}`
+    };
+  }
+
+  return organizations;
+}
+
+// =============================================================================
+// Overrides
+// =============================================================================
+
+/**
+ * Load optional overrides file
+ */
+function loadOverrides(): Overrides {
+  const overridesPath = path.join(__dirname, '..', 'data', 'overrides.json');
+
+  try {
+    if (fs.existsSync(overridesPath)) {
+      const data = fs.readFileSync(overridesPath, 'utf-8');
+      console.log('  Loaded overrides file');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('  [WARN] Failed to load overrides:', error);
+  }
+
+  return {};
+}
+
+/**
+ * Apply overrides to an entity
+ */
+function applyOverride<T extends { name?: string; aliases?: string[]; description?: string }>(
+  entity: T,
+  override?: Override
+): T {
+  if (!override) return entity;
+
+  return {
+    ...entity,
+    name: override.name || entity.name,
+    aliases: override.aliases || entity.aliases,
+    description: override.description || entity.description,
+  };
+}
+
+// =============================================================================
+// Main Build Process
+// =============================================================================
+
+async function fetchCreditClasses(): Promise<LedgerCreditClass[]> {
+  try {
+    console.log('  Fetching credit classes from Ledger...');
+    const response = await axios.get(`${LEDGER_API}/regen/ecocredit/v1/classes`);
+    const classes = response.data.classes || [];
+    console.log(`  Found ${classes.length} credit classes`);
+    return classes;
+  } catch (error) {
+    console.error('  [ERROR] Failed to fetch credit classes:', error);
+    return [];
+  }
+}
+
+async function fetchProjects(): Promise<LedgerProject[]> {
+  try {
+    console.log('  Fetching projects from Ledger...');
+    const response = await axios.get(`${LEDGER_API}/regen/ecocredit/v1/projects`);
+    const projects = response.data.projects || [];
+    console.log(`  Found ${projects.length} projects`);
+    return projects;
+  } catch (error) {
+    console.error('  [ERROR] Failed to fetch projects:', error);
+    return [];
+  }
+}
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function buildRegistry() {
+  console.log('═══════════════════════════════════════════════════════════════');
+  console.log('  REGEN ENTITY REGISTRY BUILDER (Fully Automated)');
+  console.log('═══════════════════════════════════════════════════════════════');
+  console.log(`  Ledger API: ${LEDGER_API}`);
+  console.log(`  Metadata API: ${REGEN_DATA_API}`);
+  console.log('');
+
+  // 1. Fetch raw data from Ledger
+  console.log('STEP 1: Fetching data from Ledger API');
+  const [rawClasses, rawProjects] = await Promise.all([
     fetchCreditClasses(),
     fetchProjects()
   ]);
+  console.log('');
 
-  console.log(`Found ${classes.length} credit classes and ${projects.length} projects`);
+  // 2. Resolve metadata for credit classes
+  console.log('STEP 2: Resolving credit class metadata');
+  const classesWithMetadata: Array<any> = [];
 
-  const registry = buildRegistry(classes, projects);
+  for (const cls of rawClasses) {
+    process.stdout.write(`  Resolving ${cls.id}...`);
 
+    const metadata = await resolveMetadataIRI(cls.metadata);
+    await sleep(METADATA_FETCH_DELAY_MS);
+
+    const name = metadata?.name || cls.id;
+    const description = metadata?.description || `${cls.id} credit class`;
+    const metadataAliases = metadata?.alternateNames || [];
+
+    // Generate aliases
+    const aliasCandidates = generateAliases(name, metadataAliases);
+    const aliases = aliasCandidates
+      .filter(a => a.confidence >= 0.7)
+      .map(a => a.alias);
+
+    classesWithMetadata.push({
+      id: cls.id,
+      name,
+      type: 'CREDIT_CLASS',
+      credit_type: cls.credit_type_abbrev,
+      aliases,
+      admin: cls.admin,
+      metadata_iri: cls.metadata,
+      description,
+      provider: metadata?.provider,
+    });
+
+    console.log(` ${name} (${aliases.length} aliases)`);
+  }
+  console.log('');
+
+  // 3. Resolve metadata for projects
+  console.log('STEP 3: Resolving project metadata');
+  const projectsWithMetadata: Array<any> = [];
+
+  for (const proj of rawProjects) {
+    process.stdout.write(`  Resolving ${proj.id}...`);
+
+    const metadata = await resolveMetadataIRI(proj.metadata);
+    await sleep(METADATA_FETCH_DELAY_MS);
+
+    const location = parseJurisdiction(proj.jurisdiction);
+    const className = classesWithMetadata.find(c => c.id === proj.class_id)?.name || proj.class_id;
+    const name = metadata?.name || `${className} - ${location}`;
+    const description = metadata?.description || `${className} project in ${location}`;
+    const metadataAliases = metadata?.alternateNames || [];
+
+    // Generate aliases (include class name as alias for projects)
+    const aliasCandidates = generateAliases(name, metadataAliases);
+    const aliases = aliasCandidates
+      .filter(a => a.confidence >= 0.7)
+      .map(a => a.alias);
+
+    projectsWithMetadata.push({
+      id: proj.id,
+      name,
+      type: 'PROJECT',
+      class_id: proj.class_id,
+      jurisdiction: proj.jurisdiction,
+      location,
+      aliases,
+      ...(proj.reference_id && { reference_id: proj.reference_id }),
+      metadata_iri: proj.metadata,
+      description,
+    });
+
+    console.log(` ${name.slice(0, 40)}... (${aliases.length} aliases)`);
+  }
+  console.log('');
+
+  // 4. Build organizations
+  console.log('STEP 4: Building organizations from admin addresses');
+  const organizations = buildOrganizations(classesWithMetadata);
+  console.log(`  Found ${Object.keys(organizations).length} organizations`);
+  for (const [key, org] of Object.entries(organizations)) {
+    console.log(`    - ${org.name}: ${org.administered_classes.join(', ')}`);
+  }
+  console.log('');
+
+  // 5. Load and apply overrides
+  console.log('STEP 5: Applying overrides');
+  const overrides = loadOverrides();
+
+  for (const cls of classesWithMetadata) {
+    const override = overrides.credit_classes?.[cls.id];
+    if (override) {
+      Object.assign(cls, applyOverride(cls, override));
+      console.log(`  Applied override for ${cls.id}`);
+    }
+  }
+
+  for (const proj of projectsWithMetadata) {
+    const override = overrides.projects?.[proj.id];
+    if (override) {
+      Object.assign(proj, applyOverride(proj, override));
+      console.log(`  Applied override for ${proj.id}`);
+    }
+  }
+
+  for (const [orgKey, org] of Object.entries(organizations)) {
+    const override = overrides.organizations?.[orgKey];
+    if (override) {
+      if (override.name) org.name = override.name;
+      if (override.aliases) org.aliases = [...org.aliases, ...override.aliases];
+      org.description = `Administrator of ${org.administered_classes.map(id =>
+        classesWithMetadata.find(c => c.id === id)?.name || id
+      ).join(', ')}`;
+      console.log(`  Applied override for org ${orgKey} -> ${org.name}`);
+    }
+  }
+  console.log('');
+
+  // 6. Build indexes
+  console.log('STEP 6: Building indexes');
+  const indexes = {
+    name_to_class: {} as Record<string, string>,
+    name_to_project: {} as Record<string, string>,
+    org_to_classes: {} as Record<string, string[]>,
+  };
+
+  for (const cls of classesWithMetadata) {
+    indexes.name_to_class[cls.name.toLowerCase()] = cls.id;
+    for (const alias of cls.aliases) {
+      indexes.name_to_class[alias.toLowerCase()] = cls.id;
+    }
+  }
+
+  for (const proj of projectsWithMetadata) {
+    indexes.name_to_project[proj.name.toLowerCase()] = proj.id;
+    for (const alias of proj.aliases) {
+      indexes.name_to_project[alias.toLowerCase()] = proj.id;
+    }
+  }
+
+  for (const org of Object.values(organizations)) {
+    indexes.org_to_classes[org.name.toLowerCase()] = org.administered_classes;
+    for (const alias of org.aliases) {
+      indexes.org_to_classes[alias.toLowerCase()] = org.administered_classes;
+    }
+  }
+
+  console.log(`  ${Object.keys(indexes.name_to_class).length} class name mappings`);
+  console.log(`  ${Object.keys(indexes.name_to_project).length} project name mappings`);
+  console.log(`  ${Object.keys(indexes.org_to_classes).length} org name mappings`);
+  console.log('');
+
+  // 7. Build final registry
+  const registry = {
+    version: '2.0.0',
+    generated: new Date().toISOString(),
+    description: 'Canonical entity registry for Regen Network - FULLY AUTOMATED',
+    automation: {
+      ledger_api: LEDGER_API,
+      metadata_api: REGEN_DATA_API,
+      note: 'This file is auto-generated. Edit overrides.json to make corrections.',
+    },
+    credit_classes: Object.fromEntries(
+      classesWithMetadata.map(c => {
+        const { provider, ...rest } = c;
+        return [c.id, rest];
+      })
+    ),
+    projects: Object.fromEntries(
+      projectsWithMetadata.map(p => [p.id, p])
+    ),
+    organizations,
+    indexes,
+  };
+
+  // 8. Write output
   const outputPath = path.join(__dirname, '..', 'data', 'regen_entity_registry.json');
+
+  // Ensure data directory exists
+  const dataDir = path.dirname(outputPath);
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+
   fs.writeFileSync(outputPath, JSON.stringify(registry, null, 2));
 
-  console.log(`Registry written to: ${outputPath}`);
-  console.log(`  - ${Object.keys(registry.credit_classes).length} credit classes`);
-  console.log(`  - ${Object.keys(registry.projects).length} projects`);
-  console.log(`  - ${Object.keys(registry.organizations).length} organizations`);
-  console.log(`  - ${Object.keys(registry.indexes.name_to_class).length} class name mappings`);
-  console.log(`  - ${Object.keys(registry.indexes.name_to_project).length} project name mappings`);
+  console.log('═══════════════════════════════════════════════════════════════');
+  console.log('  REGISTRY BUILD COMPLETE');
+  console.log('═══════════════════════════════════════════════════════════════');
+  console.log(`  Output: ${outputPath}`);
+  console.log(`  Credit classes: ${Object.keys(registry.credit_classes).length}`);
+  console.log(`  Projects: ${Object.keys(registry.projects).length}`);
+  console.log(`  Organizations: ${Object.keys(registry.organizations).length}`);
+  console.log(`  Total index entries: ${
+    Object.keys(indexes.name_to_class).length +
+    Object.keys(indexes.name_to_project).length +
+    Object.keys(indexes.org_to_classes).length
+  }`);
+  console.log('');
+  console.log('  To apply manual corrections, edit: data/overrides.json');
+  console.log('═══════════════════════════════════════════════════════════════');
 }
 
-main().catch(console.error);
+buildRegistry().catch(error => {
+  console.error('Build failed:', error);
+  process.exit(1);
+});

@@ -1,492 +1,1408 @@
 {
-  "version": "1.0.0",
-  "generated": "2026-01-20T00:00:00Z",
-  "description": "Canonical entity registry for Regen Network credit classes and projects",
-
+  "version": "2.0.0",
+  "generated": "2026-01-20T09:37:39.848Z",
+  "description": "Canonical entity registry for Regen Network - FULLY AUTOMATED",
+  "automation": {
+    "ledger_api": "https://lcd-regen.keplr.app",
+    "metadata_api": "https://api.regen.network/data/v2/metadata-graph",
+    "note": "This file is auto-generated. Edit overrides.json to make corrections."
+  },
   "credit_classes": {
     "C01": {
       "id": "C01",
-      "name": "CarbonPlus Grasslands",
+      "name": "Verified Carbon Standard",
       "type": "CREDIT_CLASS",
       "credit_type": "C",
-      "aliases": ["Grasslands", "CarbonPlus", "Grassland Credits"],
+      "aliases": [
+        "VCS",
+        "Carbon Standard",
+        "Standard"
+      ],
       "admin": "regen123a7e9gvgm53zvswc6daq7c85xtzt8263lgasm",
       "metadata_iri": "regen:13toVgkhsDeQTJA1DJ1diGYTb3Cmy1rZV24auNXxNPTcVTySoiFtiFq.rdf",
-      "description": "Grassland carbon sequestration credits"
+      "description": "This credit class provides a vehicle for nature based Verified Carbon Units (VCUs) to enter the blockchain space via issuance on Regen Ledger. It can be used by project developers, credit brokers, and other stakeholders interested in digitizing carbon credits issued by the VCS program to make them available in the emerging world of decentralized finance."
     },
     "C02": {
       "id": "C02",
-      "name": "City Forest Credits",
+      "name": "Urban Forest Carbon Credit Class",
       "type": "CREDIT_CLASS",
       "credit_type": "C",
-      "aliases": ["Urban Forest Carbon", "CFC", "City Forest", "Urban Forest"],
+      "aliases": [
+        "City Forest Credits",
+        "CFC",
+        "Urban Forest Carbon"
+      ],
       "admin": "regen123a7e9gvgm53zvswc6daq7c85xtzt8263lgasm",
       "metadata_iri": "regen:13toVgasFvVdGFg5VeijGetEbGHSJZwBc4jUVei2euKFgE6wqNp2Hgz.rdf",
-      "description": "Urban forest carbon credits from City Forest Credits methodology"
+      "description": "City Forest Credits is the national standard for greenhouse gas emission reduction and removal for tree projects in cities and towns. Developed by leading scientists, industry, and urban forest professionals, the Standard and Protocols define the set of rules and requirements that tree preservation projects must follow in order to earn third-party verified carbon credits.\n\nCFC has a 40-year and a 100-year Tree Preservation Protocol, modeled after avoided conversion or avoided emissions protocols in forestry. The 40-year Protocol was designed for the voluntary market and the 100-year Protocol for the compliance market in the state of California."
     },
     "C03": {
       "id": "C03",
-      "name": "TCO2: Toucan Carbon Tokens",
+      "name": "TCO2: Toucan Carbon Tokens Credit Class",
       "type": "CREDIT_CLASS",
       "credit_type": "C",
-      "aliases": ["Toucan", "TCO2", "Toucan Carbon", "NCT"],
+      "aliases": [
+        "Toucan Carbon Tokens Credit Class",
+        "Class"
+      ],
       "admin": "regen1dlszg2sst9r69my4f84l3mj66zxcf3umcgujys30t84srg95dgvs8rn9rj",
       "metadata_iri": "regen:13toVgLqqFAjByA2kZkDFq7PZB2HUyD3u8qFDiBidYjpdYBLeJvAzxB.rdf",
-      "description": "Toucan bridged carbon credits"
+      "description": "This credit class provides a vehicle for Toucan Protocol Toucan Carbon Tokens (TCO2s) to enter the Cosmos ecosystem via issuance on Regen Ledger. Each TCO2 represents a unique carbon offset brought on-chain from the Verra registry using the Toucan Carbon Bridge. Currently, only TCO2 credits that fall under the NCT criteria are eligible to be issued under this credit class. Eligible credits can be bridged directly from Polygon using the Regen Network <> Toucan Bridge."
     },
     "C04": {
       "id": "C04",
-      "name": "Ruuts Soil Carbon",
+      "name": "Ruuts Credit Class for Soil Carbon Sequestration through Regenerative Grazing",
       "type": "CREDIT_CLASS",
       "credit_type": "C",
-      "aliases": ["Ruuts", "Soil Carbon", "Ruuts Carbon"],
+      "aliases": [
+        "Credit Class for Soil Carbon Sequestration through Regenerative Grazing",
+        "Grazing"
+      ],
       "admin": "regen1c799jddmlz7segvg6jrw6w2k6svwafganjdznard3tc74n7td7rq39fqdp",
       "metadata_iri": "regen:13toVgBisQqEmauHntQsW6mwpz71RSTwsjzhn9gxCQ16tdRjHPHTRoK.rdf",
-      "description": "Soil carbon credits from Ruuts methodology"
-    },
-    "C05": {
-      "id": "C05",
-      "name": "Biochar Carbon Credits",
-      "type": "CREDIT_CLASS",
-      "credit_type": "C",
-      "aliases": ["Biochar", "Kulshan Biochar", "Kulshan Carbon"],
-      "admin": "regen1v2ncquer9r2ytlkxh2djmmsq3e8we6rjc9snfn",
-      "metadata_iri": "regen:13toVhdQSiTZYzdGS41TfEZJ1L4STgYrkixNxPT5R5ZkSjkMUFT11DA.rdf",
-      "description": "Biochar carbon removal credits"
-    },
-    "C06": {
-      "id": "C06",
-      "name": "EcoMetric UK Peatland",
-      "type": "CREDIT_CLASS",
-      "credit_type": "C",
-      "aliases": ["UK Peatland", "Peatland", "EcoMetric Peatland"],
-      "admin": "regen1v2ncquer9r2ytlkxh2djmmsq3e8we6rjc9snfn",
-      "metadata_iri": "regen:13toVgBs6FCuyDebxKFWf5cJQZipWkrN6zZNhPeGBjfnqBFmhTbxj9u.rdf",
-      "description": "UK peatland restoration carbon credits administered by EcoMetric"
-    },
-    "C07": {
-      "id": "C07",
-      "name": "Australian Carbon",
-      "type": "CREDIT_CLASS",
-      "credit_type": "C",
-      "aliases": ["ACCU", "Australian Carbon Credit Units", "Australia Carbon"],
-      "admin": "regen123a7e9gvgm53zvswc6daq7c85xtzt8263lgasm",
-      "metadata_iri": "regen:13toVhUaK2XtanaM3JLYzfEoUUSA5QYcMmJygejwyeo5ENc6GAdMvQA.rdf",
-      "description": "Australian carbon credit units"
-    },
-    "C08": {
-      "id": "C08",
-      "name": "EcoMetric Biodiversity",
-      "type": "CREDIT_CLASS",
-      "credit_type": "C",
-      "aliases": ["Biodiversity Credits", "EcoMetric Bio"],
-      "admin": "regen1v2ncquer9r2ytlkxh2djmmsq3e8we6rjc9snfn",
-      "metadata_iri": "regen:13toVhba4hSPuPBosi445UcCUf6syZo7asNx7MPR3ZPxxkgg8mGgS43.rdf",
-      "description": "EcoMetric biodiversity credits"
-    },
-    "C09": {
-      "id": "C09",
-      "name": "EcoMetric Soil Health",
-      "type": "CREDIT_CLASS",
-      "credit_type": "C",
-      "aliases": ["Soil Health Credits", "EcoMetric Soil"],
-      "admin": "regen1v2ncquer9r2ytlkxh2djmmsq3e8we6rjc9snfn",
-      "metadata_iri": "regen:13toVgL2Ysv8awVocmEmAcVa7DpxqxuJqshjKf1KAFeQ4JcfQuxXrzy.rdf",
-      "description": "EcoMetric soil health credits"
-    },
-    "BT01": {
-      "id": "BT01",
-      "name": "BioTerra",
-      "type": "CREDIT_CLASS",
-      "credit_type": "BT",
-      "aliases": ["Terrasos Protocol", "Terrasos", "BioTerra Credits"],
-      "admin": "regen1v2ncquer9r2ytlkxh2djmmsq3e8we6rjc9snfn",
-      "metadata_iri": "regen:13toVhP28vRJKkkKCfiWod83aUUKQnvutB3U3v6wdLjnS6J2GF2HcoC.rdf",
-      "description": "Biodiversity credits from Terrasos methodology in Colombia"
+      "description": "The Credit Class and its accompanying methodology provide farmers with a measuring and monitoring process for soil organic carbon sequestration in regenerative grazing systems, enabling them to generate carbon credits that also include robust ecological co-benefits such as water infiltration and biodiversity."
     },
     "KSH01": {
       "id": "KSH01",
-      "name": "Grazing Management",
+      "name": "Credit Class for Sheep Grazing in Vineyard Systems",
       "type": "CREDIT_CLASS",
       "credit_type": "KSH",
-      "aliases": ["Kilo-Sheep-Hour", "KSH", "Grazing Credits", "Sheep Hour"],
+      "aliases": [
+        "Class for Sheep Grazing in Vineyard Systems",
+        "Systems"
+      ],
       "admin": "regen1v2ncquer9r2ytlkxh2djmmsq3e8we6rjc9snfn",
       "metadata_iri": "regen:13toVh3S3R9HK4CcvnWDAQDbpwekWosPNQhVn8drrjziNznPnZdmCm9.rdf",
-      "description": "Grazing management credits measured in Kilo-Sheep-Hours"
+      "description": "This Credit Class and its accompanying methodology are designed to support the use of high-density, short-duration rotational targeted sheep grazing in vineyard systems to improve ecosystem functioning through active management of the soil and herbaceous cover in the vineyard understory. As with other Environmental Stewardship methodologies, the environmental benefits are implicit in the practice. Projects being developed under the Methodology for Grazing in Vineyard Systems are expected, based on prior research, to result in positive ecological outcomes. This methodology is new and innovative, and will be improved as new projects are created and lessons are learned."
+    },
+    "C05": {
+      "id": "C05",
+      "name": "Credit Class for Carbon Removal through Biochar Production",
+      "type": "CREDIT_CLASS",
+      "credit_type": "C",
+      "aliases": [
+        "Biochar",
+        "Biochar Carbon Credits",
+        "Kulshan Biochar"
+      ],
+      "admin": "regen1v2ncquer9r2ytlkxh2djmmsq3e8we6rjc9snfn",
+      "metadata_iri": "regen:13toVhdQSiTZYzdGS41TfEZJ1L4STgYrkixNxPT5R5ZkSjkMUFT11DA.rdf",
+      "description": "The Biochar Carbon credit focuses on carbon removal and avoiding emissions that would have resulted from the decomposition of waste biomass. Carbon removal is the approved benefit that is monitored, quantified, and determines the number of credits issued. The approved benefit of atmospheric regulation through carbon sequestration is driven by carbon removals and reductions through the production and application of biochar to soils."
+    },
+    "C06": {
+      "id": "C06",
+      "name": "GHG Benefits in Managed Crop and Grassland Systems Credit Class",
+      "type": "CREDIT_CLASS",
+      "credit_type": "C",
+      "aliases": [
+        "Benefits in Managed Crop and Grassland Systems Credit Class",
+        "Class"
+      ],
+      "admin": "regen1v2ncquer9r2ytlkxh2djmmsq3e8we6rjc9snfn",
+      "metadata_iri": "regen:13toVgBs6FCuyDebxKFWf5cJQZipWkrN6zZNhPeGBjfnqBFmhTbxj9u.rdf",
+      "description": "This Credit Class and its supporting measuring and monitoring methodology, focuses on quantifying increases in soil organic carbon sequestration and storage in regenerative cropping and managed grassland agricultural systems."
+    },
+    "C07": {
+      "id": "C07",
+      "name": "CarbonPlus Grasslands Credit Class",
+      "type": "CREDIT_CLASS",
+      "credit_type": "C",
+      "aliases": [
+        "CGCC",
+        "Grasslands Credit Class",
+        "Class"
+      ],
+      "admin": "regen123a7e9gvgm53zvswc6daq7c85xtzt8263lgasm",
+      "metadata_iri": "regen:13toVhUaK2XtanaM3JLYzfEoUUSA5QYcMmJygejwyeo5ENc6GAdMvQA.rdf",
+      "description": "This Credit Class provide incentive and a structure to significantly increase the amount of hectares/acres under managed grazing worldwide by providing land stewards with the necessary incentives to make this important work possible. The CarbonPlus credit focuses on soil carbon sequestration in grassland ecosystems. The Plus indicates that co-benefits (or secondary ecological benefits) allow for a credit that accounts for more than just carbon."
+    },
+    "BT01": {
+      "id": "BT01",
+      "name": "Terrasos Biodiversity Unit",
+      "type": "CREDIT_CLASS",
+      "credit_type": "BT",
+      "aliases": [
+        "TBU",
+        "Biodiversity Unit",
+        "Unit"
+      ],
+      "admin": "regen1v2ncquer9r2ytlkxh2djmmsq3e8we6rjc9snfn",
+      "metadata_iri": "regen:13toVhP28vRJKkkKCfiWod83aUUKQnvutB3U3v6wdLjnS6J2GF2HcoC.rdf",
+      "description": "The Biodioversity Credits protocol outlines a strategic framework for the development of projects that guarantee quantifiable gains in biodiversity, all while providing robust financial and legal assurances to secure their sustainability and enduring impact. This pioneering approach to biodiversity conservation and resource management emphasizes the selection of projects distinguished by their significant ecological value within a performance-based model. \n This protocol streamlines the process of registration, quantification, and issuance of Biodiversity Credits (VBC) for conservation projects that meet the eligibility criteria. It is designed to resonate with both individuals and organizations committed to contributing to the preservation of threatened ecosystems and biodiversity, ultimately delivering long-term sustainability and socio-economic benefits."
     },
     "MBS01": {
       "id": "MBS01",
-      "name": "Marine Biodiversity",
+      "name": "SeaTrees Crediting Protocol for Marine Restoration",
       "type": "CREDIT_CLASS",
       "credit_type": "MBS",
-      "aliases": ["Marine Bio Stewardship", "Marine Credits", "MBS"],
+      "aliases": [
+        "SCPMR",
+        "Crediting Protocol for Marine Restoration",
+        "Restoration"
+      ],
       "admin": "regen1ueyj7zm9kjrm4uuwnh2dye02zekjgt8wfvd4wfc0ttlctwzajffqp0puwv",
       "metadata_iri": "regen:13toVhmG8hxSeQseTQG51EwNpjoqLe6k9C1t3XY3PZohX6AttnuJjWZ.rdf",
-      "description": "Marine biodiversity stewardship credits"
+      "description": "This protocol is designed to help local communities scale the restoration of degraded nearshore ecosystems and provide direct market access to philanthropic, donation-based funding via biodiversity credits called SeaTrees Biodiversity Blocks. It is a roadmap for designing effective marine restoration projects that can be funded via the insurance of voluntary biodiversity credits. This protocol also contains three ecosystem-specific modules, which provide guidelines and best-practices for restoring coral reefs, mangrove forests, and kelp forests. This protocol does not allow issuance of carbon credits or biodiversity offsets."
     },
     "USS01": {
       "id": "USS01",
-      "name": "Umbrella Species",
+      "name": "Biodiversity Credit Protocol for Umbrella Species Stewardship",
       "type": "CREDIT_CLASS",
       "credit_type": "USS",
-      "aliases": ["Umbrella Species Stewardship", "USS", "Species Credits"],
+      "aliases": [
+        "Credit Protocol for Umbrella Species Stewardship",
+        "Stewardship"
+      ],
       "admin": "regen1v2ncquer9r2ytlkxh2djmmsq3e8we6rjc9snfn",
       "metadata_iri": "regen:13toVfzccLtKL9pDzRojtTAKU61JH2kDKMggg35LoCUCDHQfgAodUh2.rdf",
-      "description": "Umbrella species stewardship credits for wildlife habitat"
+      "description": "The Biodiversity Crediting Protocol for Umbrella Species Stewardship (USS) provides a comprehensive framework for measuring, verifying, and rewarding communities for their conservation of umbrella species—organisms whose protection benefits entire ecosystems and their inhabitants. The protocol measures conservation success through three integrated components: Umbrella Species Health, which tracks population dynamics and distribution; Habitat Quality, which assesses ecosystem composition and function; and a Theory of Change, which translates community knowledge and long-term goals into strategic conservation activities. By combining on-the-ground data collection, remote sensing, and traditional ecological knowledge, the protocol enables scientifically rigorous and transparent verification of conservation outcomes. All ecological data anchors securely to a blockchain, ensuring credible, verifiable proof of impact. The USS credits represent actual implementation costs, directly linking conservation finance to real biodiversity gains while preventing speculative trading. This empowers local communities and land stewards to address critical biodiversity threats and strengthens their essential role in long-term ecosystem stewardship."
+    },
+    "C08": {
+      "id": "C08",
+      "name": "Nature-Based Watershed & Green Infrastructure Solutions to Avoid Gray Infrastructure Emissions",
+      "type": "CREDIT_CLASS",
+      "credit_type": "C",
+      "aliases": [
+        "Watershed & Green Infrastructure Solutions to Avoid Gray Infrastructure Emissions",
+        "Emissions"
+      ],
+      "admin": "regen1v2ncquer9r2ytlkxh2djmmsq3e8we6rjc9snfn",
+      "metadata_iri": "regen:13toVhba4hSPuPBosi445UcCUf6syZo7asNx7MPR3ZPxxkgg8mGgS43.rdf",
+      "description": "This Credit Class enables Project Proponents to generate carbon credits by reducing nonpoint source contamination of watersheds, thereby avoiding the increased greenhouse gas emissions from the status-quo infrastructure construction and electricity use associated with industrial drinking water and wastewater management and treatment. Project Proponents quantify reduction in GHG emissions associated with the avoided energy and materials from the gray infrastructure that green solutions replace - including construction materials, decades of operational energy use, and facility maintenance. Credits issue annually ex-post throughout the avoided infrastructure's lifetime, representing permanent emission reductions achieved when watersheds naturally filter and treat water, making industrial treatment infrastructure unnecessary while improving ecosystem health."
+    },
+    "C09": {
+      "id": "C09",
+      "name": "GHG & Co-Benefits in Watershed Carbon",
+      "type": "CREDIT_CLASS",
+      "credit_type": "C",
+      "aliases": [
+        "GCWC",
+        "& Co-Benefits in Watershed Carbon",
+        "GHG & Co-Benefits in Watershed"
+      ],
+      "admin": "regen1v2ncquer9r2ytlkxh2djmmsq3e8we6rjc9snfn",
+      "metadata_iri": "regen:13toVgL2Ysv8awVocmEmAcVa7DpxqxuJqshjKf1KAFeQ4JcfQuxXrzy.rdf",
+      "description": "This Credit Class generates carbon credits by reducing nonpoint source contamination of watersheds, thereby avoiding increased greenhouse gas emissions from construction and operation of gray water infrastructure. Credits are issued for avoided emissions from energy and material use in drinking water, wastewater, and stormwater management facilities."
     }
   },
-
   "projects": {
     "BT01-001": {
       "id": "BT01-001",
-      "name": "El Globo Nature Reserve",
+      "name": "El Globo Habitat Bank",
       "type": "PROJECT",
       "class_id": "BT01",
       "jurisdiction": "CO-ANT",
       "location": "Antioquia, Colombia",
-      "aliases": ["El Globo", "Globo Reserve"],
-      "metadata_iri": "regen:13toVgmmn3f6dzVJZvHEJhstk7VHufJHLELMH2L3pyDgzmHyrqkscnR.rdf"
+      "aliases": [
+        "EGHB",
+        "Globo Habitat Bank",
+        "Bank"
+      ],
+      "metadata_iri": "regen:13toVgmmn3f6dzVJZvHEJhstk7VHufJHLELMH2L3pyDgzmHyrqkscnR.rdf",
+      "description": "El Globo is the first project in Colombia to issue Voluntary Biodiversity Credits. It is located in the \"Cuchilla Jardín-Támesis\" Integrated Management District (DMI). Known as the \"water star\" of southwestern Antioquia, this area is a prioritized ecosystem for conservation. Here ecosystem preservation, forest enhancement and restoration activities are implemented to generate positive and permanent impacts on biodiversity. The project has a 30-year financial, technical and legal structure for operation, securing biodiversity gains in time. The area has one of the few remnants of Native High Andean Forest still preserved in the region and it is a registered Habitat Bank at the Ministry of Environment and Sustainable Development of Colombia."
     },
     "BT01-002": {
       "id": "BT01-002",
-      "name": "La Pedregoza Reserve",
+      "name": "Aguadulce Habitat Bank",
       "type": "PROJECT",
       "class_id": "BT01",
       "jurisdiction": "CO-CUN",
       "location": "Cundinamarca, Colombia",
-      "aliases": ["La Pedregoza", "Pedregoza"],
-      "metadata_iri": "regen:13toVg3S5ECRejMZE924hidTPVJXnrRMy8HetqnDvNLbwEgWbzDKxgn.rdf"
+      "aliases": [
+        "AHB",
+        "Habitat Bank",
+        "Bank"
+      ],
+      "metadata_iri": "regen:13toVg3S5ECRejMZE924hidTPVJXnrRMy8HetqnDvNLbwEgWbzDKxgn.rdf",
+      "description": "Aguadulce – Río Sumapaz Habitat Bank, located in the province of Alto Magdalena, Cundinamarca, Colombia, spans over 124.76 hectares and aims to preserve and restore two key ecosystems: tropical dry forest and premontane humid forest. Through this initiative, Terrasos promotes biodiversity conservation and offers biodiversity credits to offset environmental impacts. This project offers an opportunity for buyers to contribute to the protection of endangered species while supporting ecosystem restoration."
     },
     "C01-001": {
       "id": "C01-001",
-      "name": "Kasigau Wildlife Corridor",
+      "name": "The Mai Ndombe REDD+ Project",
       "type": "PROJECT",
       "class_id": "C01",
       "jurisdiction": "CD-MN",
-      "location": "Democratic Republic of Congo",
-      "aliases": ["Kasigau", "Wildlife Corridor DRC"],
+      "location": "MN, Democratic Republic of Congo",
+      "aliases": [
+        "TMNRP",
+        "Mai Ndombe REDD+ Project",
+        "Project"
+      ],
       "reference_id": "VCS-934",
-      "metadata_iri": "regen:13toVgGCN3gvRbWFkvYxfZUHrsFsribCKiGfFxW4mchJWsjEYdFaYd4.rdf"
+      "metadata_iri": "regen:13toVgGCN3gvRbWFkvYxfZUHrsFsribCKiGfFxW4mchJWsjEYdFaYd4.rdf",
+      "description": "Verified Carbon Standard project in MN, Democratic Republic of Congo"
     },
     "C01-002": {
       "id": "C01-002",
-      "name": "Kenya Grasslands",
+      "name": "The Kasigau Corridor REDD Project - Phase II The Community Ranches",
       "type": "PROJECT",
       "class_id": "C01",
       "jurisdiction": "KE",
       "location": "Kenya",
-      "aliases": ["Kenya Grassland", "KE Grasslands"],
+      "aliases": [
+        "Kasigau Corridor REDD Project - Phase II The Community Ranches",
+        "Ranches"
+      ],
       "reference_id": "VCS-612",
-      "metadata_iri": "regen:13toVgoZxism9hBjsmFGuAXxj6uv5WrXHPRUTR33G3Eewp9567K5PU7.rdf"
+      "metadata_iri": "regen:13toVgoZxism9hBjsmFGuAXxj6uv5WrXHPRUTR33G3Eewp9567K5PU7.rdf",
+      "description": "Verified Carbon Standard project in Kenya"
     },
     "C01-003": {
       "id": "C01-003",
-      "name": "Peru Amazon Grasslands",
+      "name": "Evio Kuiñaji Ese´eja Cuana",
       "type": "PROJECT",
       "class_id": "C01",
       "jurisdiction": "PE-MDD",
-      "location": "Madre de Dios, Peru",
-      "aliases": ["Peru Grasslands", "Amazon Grasslands"],
+      "location": "MDD, Peru",
+      "aliases": [
+        "EKEC",
+        "Kuiñaji Ese´eja Cuana",
+        "Cuana"
+      ],
       "reference_id": "VCS-1218",
-      "metadata_iri": "regen:13toVggnVfBxDbJ47V5ZUdwB3gWd6avSGVQGKk4rDx4o9kbjvKj6G13.rdf"
+      "metadata_iri": "regen:13toVggnVfBxDbJ47V5ZUdwB3gWd6avSGVQGKk4rDx4o9kbjvKj6G13.rdf",
+      "description": "Verified Carbon Standard project in MDD, Peru"
     },
     "C02-001": {
       "id": "C02-001",
-      "name": "Seattle Urban Forest",
+      "name": "King County Urban Forest Carbon Project",
       "type": "PROJECT",
       "class_id": "C02",
       "jurisdiction": "US-WA",
       "location": "Washington, USA",
-      "aliases": ["Seattle Forest", "Washington Urban Forest"],
+      "aliases": [
+        "County Urban Forest Carbon Project",
+        "Project"
+      ],
       "reference_id": "CFC-1.2018",
-      "metadata_iri": "regen:13toVhmNbuUMgxxzAenxV1rkQHPrhXyuN3PyaQxsfCrxCn2i9G9niWM.rdf"
+      "metadata_iri": "regen:13toVhmNbuUMgxxzAenxV1rkQHPrhXyuN3PyaQxsfCrxCn2i9G9niWM.rdf",
+      "description": "Urban Forest Carbon Credit Class project in Washington, USA"
     },
     "C02-002": {
       "id": "C02-002",
-      "name": "Ohio Urban Forest",
+      "name": "Sandy Cross Forest Preservation Project",
       "type": "PROJECT",
       "class_id": "C02",
       "jurisdiction": "US-OH",
       "location": "Ohio, USA",
-      "aliases": ["Ohio Forest", "OH Urban Forest"],
+      "aliases": [
+        "SCFPP",
+        "Cross Forest Preservation Project",
+        "Project"
+      ],
       "reference_id": "CFC-18",
-      "metadata_iri": "regen:13toVgCCjzpdUF8ubQeodLJd9vkPQaxnC7XnV1Ztert2Lv9hxCUKUGW.rdf"
+      "metadata_iri": "regen:13toVgCCjzpdUF8ubQeodLJd9vkPQaxnC7XnV1Ztert2Lv9hxCUKUGW.rdf",
+      "description": "Urban Forest Carbon Credit Class project in Ohio, USA"
     },
     "C02-003": {
       "id": "C02-003",
-      "name": "Buena Vista Heights",
+      "name": "Buena Vista Heights Conservation Area",
       "type": "PROJECT",
       "class_id": "C02",
       "jurisdiction": "US-PA",
       "location": "Pennsylvania, USA",
-      "aliases": ["Buena Vista", "BVH", "Pennsylvania Forest"],
+      "aliases": [
+        "BVHCA",
+        "Vista Heights Conservation Area",
+        "Area"
+      ],
       "reference_id": "CFC-9",
-      "metadata_iri": "regen:13toVg8V7ves71kfAsbqxwr4QV5pvj2WBvEiLyUy9XHKGGFRAYcchmC.rdf"
+      "metadata_iri": "regen:13toVg8V7ves71kfAsbqxwr4QV5pvj2WBvEiLyUy9XHKGGFRAYcchmC.rdf",
+      "description": "Urban Forest Carbon Credit Class project in Pennsylvania, USA"
     },
     "C02-004": {
       "id": "C02-004",
-      "name": "Issaquah Urban Forest",
+      "name": "Harvey Manning Park Expansion",
       "type": "PROJECT",
       "class_id": "C02",
       "jurisdiction": "US-WA 98029",
-      "location": "Issaquah, Washington, USA",
-      "aliases": ["Issaquah Forest", "Issaquah"],
+      "location": "Washington, USA",
+      "aliases": [
+        "HMPE",
+        "Manning Park Expansion",
+        "Expansion"
+      ],
       "reference_id": "CFC-15",
-      "metadata_iri": "regen:13toVhpRRova7M4o54S9dq51sVFvnJCxKT79UMPopSQzReP2PuxNdAP.rdf"
+      "metadata_iri": "regen:13toVhpRRova7M4o54S9dq51sVFvnJCxKT79UMPopSQzReP2PuxNdAP.rdf",
+      "description": "Urban Forest Carbon Credit Class project in Washington, USA"
     },
     "C02-005": {
       "id": "C02-005",
-      "name": "Richmond Urban Forest",
+      "name": "Evergreen & East Preservation Project",
       "type": "PROJECT",
       "class_id": "C02",
       "jurisdiction": "US-VA 23223",
-      "location": "Richmond, Virginia, USA",
-      "aliases": ["Richmond Forest", "Virginia Urban Forest"],
+      "location": "Virginia, USA",
+      "aliases": [
+        "EEPP",
+        "& East Preservation Project",
+        "Project"
+      ],
       "reference_id": "CFC-006",
-      "metadata_iri": "regen:13toVgRKSPwrP6Z7rx9sXXo51XYqDewrabDjaqoXQMudXuRYJqdEHxp.rdf"
+      "metadata_iri": "regen:13toVgRKSPwrP6Z7rx9sXXo51XYqDewrabDjaqoXQMudXuRYJqdEHxp.rdf",
+      "description": "Urban Forest Carbon Credit Class project in Virginia, USA"
     },
     "C02-006": {
       "id": "C02-006",
-      "name": "Chattanooga Urban Forest",
+      "name": "St. Elmo Preservation Project",
       "type": "PROJECT",
       "class_id": "C02",
       "jurisdiction": "US-TN 37409",
-      "location": "Chattanooga, Tennessee, USA",
-      "aliases": ["Chattanooga Forest", "Tennessee Forest"],
+      "location": "Tennessee, USA",
+      "aliases": [
+        "SEPP",
+        "Elmo Preservation Project",
+        "Project"
+      ],
       "reference_id": "CFC-012",
-      "metadata_iri": "regen:13toVh8FBw5G7FNPRkFuBM3GNXDB5MAAPBbeBdYQ5KuRodH7XBTgSak.rdf"
+      "metadata_iri": "regen:13toVh8FBw5G7FNPRkFuBM3GNXDB5MAAPBbeBdYQ5KuRodH7XBTgSak.rdf",
+      "description": "Urban Forest Carbon Credit Class project in Tennessee, USA"
     },
     "C02-007": {
       "id": "C02-007",
-      "name": "Iowa Urban Forest",
+      "name": "Reforesting Des Moines",
       "type": "PROJECT",
       "class_id": "C02",
       "jurisdiction": "US-IA",
       "location": "Iowa, USA",
-      "aliases": ["Iowa Forest", "IA Urban Forest"],
+      "aliases": [
+        "RDM",
+        "Des Moines",
+        "Moines"
+      ],
       "reference_id": "CFC-016",
-      "metadata_iri": "regen:13toVgy9fFtUqxnH4hgganX1hhogtZdMhAw2GSyS4uERb9SHDVmBrJG.rdf"
+      "metadata_iri": "regen:13toVgy9fFtUqxnH4hgganX1hhogtZdMhAw2GSyS4uERb9SHDVmBrJG.rdf",
+      "description": "Urban Forest Carbon Credit Class project in Iowa, USA"
     },
     "C02-008": {
       "id": "C02-008",
-      "name": "Idaho Urban Forest",
+      "name": "Treasure Valley Municipal Parks Project",
       "type": "PROJECT",
       "class_id": "C02",
       "jurisdiction": "US-ID",
       "location": "Idaho, USA",
-      "aliases": ["Idaho Forest", "ID Urban Forest"],
+      "aliases": [
+        "TVMPP",
+        "Valley Municipal Parks Project",
+        "Project"
+      ],
       "reference_id": "CFC-004",
-      "metadata_iri": "regen:13toVfzopvihH7CiyLBPpuaShz4rK2wBp2tGF5fqZDDjjFHdPY6JxJa.rdf"
+      "metadata_iri": "regen:13toVfzopvihH7CiyLBPpuaShz4rK2wBp2tGF5fqZDDjjFHdPY6JxJa.rdf",
+      "description": "Urban Forest Carbon Credit Class project in Idaho, USA"
     },
     "C02-009": {
       "id": "C02-009",
-      "name": "Texas Urban Forest",
+      "name": "Travis County Floodplain Reforestation Program",
       "type": "PROJECT",
       "class_id": "C02",
       "jurisdiction": "US-TX",
       "location": "Texas, USA",
-      "aliases": ["Texas Forest", "TX Urban Forest"],
+      "aliases": [
+        "TCFRP",
+        "County Floodplain Reforestation Program",
+        "Program"
+      ],
       "reference_id": "CFC-014",
-      "metadata_iri": "regen:13toVgEjB6hA8PVYKUd464o1pepscD9TT8jcywWg9NehxkJog34apfa.rdf"
+      "metadata_iri": "regen:13toVgEjB6hA8PVYKUd464o1pepscD9TT8jcywWg9NehxkJog34apfa.rdf",
+      "description": "Urban Forest Carbon Credit Class project in Texas, USA"
     },
     "C02-010": {
       "id": "C02-010",
-      "name": "Washington State Forest",
+      "name": "Ballinger Open Space Restoration",
       "type": "PROJECT",
       "class_id": "C02",
       "jurisdiction": "US-WA",
       "location": "Washington, USA",
-      "aliases": ["WA Forest", "Washington Forest"],
+      "aliases": [
+        "BOSR",
+        "Open Space Restoration",
+        "Restoration"
+      ],
       "reference_id": "CFC-003",
-      "metadata_iri": "regen:13toVhZbyKrWHLEo8k1SxiJPMMuXzP6sZ638nbXy6ov26mSXWFqHuDa.rdf"
+      "metadata_iri": "regen:13toVhZbyKrWHLEo8k1SxiJPMMuXzP6sZ638nbXy6ov26mSXWFqHuDa.rdf",
+      "description": "Urban Forest Carbon Credit Class project in Washington, USA"
     },
     "C02-011": {
       "id": "C02-011",
-      "name": "Illinois Urban Forest",
+      "name": "Lake County Forest Preserve",
       "type": "PROJECT",
       "class_id": "C02",
       "jurisdiction": "US-IL",
       "location": "Illinois, USA",
-      "aliases": ["Illinois Forest", "IL Urban Forest"],
+      "aliases": [
+        "LCFP",
+        "County Forest Preserve",
+        "Preserve"
+      ],
       "reference_id": "CFC-020",
-      "metadata_iri": "regen:13toVgM43QoZTfNkmoUjnUJnGpuxKMg1ZWqCFDZxMor9EwpeNLYsjaj.rdf"
+      "metadata_iri": "regen:13toVgM43QoZTfNkmoUjnUJnGpuxKMg1ZWqCFDZxMor9EwpeNLYsjaj.rdf",
+      "description": "Urban Forest Carbon Credit Class project in Illinois, USA"
     },
     "C02-012": {
       "id": "C02-012",
-      "name": "Chicago Urban Forest",
+      "name": "Fox River Bluffs Planting Project",
       "type": "PROJECT",
       "class_id": "C02",
       "jurisdiction": "US-IL",
-      "location": "Chicago, Illinois, USA",
-      "aliases": ["Chicago Forest", "IL Chicago Forest"],
+      "location": "Illinois, USA",
+      "aliases": [
+        "FRBPP",
+        "River Bluffs Planting Project",
+        "Project"
+      ],
       "reference_id": "CFC-019",
-      "metadata_iri": "regen:13toVgiLscvDf33nQtjGVrWLJ9qwYfuzetXDxMfehWXUULJZxzS2waV.rdf"
+      "metadata_iri": "regen:13toVgiLscvDf33nQtjGVrWLJ9qwYfuzetXDxMfehWXUULJZxzS2waV.rdf",
+      "description": "Urban Forest Carbon Credit Class project in Illinois, USA"
+    },
+    "C03-001": {
+      "id": "C03-001",
+      "name": "Rimba Raya Biodiversity Reserve Project",
+      "type": "PROJECT",
+      "class_id": "C03",
+      "jurisdiction": "ID",
+      "location": "Indonesia",
+      "aliases": [
+        "RRBRP",
+        "Raya Biodiversity Reserve Project",
+        "Project"
+      ],
+      "reference_id": "VCS-674",
+      "metadata_iri": "regen:13toVgJE2eUkVhmnohXpzKvvWiapcPmBsaY8hyMBHLDeGJRcksSXe9N.rdf",
+      "description": "TCO2: Toucan Carbon Tokens Credit Class project in Indonesia"
+    },
+    "C03-002": {
+      "id": "C03-002",
+      "name": "REDD+ Project Resguardo Indigena Unificado Selva de Mataven (RIU SM)",
+      "type": "PROJECT",
+      "class_id": "C03",
+      "jurisdiction": "CO",
+      "location": "Colombia",
+      "aliases": [
+        "Project Resguardo Indigena Unificado Selva de Mataven (RIU SM)",
+        "SM)"
+      ],
+      "reference_id": "VCS-1566",
+      "metadata_iri": "regen:13toVhFcZXHD1rmZeza4iC8g6ZLdV1hdtczEyHBWYFqVjxV1BMXWQkb.rdf",
+      "description": "TCO2: Toucan Carbon Tokens Credit Class project in Colombia"
+    },
+    "C03-003": {
+      "id": "C03-003",
+      "name": "Reduced Emissions from Deforestation and Degradation in Keo Seima Wildlife Sanctuary",
+      "type": "PROJECT",
+      "class_id": "C03",
+      "jurisdiction": "KH",
+      "location": "Cambodia",
+      "aliases": [
+        "Emissions from Deforestation and Degradation in Keo Seima Wildlife Sanctuary",
+        "Sanctuary"
+      ],
+      "reference_id": "VCS-1650",
+      "metadata_iri": "regen:13toVgNuHj5Z7VobRehvrVhnGZdRUeEww9Tcic9zxFBkzkKzrACNLp8.rdf",
+      "description": "TCO2: Toucan Carbon Tokens Credit Class project in Cambodia"
+    },
+    "C03-004": {
+      "id": "C03-004",
+      "name": "The Kasigau Corridor REDD Project - Phase II The Community Ranches",
+      "type": "PROJECT",
+      "class_id": "C03",
+      "jurisdiction": "KE",
+      "location": "Kenya",
+      "aliases": [
+        "Kasigau Corridor REDD Project - Phase II The Community Ranches",
+        "Ranches"
+      ],
+      "reference_id": "VCS-612",
+      "metadata_iri": "regen:13toVhNhUt21HvNWqR1gSSmeuiewvuSwx5z1zvs6aKL2owKF7NAP1Du.rdf",
+      "description": "TCO2: Toucan Carbon Tokens Credit Class project in Kenya"
+    },
+    "C03-005": {
+      "id": "C03-005",
+      "name": "Florestal Santa Maria Project",
+      "type": "PROJECT",
+      "class_id": "C03",
+      "jurisdiction": "BR",
+      "location": "Brazil",
+      "aliases": [
+        "FSMP",
+        "Santa Maria Project",
+        "Project"
+      ],
+      "reference_id": "VCS-875",
+      "metadata_iri": "regen:13toVgerWTuzKZAW3a4DokEjYSuxhzv3mG9k2eq3dsws7U1GLFx6HnW.rdf",
+      "description": "TCO2: Toucan Carbon Tokens Credit Class project in Brazil"
+    },
+    "C03-006": {
+      "id": "C03-006",
+      "name": "The Mai Ndombe REDD+ Project",
+      "type": "PROJECT",
+      "class_id": "C03",
+      "jurisdiction": "CD",
+      "location": "Democratic Republic of Congo",
+      "aliases": [
+        "TMNRP",
+        "Mai Ndombe REDD+ Project",
+        "Project"
+      ],
+      "reference_id": "VCS-934",
+      "metadata_iri": "regen:13toVgAY2ZQv6dAxqBSfXBnBKxpSaRfnu9LkL25vqqXzLSrF9pRJD8s.rdf",
+      "description": "TCO2: Toucan Carbon Tokens Credit Class project in Democratic Republic of Congo"
+    },
+    "C03-007": {
+      "id": "C03-007",
+      "name": "Pacajai REDD+ Project",
+      "type": "PROJECT",
+      "class_id": "C03",
+      "jurisdiction": "BR",
+      "location": "Brazil",
+      "aliases": [
+        "PRP",
+        "REDD+ Project",
+        "Project"
+      ],
+      "reference_id": "VCS-981",
+      "metadata_iri": "regen:13toVhKaTEK5CzzQHsMKWqTua7Rmc7AUzo8stVfJTE3kCy5VCMAsvxf.rdf",
+      "description": "TCO2: Toucan Carbon Tokens Credit Class project in Brazil"
+    },
+    "C03-008": {
+      "id": "C03-008",
+      "name": "Inner Mongolia Chao’er Improved Forest Management Project",
+      "type": "PROJECT",
+      "class_id": "C03",
+      "jurisdiction": "CN",
+      "location": "China",
+      "aliases": [
+        "Mongolia Chao’er Improved Forest Management Project",
+        "Project"
+      ],
+      "reference_id": "VCS-1529",
+      "metadata_iri": "regen:13toVgEhxth8bvyVnpCqn5QjV7PapbhMpSz21jjP2yUwGN53LTKd4GL.rdf",
+      "description": "TCO2: Toucan Carbon Tokens Credit Class project in China"
+    },
+    "C03-009": {
+      "id": "C03-009",
+      "name": "Fujian Yong’an Improved Forest Management Project",
+      "type": "PROJECT",
+      "class_id": "C03",
+      "jurisdiction": "CN",
+      "location": "China",
+      "aliases": [
+        "Yong’an Improved Forest Management Project",
+        "Project"
+      ],
+      "reference_id": "VCS-1577",
+      "metadata_iri": "regen:13toVhC7QXTsA4NPUPMk8nfiSse9HpfnkqimfZ9o9bL4fgWsnnYuPeN.rdf",
+      "description": "TCO2: Toucan Carbon Tokens Credit Class project in China"
+    },
+    "C03-010": {
+      "id": "C03-010",
+      "name": "Yunnan Kunming Liangqu Improved Forest Management Project",
+      "type": "PROJECT",
+      "class_id": "C03",
+      "jurisdiction": "CN",
+      "location": "China",
+      "aliases": [
+        "Kunming Liangqu Improved Forest Management Project",
+        "Project"
+      ],
+      "reference_id": "VCS-1542",
+      "metadata_iri": "regen:13toVg2h9es7WEBLQJGrpCYgLKNFFfZXn9Nh6qQA71595pGTXrrRNEM.rdf",
+      "description": "TCO2: Toucan Carbon Tokens Credit Class project in China"
+    },
+    "C03-011": {
+      "id": "C03-011",
+      "name": "Jiangxi Province Le'an County Forest Farm Carbon Sink Project",
+      "type": "PROJECT",
+      "class_id": "C03",
+      "jurisdiction": "CN",
+      "location": "China",
+      "aliases": [
+        "Province Le'an County Forest Farm Carbon Sink Project",
+        "Project"
+      ],
+      "reference_id": "VCS-1162",
+      "metadata_iri": "regen:13toVgQAoXqnrWVVn9s1HEFcaHXzZDdvPSPuF4eN6Nv7AHn6DXudSQF.rdf",
+      "description": "TCO2: Toucan Carbon Tokens Credit Class project in China"
+    },
+    "C03-012": {
+      "id": "C03-012",
+      "name": "North Pikounda REDD+",
+      "type": "PROJECT",
+      "class_id": "C03",
+      "jurisdiction": "CG",
+      "location": "Republic of Congo",
+      "aliases": [
+        "NPR",
+        "Pikounda REDD+",
+        "REDD+"
+      ],
+      "reference_id": "VCS-1052",
+      "metadata_iri": "regen:13toVhrafJcnz74vhsQoCwThKsnEoF12tNkUGhR6dqb9L77QoorUmhV.rdf",
+      "description": "TCO2: Toucan Carbon Tokens Credit Class project in Republic of Congo"
     },
     "C05-001": {
       "id": "C05-001",
-      "name": "Kulshan Biochar Project",
+      "name": "San Juan Carbon Project",
       "type": "PROJECT",
       "class_id": "C05",
       "jurisdiction": "US-WA 98245",
       "location": "Washington, USA",
-      "aliases": ["Kulshan", "Kulshan Biochar", "Washington Biochar"],
-      "metadata_iri": "regen:13toVhm2Vp1F3dy4Exp4FgzvaQciZ57Ssr1qtfrjBnbeD54mtb5rA5C.rdf"
+      "aliases": [
+        "SJCP",
+        "Juan Carbon Project",
+        "Project"
+      ],
+      "metadata_iri": "regen:13toVhm2Vp1F3dy4Exp4FgzvaQciZ57Ssr1qtfrjBnbeD54mtb5rA5C.rdf",
+      "description": "The San Juan Islands Garry Oak Restoration Burns Project focuses on producing biochar from waste biomass in Washington's San Juan Islands. By converting wood waste gathered from wildfire prevention and invasive species control efforts into biochar, this project sequesters carbon, reduces GHG emissions, and restores native Garry Oak woodlands. The in-stand biochar application enhances soil health and supports long-term carbon storage."
+    },
+    "C06-001": {
+      "id": "C06-001",
+      "name": "Philipson Estate Blaston",
+      "type": "PROJECT",
+      "class_id": "C06",
+      "jurisdiction": "GB-ENG",
+      "location": "England, UK",
+      "aliases": [
+        "PEB",
+        "Estate Blaston",
+        "Blaston"
+      ],
+      "metadata_iri": "regen:13toVgQvSAHjKSwkvrWjnVBU74Qwp4rZqhiu5rXqAsAwZtX8oz7PRNg.rdf",
+      "description": "GHG Benefits in Managed Crop and Grassland Systems Credit Class project in England, UK"
+    },
+    "C06-002": {
+      "id": "C06-002",
+      "name": "Pimlico Farm",
+      "type": "PROJECT",
+      "class_id": "C06",
+      "jurisdiction": "GB-ENG  ",
+      "location": "England, UK",
+      "aliases": [
+        "PF",
+        "Farm"
+      ],
+      "metadata_iri": "regen:13toVguEzGgE4mtj6TSPcqhkQaep9FNAk1FoNVMXniZZadGkMU8aydM.rdf",
+      "description": "The primary indicator in this credit class is SOCS. Levels will be increased by growing harvestable and cover crops and grass to maximise canopy and root growth while incorporating crop residues and manures. Reduced soil disturbance, maintaining soil cover and returning crop residues will maximise retained organic matter (OM) in the soil and, through improved soil microbial activity, this will be converted to resilient SOC. "
+    },
+    "C06-003": {
+      "id": "C06-003",
+      "name": "Bromborough Estate",
+      "type": "PROJECT",
+      "class_id": "C06",
+      "jurisdiction": "GB-ENG  DH1 2DF",
+      "location": "England, UK",
+      "aliases": [
+        "BE",
+        "Estate"
+      ],
+      "metadata_iri": "regen:13toVhhxLU2kTcDwnkGhXBByT1nSMG1sxhhXVj1bXLb68ahh8Jke6Jt.rdf",
+      "description": "The primary indicator in this credit class is SOCS.  Levels will be increased by growing harvestable and cover crops and grass to maximise canopy and root growth while incorporating crop residues and manures. Reduced soil disturbance, maintaining soil cover and returning crop residues will maximise retained organic matter (OM) in the soil and, through improved soil microbial activity, this will be converted to resilient SOC. "
+    },
+    "C06-004": {
+      "id": "C06-004",
+      "name": "Marston Lodge",
+      "type": "PROJECT",
+      "class_id": "C06",
+      "jurisdiction": "GB-ENG  ",
+      "location": "England, UK",
+      "aliases": [
+        "ML",
+        "Lodge"
+      ],
+      "metadata_iri": "regen:13toVgKBBqv6rsErJhDJnREb3j9AFD4VFeV1EykgTMxhBLFEsVNyLmx.rdf",
+      "description": "GHG Benefits in Managed Crop and Grassland Systems Credit Class project in England, UK"
+    },
+    "C06-005": {
+      "id": "C06-005",
+      "name": "Neesham Farm Ltd.",
+      "type": "PROJECT",
+      "class_id": "C06",
+      "jurisdiction": "GB-ENG  ",
+      "location": "England, UK",
+      "aliases": [
+        "NFL",
+        "Farm Ltd.",
+        "Ltd."
+      ],
+      "metadata_iri": "regen:13toVhA9yWgzFwhiBe6zPPCToGvQB8H9QSK7kxkMkMXNkFgsVEQ4dPw.rdf",
+      "description": "GHG Benefits in Managed Crop and Grassland Systems Credit Class project in England, UK"
+    },
+    "C06-006": {
+      "id": "C06-006",
+      "name": "Botany Farm Partnership",
+      "type": "PROJECT",
+      "class_id": "C06",
+      "jurisdiction": "GB-ENG  ",
+      "location": "England, UK",
+      "aliases": [
+        "BFP",
+        "Farm Partnership",
+        "Partnership"
+      ],
+      "metadata_iri": "regen:13toVgQYistesMpdbRa4xvu5YqurPih9YkVZHi999cdfXAwrgkjxrmg.rdf",
+      "description": "GHG Benefits in Managed Crop and Grassland Systems Credit Class project in England, UK"
+    },
+    "C06-007": {
+      "id": "C06-007",
+      "name": "Lowick Manor Farm",
+      "type": "PROJECT",
+      "class_id": "C06",
+      "jurisdiction": "GB-ENG  ",
+      "location": "England, UK",
+      "aliases": [
+        "LMF",
+        "Manor Farm",
+        "Farm"
+      ],
+      "metadata_iri": "regen:13toVgHsVocegBC95Hb5ZmzzotrCsuVCWT65TiyAeSFhZLASxnWs219.rdf",
+      "description": "GHG Benefits in Managed Crop and Grassland Systems Credit Class project in England, UK"
+    },
+    "C06-008": {
+      "id": "C06-008",
+      "name": "Alan Woodley & Sons",
+      "type": "PROJECT",
+      "class_id": "C06",
+      "jurisdiction": "GB-ENG  ",
+      "location": "England, UK",
+      "aliases": [
+        "AWS",
+        "Woodley & Sons",
+        "Sons"
+      ],
+      "metadata_iri": "regen:13toVhQS1YRkhD2p8KQnv9UcxvTvRwok8XzGnjNfo4LNU8coyU5RB4M.rdf",
+      "description": "GHG Benefits in Managed Crop and Grassland Systems Credit Class project in England, UK"
+    },
+    "C06-009": {
+      "id": "C06-009",
+      "name": "Southill Park Estate",
+      "type": "PROJECT",
+      "class_id": "C06",
+      "jurisdiction": "GB-ENG  ",
+      "location": "England, UK",
+      "aliases": [
+        "SPE",
+        "Park Estate",
+        "Estate"
+      ],
+      "metadata_iri": "regen:13toVh2TZNtMQb4JY9MEqKwdhg8vFjjscuosC9TERA1bBBMR5ud5SgN.rdf",
+      "description": "GHG Benefits in Managed Crop and Grassland Systems Credit Class project in England, UK"
+    },
+    "C06-010": {
+      "id": "C06-010",
+      "name": "Bramall Farming Limited",
+      "type": "PROJECT",
+      "class_id": "C06",
+      "jurisdiction": "GB-ENG  ",
+      "location": "England, UK",
+      "aliases": [
+        "BFL",
+        "Farming Limited",
+        "Limited"
+      ],
+      "metadata_iri": "regen:13toVg9y1Kr678YARcMmh8Hf87CY7Fbco7RVbje9xFASfYZCiZYTCPd.rdf",
+      "description": "The primary indicator in this credit class is SOCS. Levels will be increased by growing harvestable and cover crops and grass to maximise canopy and root growth while incorporating crop residues and manures. Reduced soil disturbance, maintaining soil cover and returning crop residues will maximise retained organic matter (OM) in the soil and, through improved soil microbial activity, this will be converted to resilient SOC. "
+    },
+    "C06-011": {
+      "id": "C06-011",
+      "name": "Burton Latimer Farms",
+      "type": "PROJECT",
+      "class_id": "C06",
+      "jurisdiction": "GB-ENG  ",
+      "location": "England, UK",
+      "aliases": [
+        "BLF",
+        "Latimer Farms",
+        "Farms"
+      ],
+      "metadata_iri": "regen:13toVgC12kpbeETKKhLejNiZNMGhx8Xe9c8HMMAtvNzTJQUp4G5C1p9.rdf",
+      "description": "GHG Benefits in Managed Crop and Grassland Systems Credit Class project in England, UK"
+    },
+    "C06-012": {
+      "id": "C06-012",
+      "name": "Burrough Court Estate",
+      "type": "PROJECT",
+      "class_id": "C06",
+      "jurisdiction": "GB-ENG  ",
+      "location": "England, UK",
+      "aliases": [
+        "BCE",
+        "Court Estate",
+        "Estate"
+      ],
+      "metadata_iri": "regen:13toVgKtRmHEddJg43651oGz2TgQbxdrncWZtvnEr335q6EQtr8c5RL.rdf",
+      "description": "GHG Benefits in Managed Crop and Grassland Systems Credit Class project in England, UK"
+    },
+    "C06-013": {
+      "id": "C06-013",
+      "name": "Coppicemoor Farm",
+      "type": "PROJECT",
+      "class_id": "C06",
+      "jurisdiction": "GB-ENG  ",
+      "location": "England, UK",
+      "aliases": [
+        "CF",
+        "Farm"
+      ],
+      "metadata_iri": "regen:13toVhRnuebxMMufkb9pDboehaW2QBb5tYb9xp3HaQeW5X4CfL6v6Mb.rdf",
+      "description": "GHG Benefits in Managed Crop and Grassland Systems Credit Class project in England, UK"
+    },
+    "C06-014": {
+      "id": "C06-014",
+      "name": "Edward Pope Farms",
+      "type": "PROJECT",
+      "class_id": "C06",
+      "jurisdiction": "GB-ENG  ",
+      "location": "England, UK",
+      "aliases": [
+        "EPF",
+        "Pope Farms",
+        "Farms"
+      ],
+      "metadata_iri": "regen:13toVh5WEenw6fB5hWKer52saifpRLMt4t4jttKRNL4DnrkEihYLjKg.rdf",
+      "description": "GHG Benefits in Managed Crop and Grassland Systems Credit Class project in England, UK"
+    },
+    "C06-015": {
+      "id": "C06-015",
+      "name": "Fonthill Farms",
+      "type": "PROJECT",
+      "class_id": "C06",
+      "jurisdiction": "GB-ENG  ",
+      "location": "England, UK",
+      "aliases": [
+        "FF",
+        "Farms"
+      ],
+      "metadata_iri": "regen:13toVhrSmve9X6JZkgqhzKBSLMHfTPVfuuq9ypFqYqhsZ18oJcHCRfP.rdf",
+      "description": "GHG Benefits in Managed Crop and Grassland Systems Credit Class project in England, UK"
+    },
+    "C06-016": {
+      "id": "C06-016",
+      "name": "Greens Lodge Farms",
+      "type": "PROJECT",
+      "class_id": "C06",
+      "jurisdiction": "GB-ENG  ",
+      "location": "England, UK",
+      "aliases": [
+        "GLF",
+        "Lodge Farms",
+        "Farms"
+      ],
+      "metadata_iri": "regen:13toVhXiUUNeEhbNtZ9bNxDqx5ix1MGdZd57xQdm5LnLAwZ6a9aYjT4.rdf",
+      "description": "GHG Benefits in Managed Crop and Grassland Systems Credit Class project in England, UK"
+    },
+    "C06-017": {
+      "id": "C06-017",
+      "name": "HCF Farms",
+      "type": "PROJECT",
+      "class_id": "C06",
+      "jurisdiction": "GB-ENG  ",
+      "location": "England, UK",
+      "aliases": [
+        "HF",
+        "Farms"
+      ],
+      "metadata_iri": "regen:13toVg1zraSnAsN2ybWC8FJ3G26qSr9XKiFat8izjMD1P6seA1DYnS4.rdf",
+      "description": "GHG Benefits in Managed Crop and Grassland Systems Credit Class project in England, UK"
+    },
+    "C06-018": {
+      "id": "C06-018",
+      "name": "John Darby Farms",
+      "type": "PROJECT",
+      "class_id": "C06",
+      "jurisdiction": "GB-ENG  ",
+      "location": "England, UK",
+      "aliases": [
+        "JDF",
+        "Darby Farms",
+        "Farms"
+      ],
+      "metadata_iri": "regen:13toVfvfM5B7yuJqq8h3iVRHp3PKUJ4ABxHyvn4MeUMwwv1pWQGL295.rdf",
+      "description": "GHG Benefits in Managed Crop and Grassland Systems Credit Class project in England, UK"
+    },
+    "C06-019": {
+      "id": "C06-019",
+      "name": "RE and EJ Kerr",
+      "type": "PROJECT",
+      "class_id": "C06",
+      "jurisdiction": "GB-ENG  ",
+      "location": "England, UK",
+      "aliases": [
+        "REK",
+        "and EJ Kerr",
+        "Kerr"
+      ],
+      "metadata_iri": "regen:13toVgFbrG6YxQgUn1q9UiD12SZ47gJF57TLgmnNni6FyKNKKoMgVoq.rdf",
+      "description": "GHG Benefits in Managed Crop and Grassland Systems Credit Class project in England, UK"
+    },
+    "C06-020": {
+      "id": "C06-020",
+      "name": "Windmill Down Farms",
+      "type": "PROJECT",
+      "class_id": "C06",
+      "jurisdiction": "GB-ENG  ",
+      "location": "England, UK",
+      "aliases": [
+        "WDF",
+        "Down Farms",
+        "Farms"
+      ],
+      "metadata_iri": "regen:13toVgRfHFv1vnW3uwp4MyWK9VDYUoZVa2fYZ8eyQHp9J1n6BH6uC9S.rdf",
+      "description": "GHG Benefits in Managed Crop and Grassland Systems Credit Class project in England, UK"
+    },
+    "C06-021": {
+      "id": "C06-021",
+      "name": "Rockscape Farms",
+      "type": "PROJECT",
+      "class_id": "C06",
+      "jurisdiction": "GB-ENG  ",
+      "location": "England, UK",
+      "aliases": [
+        "RF",
+        "Farms"
+      ],
+      "metadata_iri": "regen:13toVhP7CAB7SHsgyuDYvj7Kt7raDoUU9iJVFf8kyQvumJBXqEw28UM.rdf",
+      "description": "GHG Benefits in Managed Crop and Grassland Systems Credit Class project in England, UK"
+    },
+    "C07-001": {
+      "id": "C07-001",
+      "name": "Woodburn",
+      "type": "PROJECT",
+      "class_id": "C07",
+      "jurisdiction": "AU-NSW 2358",
+      "location": "New South Wales, Australia",
+      "aliases": [],
+      "metadata_iri": "regen:13toVgzh4miRzzQhxG7p5oHhE7ohwLbUhw4v8FT6VKoScre335rBLT6.rdf",
+      "description": "Woodburn is a beef breeding operation situated north of Walcha on the New England tablelands of Australia. The grasslands here grow on basalt and sandy loam soils and host Woodburn's high density herds of cattle. Considerable investments have been made at Woodburn to improve fencing and water infrastructure, enabling for an increase in animal density integral to prescribed grazing. Continued improvement in the ecological state of the farm is core to how Woodburn is managed."
+    },
+    "C07-002": {
+      "id": "C07-002",
+      "name": "Cavan Station",
+      "type": "PROJECT",
+      "class_id": "C07",
+      "jurisdiction": "AU-NSW 2582",
+      "location": "New South Wales, Australia",
+      "aliases": [
+        "CS",
+        "Station"
+      ],
+      "metadata_iri": "regen:13toVgrDV2LdwbfXB3ysQ2GaRywG2dvw2Mxw57HrrDAcQmiYDnVJvAN.rdf",
+      "description": "Cavan Station is on the southern tablelands of New South Wales, Australia. Divided by the Murrumbidgee River at Yass, it comprises a diverse range of landscapes including limestone rocky outcrops, undulating slopes and steep native vegetated hills. The Cavan Station angus cow herd has been developed over the past 20 years on the harsh Southern Tablelands environment and steep limestone hills. The lands are managed with time controlled rotational grazing."
+    },
+    "C08-001": {
+      "id": "C08-001",
+      "name": "Yahara WINS Watershed Carbon Project",
+      "type": "PROJECT",
+      "class_id": "C08",
+      "jurisdiction": "US-WI 53713",
+      "location": "Wisconsin, USA",
+      "aliases": [
+        "YWWCP",
+        "WINS Watershed Carbon Project",
+        "Project"
+      ],
+      "metadata_iri": "regen:13toVfznx8We61hkLTmXWV7sjk3YAVvZrXEr7Q649NZaKvAtgM4sX3S.rdf",
+      "description": "The Yahara WINS Watershed Carbon Project implements nature-based and green infrastructure practices that avoid emissions from construction and operation of gray wastewater infrastructure. Through an adaptive management approach, the project reduces nutrient loads via agricultural and watershed best management practices—including cover crops, conservation cover, grassed waterways, wetland restoration, and structural erosion control measures—thereby avoiding the need for a tertiary/advanced filtration upgrade at the Nine Springs Wastewater Treatment Plant. Project Proponents quantify reduction in GHG emissions associated with the avoided energy and materials from the gray infrastructure that green solutions replace, including construction materials, decades of operational energy use, and facility maintenance. Credits issue annually ex-post throughout the avoided infrastructure's lifetime."
     },
     "KSH01-001": {
       "id": "KSH01-001",
-      "name": "California Grazing Project",
+      "name": "Grgich Hills Estate Regenerative Sheep Grazing",
       "type": "PROJECT",
       "class_id": "KSH01",
       "jurisdiction": "US-CA",
       "location": "California, USA",
-      "aliases": ["CA Grazing", "California Grazing"],
-      "metadata_iri": "regen:13toVgEs67VyTgaLnLGk5ms9BwxGcjvZgiMcbGcgM2ttdWpfDhBHtZx.rdf"
+      "aliases": [
+        "Hills Estate Regenerative Sheep Grazing",
+        "Grazing"
+      ],
+      "metadata_iri": "regen:13toVgEs67VyTgaLnLGk5ms9BwxGcjvZgiMcbGcgM2ttdWpfDhBHtZx.rdf",
+      "description": "Credit Class for Sheep Grazing in Vineyard Systems project in California, USA"
     },
     "MBS01-001": {
       "id": "MBS01-001",
-      "name": "Kenya Marine Conservation",
+      "name": "Mangrove Forest: Marereni",
       "type": "PROJECT",
       "class_id": "MBS01",
       "jurisdiction": "KE",
       "location": "Kenya",
-      "aliases": ["Kenya Marine", "KE Marine Conservation"],
-      "metadata_iri": "regen:13toVhYTmnsD5ojHkZL9PZpmWi2Qrf3116ffMqc6diCsvc4d354VLCF.rdf"
+      "aliases": [
+        "MFM",
+        "Forest: Marereni",
+        "Marereni"
+      ],
+      "metadata_iri": "regen:13toVhYTmnsD5ojHkZL9PZpmWi2Qrf3116ffMqc6diCsvc4d354VLCF.rdf",
+      "description": "Empowering local communities to plant and protect mangrove ecosystems in Marereni, Kilifi, Kenya"
     },
     "USS01-001": {
       "id": "USS01-001",
-      "name": "Brazil Jaguar Corridor",
+      "name": "Jaguar Stewardship in the Pantanal Conservation Network",
       "type": "PROJECT",
       "class_id": "USS01",
       "jurisdiction": "BR-MS",
       "location": "Mato Grosso do Sul, Brazil",
-      "aliases": ["Jaguar Corridor", "Brazil Wildlife"],
-      "metadata_iri": "regen:13toVhVHQP5ZSNujHJhtxY8PDqFMUPvLfH5GZFsRe4vByv7uV2CW3UR.rdf"
+      "aliases": [
+        "JSPCN",
+        "Stewardship in the Pantanal Conservation Network",
+        "Network"
+      ],
+      "metadata_iri": "regen:13toVhVHQP5ZSNujHJhtxY8PDqFMUPvLfH5GZFsRe4vByv7uV2CW3UR.rdf",
+      "description": "The Instituto Homem Pantaneiro (IHP) is an NGO dedicated to preserving the Brazilian Pantanal biome, considered the largest continental wetland on the planet and a Natural World Heritage Site. IHP conducts a range of activities to improve ecosystem health and jaguar habitat, including: managing protected areas, firefighting, monitoring biodiversity and deforestation, conducting research, and facilitating dialogue among stakeholders. One credit represents a composite measure of biodiversity stewardship effectiveness, focused on jaguars as an umbrella species, across a 40,613-hectare private conservation reserve, based on a Theory of Change established by ERA and IHP. The project combines advanced monitoring technologies with community engagement to address key threats, particularly wildfires which affected over 90% of the Serra do Amolar region in 2020."
     },
     "USS01-002": {
       "id": "USS01-002",
-      "name": "Ecuador Wildlife Corridor",
+      "name": "Biocultural Jaguar Credits, Ancestral Stewardship in the Sharamentsa Community",
       "type": "PROJECT",
       "class_id": "USS01",
       "jurisdiction": "EC-Y",
-      "location": "Ecuador",
-      "aliases": ["Ecuador Corridor", "EC Wildlife"],
-      "metadata_iri": "regen:13toVh88z5D4NhdytCKHuoNvJiBgYHkf6hQMoAaHxF9hvJusD7Uijo7.rdf"
+      "location": "Y, Ecuador",
+      "aliases": [
+        "Jaguar Credits, Ancestral Stewardship in the Sharamentsa Community",
+        "Community"
+      ],
+      "metadata_iri": "regen:13toVh88z5D4NhdytCKHuoNvJiBgYHkf6hQMoAaHxF9hvJusD7Uijo7.rdf",
+      "description": "A biocultural conservation project led by the Sharamentsa community of the Achuar Nation, protecting jaguar habitat in the Ecuadorian Amazon through land management and community-based monitoring. This pilot initiative demonstrates a new ecological-economic model aligning biodiversity conservation with cultural integrity and local well-being."
     }
   },
-
   "organizations": {
-    "city_forest_credits": {
-      "name": "City Forest Credits",
-      "type": "ORGANIZATION",
-      "aliases": ["CFC", "City Forest"],
-      "administered_classes": ["C02"],
-      "description": "Urban forestry carbon credit methodology developer"
-    },
-    "ecometric": {
-      "name": "EcoMetric",
-      "type": "ORGANIZATION",
-      "aliases": ["Ecometric", "EcoMetric Ltd"],
-      "administered_classes": ["C06", "C08", "C09"],
-      "description": "UK-based environmental credits administrator"
-    },
-    "terrasos": {
-      "name": "Terrasos",
-      "type": "ORGANIZATION",
-      "aliases": ["Terrasos Foundation", "BioTerra"],
-      "administered_classes": ["BT01"],
-      "description": "Colombian biodiversity credit developer"
-    },
-    "toucan": {
-      "name": "Toucan Protocol",
-      "type": "ORGANIZATION",
-      "aliases": ["Toucan", "Toucan Carbon"],
-      "administered_classes": ["C03"],
-      "description": "Carbon credit tokenization and bridging protocol"
-    },
-    "kulshan_carbon": {
-      "name": "Kulshan Carbon Trust",
-      "type": "ORGANIZATION",
-      "aliases": ["Kulshan", "Kulshan Biochar"],
-      "administered_classes": ["C05"],
-      "description": "Biochar carbon removal credit developer"
-    },
-    "ruuts": {
-      "name": "Ruuts",
-      "type": "ORGANIZATION",
-      "aliases": ["Ruuts Carbon", "Ruuts Soil"],
-      "administered_classes": ["C04"],
-      "description": "Soil carbon credit methodology developer"
-    },
-    "regen_network": {
+    "admin_123a7e9g": {
+      "key": "admin_123a7e9g",
       "name": "Regen Network",
       "type": "ORGANIZATION",
-      "aliases": ["Regen", "Regen Network Development"],
-      "administered_classes": ["C01", "C07", "KSH01", "MBS01", "USS01"],
-      "description": "Core development organization for Regen Network blockchain"
+      "aliases": [
+        "Regen",
+        "RND"
+      ],
+      "administered_classes": [
+        "C01",
+        "C02",
+        "C07"
+      ],
+      "description": "Administrator of Verified Carbon Standard, Urban Forest Carbon Credit Class, CarbonPlus Grasslands Credit Class"
+    },
+    "tco2": {
+      "key": "tco2",
+      "name": "Toucan Protocol",
+      "type": "ORGANIZATION",
+      "aliases": [
+        "Toucan",
+        "TCO2"
+      ],
+      "administered_classes": [
+        "C03"
+      ],
+      "description": "Administrator of TCO2: Toucan Carbon Tokens Credit Class"
+    },
+    "ruuts": {
+      "key": "ruuts",
+      "name": "Ruuts",
+      "type": "ORGANIZATION",
+      "aliases": [],
+      "administered_classes": [
+        "C04"
+      ],
+      "description": "Administrator of Ruuts Credit Class for Soil Carbon Sequestration through Regenerative Grazing"
+    },
+    "admin_1v2ncque": {
+      "key": "admin_1v2ncque",
+      "name": "EcoMetric",
+      "type": "ORGANIZATION",
+      "aliases": [
+        "EcoMetric Ltd"
+      ],
+      "administered_classes": [
+        "BT01",
+        "C05",
+        "C06",
+        "C08",
+        "C09",
+        "KSH01",
+        "USS01"
+      ],
+      "description": "Administrator of Terrasos Biodiversity Unit, Credit Class for Carbon Removal through Biochar Production, GHG Benefits in Managed Crop and Grassland Systems Credit Class, Nature-Based Watershed & Green Infrastructure Solutions to Avoid Gray Infrastructure Emissions, GHG & Co-Benefits in Watershed Carbon, Credit Class for Sheep Grazing in Vineyard Systems, Biodiversity Credit Protocol for Umbrella Species Stewardship"
+    },
+    "seatrees": {
+      "key": "seatrees",
+      "name": "SeaTrees",
+      "type": "ORGANIZATION",
+      "aliases": [],
+      "administered_classes": [
+        "MBS01"
+      ],
+      "description": "Administrator of SeaTrees Crediting Protocol for Marine Restoration"
     }
   },
-
   "indexes": {
     "name_to_class": {
-      "carbonplus grasslands": "C01",
-      "grasslands": "C01",
-      "carbonplus": "C01",
+      "verified carbon standard": "C01",
+      "vcs": "C01",
+      "carbon standard": "C01",
+      "standard": "C01",
+      "urban forest carbon credit class": "C02",
       "city forest credits": "C02",
-      "urban forest carbon": "C02",
       "cfc": "C02",
-      "city forest": "C02",
-      "tco2": "C03",
-      "toucan carbon tokens": "C03",
-      "toucan": "C03",
-      "nct": "C03",
-      "ruuts soil carbon": "C04",
-      "ruuts": "C04",
-      "soil carbon": "C04",
-      "biochar carbon credits": "C05",
+      "urban forest carbon": "C02",
+      "tco2: toucan carbon tokens credit class": "C03",
+      "toucan carbon tokens credit class": "C03",
+      "class": "C07",
+      "ruuts credit class for soil carbon sequestration through regenerative grazing": "C04",
+      "credit class for soil carbon sequestration through regenerative grazing": "C04",
+      "grazing": "C04",
+      "credit class for sheep grazing in vineyard systems": "KSH01",
+      "class for sheep grazing in vineyard systems": "KSH01",
+      "systems": "KSH01",
+      "credit class for carbon removal through biochar production": "C05",
       "biochar": "C05",
+      "biochar carbon credits": "C05",
       "kulshan biochar": "C05",
-      "kulshan": "C05",
-      "ecometric uk peatland": "C06",
-      "uk peatland": "C06",
-      "peatland": "C06",
-      "australian carbon": "C07",
-      "accu": "C07",
-      "ecometric biodiversity": "C08",
-      "ecometric soil health": "C09",
-      "bioterra": "BT01",
-      "terrasos": "BT01",
-      "grazing management": "KSH01",
-      "kilo-sheep-hour": "KSH01",
-      "ksh": "KSH01",
-      "marine biodiversity": "MBS01",
-      "marine bio stewardship": "MBS01",
-      "mbs": "MBS01",
-      "umbrella species": "USS01",
-      "umbrella species stewardship": "USS01",
-      "uss": "USS01"
+      "ghg benefits in managed crop and grassland systems credit class": "C06",
+      "benefits in managed crop and grassland systems credit class": "C06",
+      "carbonplus grasslands credit class": "C07",
+      "cgcc": "C07",
+      "grasslands credit class": "C07",
+      "terrasos biodiversity unit": "BT01",
+      "tbu": "BT01",
+      "biodiversity unit": "BT01",
+      "unit": "BT01",
+      "seatrees crediting protocol for marine restoration": "MBS01",
+      "scpmr": "MBS01",
+      "crediting protocol for marine restoration": "MBS01",
+      "restoration": "MBS01",
+      "biodiversity credit protocol for umbrella species stewardship": "USS01",
+      "credit protocol for umbrella species stewardship": "USS01",
+      "stewardship": "USS01",
+      "nature-based watershed & green infrastructure solutions to avoid gray infrastructure emissions": "C08",
+      "watershed & green infrastructure solutions to avoid gray infrastructure emissions": "C08",
+      "emissions": "C08",
+      "ghg & co-benefits in watershed carbon": "C09",
+      "gcwc": "C09",
+      "& co-benefits in watershed carbon": "C09",
+      "ghg & co-benefits in watershed": "C09"
     },
     "name_to_project": {
-      "buena vista heights": "C02-003",
-      "buena vista": "C02-003",
-      "bvh": "C02-003",
-      "kulshan biochar project": "C05-001",
-      "kulshan": "C05-001",
-      "seattle urban forest": "C02-001",
-      "el globo": "BT01-001",
-      "la pedregoza": "BT01-002",
-      "kasigau wildlife corridor": "C01-001",
-      "jaguar corridor": "USS01-001",
-      "kenya marine conservation": "MBS01-001"
+      "el globo habitat bank": "BT01-001",
+      "eghb": "BT01-001",
+      "globo habitat bank": "BT01-001",
+      "bank": "BT01-002",
+      "aguadulce habitat bank": "BT01-002",
+      "ahb": "BT01-002",
+      "habitat bank": "BT01-002",
+      "the mai ndombe redd+ project": "C03-006",
+      "tmnrp": "C03-006",
+      "mai ndombe redd+ project": "C03-006",
+      "project": "C08-001",
+      "the kasigau corridor redd project - phase ii the community ranches": "C03-004",
+      "kasigau corridor redd project - phase ii the community ranches": "C03-004",
+      "ranches": "C03-004",
+      "evio kuiñaji ese´eja cuana": "C01-003",
+      "ekec": "C01-003",
+      "kuiñaji ese´eja cuana": "C01-003",
+      "cuana": "C01-003",
+      "king county urban forest carbon project": "C02-001",
+      "county urban forest carbon project": "C02-001",
+      "sandy cross forest preservation project": "C02-002",
+      "scfpp": "C02-002",
+      "cross forest preservation project": "C02-002",
+      "buena vista heights conservation area": "C02-003",
+      "bvhca": "C02-003",
+      "vista heights conservation area": "C02-003",
+      "area": "C02-003",
+      "harvey manning park expansion": "C02-004",
+      "hmpe": "C02-004",
+      "manning park expansion": "C02-004",
+      "expansion": "C02-004",
+      "evergreen & east preservation project": "C02-005",
+      "eepp": "C02-005",
+      "& east preservation project": "C02-005",
+      "st. elmo preservation project": "C02-006",
+      "sepp": "C02-006",
+      "elmo preservation project": "C02-006",
+      "reforesting des moines": "C02-007",
+      "rdm": "C02-007",
+      "des moines": "C02-007",
+      "moines": "C02-007",
+      "treasure valley municipal parks project": "C02-008",
+      "tvmpp": "C02-008",
+      "valley municipal parks project": "C02-008",
+      "travis county floodplain reforestation program": "C02-009",
+      "tcfrp": "C02-009",
+      "county floodplain reforestation program": "C02-009",
+      "program": "C02-009",
+      "ballinger open space restoration": "C02-010",
+      "bosr": "C02-010",
+      "open space restoration": "C02-010",
+      "restoration": "C02-010",
+      "lake county forest preserve": "C02-011",
+      "lcfp": "C02-011",
+      "county forest preserve": "C02-011",
+      "preserve": "C02-011",
+      "fox river bluffs planting project": "C02-012",
+      "frbpp": "C02-012",
+      "river bluffs planting project": "C02-012",
+      "rimba raya biodiversity reserve project": "C03-001",
+      "rrbrp": "C03-001",
+      "raya biodiversity reserve project": "C03-001",
+      "redd+ project resguardo indigena unificado selva de mataven (riu sm)": "C03-002",
+      "project resguardo indigena unificado selva de mataven (riu sm)": "C03-002",
+      "sm)": "C03-002",
+      "reduced emissions from deforestation and degradation in keo seima wildlife sanctuary": "C03-003",
+      "emissions from deforestation and degradation in keo seima wildlife sanctuary": "C03-003",
+      "sanctuary": "C03-003",
+      "florestal santa maria project": "C03-005",
+      "fsmp": "C03-005",
+      "santa maria project": "C03-005",
+      "pacajai redd+ project": "C03-007",
+      "prp": "C03-007",
+      "redd+ project": "C03-007",
+      "inner mongolia chao’er improved forest management project": "C03-008",
+      "mongolia chao’er improved forest management project": "C03-008",
+      "fujian yong’an improved forest management project": "C03-009",
+      "yong’an improved forest management project": "C03-009",
+      "yunnan kunming liangqu improved forest management project": "C03-010",
+      "kunming liangqu improved forest management project": "C03-010",
+      "jiangxi province le'an county forest farm carbon sink project": "C03-011",
+      "province le'an county forest farm carbon sink project": "C03-011",
+      "north pikounda redd+": "C03-012",
+      "npr": "C03-012",
+      "pikounda redd+": "C03-012",
+      "redd+": "C03-012",
+      "san juan carbon project": "C05-001",
+      "sjcp": "C05-001",
+      "juan carbon project": "C05-001",
+      "philipson estate blaston": "C06-001",
+      "peb": "C06-001",
+      "estate blaston": "C06-001",
+      "blaston": "C06-001",
+      "pimlico farm": "C06-002",
+      "pf": "C06-002",
+      "farm": "C06-013",
+      "bromborough estate": "C06-003",
+      "be": "C06-003",
+      "estate": "C06-012",
+      "marston lodge": "C06-004",
+      "ml": "C06-004",
+      "lodge": "C06-004",
+      "neesham farm ltd.": "C06-005",
+      "nfl": "C06-005",
+      "farm ltd.": "C06-005",
+      "ltd.": "C06-005",
+      "botany farm partnership": "C06-006",
+      "bfp": "C06-006",
+      "farm partnership": "C06-006",
+      "partnership": "C06-006",
+      "lowick manor farm": "C06-007",
+      "lmf": "C06-007",
+      "manor farm": "C06-007",
+      "alan woodley & sons": "C06-008",
+      "aws": "C06-008",
+      "woodley & sons": "C06-008",
+      "sons": "C06-008",
+      "southill park estate": "C06-009",
+      "spe": "C06-009",
+      "park estate": "C06-009",
+      "bramall farming limited": "C06-010",
+      "bfl": "C06-010",
+      "farming limited": "C06-010",
+      "limited": "C06-010",
+      "burton latimer farms": "C06-011",
+      "blf": "C06-011",
+      "latimer farms": "C06-011",
+      "farms": "C06-021",
+      "burrough court estate": "C06-012",
+      "bce": "C06-012",
+      "court estate": "C06-012",
+      "coppicemoor farm": "C06-013",
+      "cf": "C06-013",
+      "edward pope farms": "C06-014",
+      "epf": "C06-014",
+      "pope farms": "C06-014",
+      "fonthill farms": "C06-015",
+      "ff": "C06-015",
+      "greens lodge farms": "C06-016",
+      "glf": "C06-016",
+      "lodge farms": "C06-016",
+      "hcf farms": "C06-017",
+      "hf": "C06-017",
+      "john darby farms": "C06-018",
+      "jdf": "C06-018",
+      "darby farms": "C06-018",
+      "re and ej kerr": "C06-019",
+      "rek": "C06-019",
+      "and ej kerr": "C06-019",
+      "kerr": "C06-019",
+      "windmill down farms": "C06-020",
+      "wdf": "C06-020",
+      "down farms": "C06-020",
+      "rockscape farms": "C06-021",
+      "rf": "C06-021",
+      "woodburn": "C07-001",
+      "cavan station": "C07-002",
+      "cs": "C07-002",
+      "station": "C07-002",
+      "yahara wins watershed carbon project": "C08-001",
+      "ywwcp": "C08-001",
+      "wins watershed carbon project": "C08-001",
+      "grgich hills estate regenerative sheep grazing": "KSH01-001",
+      "hills estate regenerative sheep grazing": "KSH01-001",
+      "grazing": "KSH01-001",
+      "mangrove forest: marereni": "MBS01-001",
+      "mfm": "MBS01-001",
+      "forest: marereni": "MBS01-001",
+      "marereni": "MBS01-001",
+      "jaguar stewardship in the pantanal conservation network": "USS01-001",
+      "jspcn": "USS01-001",
+      "stewardship in the pantanal conservation network": "USS01-001",
+      "network": "USS01-001",
+      "biocultural jaguar credits, ancestral stewardship in the sharamentsa community": "USS01-002",
+      "jaguar credits, ancestral stewardship in the sharamentsa community": "USS01-002",
+      "community": "USS01-002"
     },
     "org_to_classes": {
-      "city forest credits": ["C02"],
-      "cfc": ["C02"],
-      "ecometric": ["C06", "C08", "C09"],
-      "terrasos": ["BT01"],
-      "toucan": ["C03"],
-      "kulshan": ["C05"],
-      "ruuts": ["C04"],
-      "regen network": ["C01", "C07", "KSH01", "MBS01", "USS01"]
+      "regen network": [
+        "C01",
+        "C02",
+        "C07"
+      ],
+      "regen": [
+        "C01",
+        "C02",
+        "C07"
+      ],
+      "rnd": [
+        "C01",
+        "C02",
+        "C07"
+      ],
+      "toucan protocol": [
+        "C03"
+      ],
+      "toucan": [
+        "C03"
+      ],
+      "tco2": [
+        "C03"
+      ],
+      "ruuts": [
+        "C04"
+      ],
+      "ecometric": [
+        "BT01",
+        "C05",
+        "C06",
+        "C08",
+        "C09",
+        "KSH01",
+        "USS01"
+      ],
+      "ecometric ltd": [
+        "BT01",
+        "C05",
+        "C06",
+        "C08",
+        "C09",
+        "KSH01",
+        "USS01"
+      ],
+      "seatrees": [
+        "MBS01"
+      ]
     }
   }
 }

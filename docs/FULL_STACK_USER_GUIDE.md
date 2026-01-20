@@ -192,19 +192,30 @@ Your feedback is stored and helps improve the system.
 
 ## 8. Code Graph Capabilities
 
-The code graph now has rich Cosmos SDK relationship data (as of Jan 2026):
+The code graph now has rich Cosmos SDK relationship data (as of Jan 13, 2026):
 
 | Feature | Status | Notes |
 |---------|--------|-------|
+| `find_callers` | ✅ Working | Find what calls a function (11,331 CALLS edges) |
+| `find_callees` | ✅ Working | Find what a function calls |
+| `find_call_graph` | ✅ Working | Full call graph for an entity |
 | `keeper_for_msg` | ✅ Working | Returns Keeper that handles a Message (40 relationships) |
 | `msgs_for_keeper` | ✅ Working | Returns all Messages a Keeper handles |
 | `list_modules` | ✅ Working | 8 modules: ecocredit, basket, data, marketplace, etc. |
 | `find_by_type` | ✅ Working | Functions, Methods, Structs, Interfaces with GitHub URLs |
-| `find_callees` | ✅ Working | 11,331 CALLS edges for call graph navigation |
 
-**What works great:** All major query types now work - `search`, `find_by_type`, `search_entities`, `list_repos`, `keeper_for_msg`, `msgs_for_keeper`, `list_modules`.
+### Call Graph Example
+```
+> Use find_callers to see what calls the Batch function
 
-**For code navigation:** If you have regen-ledger cloned locally, Claude Code's native file reading + Grep often works better for deep code exploration. Use KOI for docs, forum, Keeper/Message relationships, and non-code sources.
+Result:
+  - _Query_Batch_Handler (x/ecocredit/base/types/v1/query.pb.go)
+  - TestScenario (x/ecocredit/server/testsuite/suite.go)
+```
+
+**What works great:** All major query types now work - `search`, `find_by_type`, `search_entities`, `list_repos`, `keeper_for_msg`, `msgs_for_keeper`, `list_modules`, `find_callers`, `find_callees`.
+
+**For code navigation:** If you have regen-ledger cloned locally, Claude Code's native file reading + Grep often works better for deep code exploration. Use KOI for docs, forum, Keeper/Message relationships, call graphs, and non-code sources.
 
 ---
 
@@ -245,8 +256,10 @@ The code graph now has rich Cosmos SDK relationship data (as of Jan 2026):
 | Metric | Value |
 |--------|-------|
 | Documents indexed | 48,000+ |
-| Code entities | 31,728 |
+| Code entities | 32,483 |
+| CALLS edges | 11,331 |
 | Repositories | 8 |
 | Data sources | 12 (GitHub, Discourse, Notion, Telegram, etc.) |
+| MCP version | 1.5.8 |
 
-*Last updated: January 2026*
+*Last updated: January 13, 2026*

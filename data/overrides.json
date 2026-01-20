@@ -1,0 +1,31 @@
+{
+  "_comment": "Optional overrides for the auto-generated entity registry. Only add entries here if the automated system gets something wrong.",
+  "_usage": {
+    "credit_classes": "Override credit class data by ID (e.g., 'C05': { 'name': 'Custom Name', 'aliases': ['Alias1'] })",
+    "projects": "Override project data by ID (e.g., 'C02-003': { 'name': 'Custom Name' })",
+    "organizations": "Override organization data by key (e.g., 'admin_123a7e9g': { 'name': 'Regen Network' })"
+  },
+  "credit_classes": {
+    "C02": {
+      "aliases": ["City Forest Credits", "CFC", "Urban Forest Carbon"]
+    },
+    "C05": {
+      "aliases": ["Biochar", "Biochar Carbon Credits", "Kulshan Biochar"]
+    }
+  },
+  "projects": {},
+  "organizations": {
+    "admin_123a7e9g": {
+      "name": "Regen Network",
+      "aliases": ["Regen", "RND"]
+    },
+    "admin_1v2ncque": {
+      "name": "EcoMetric",
+      "aliases": ["EcoMetric Ltd"]
+    },
+    "tco2": {
+      "name": "Toucan Protocol",
+      "aliases": ["Toucan", "TCO2"]
+    }
+  }
+}

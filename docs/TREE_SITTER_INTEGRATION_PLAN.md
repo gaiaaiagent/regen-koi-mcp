@@ -11,6 +11,7 @@
 | Phase 3: Add HANDLES Edges | ✅ Complete | Jan 12, 2026 |
 | Phase 4: Re-Extract Codebase | ✅ Complete | Jan 12, 2026 |
 | Phase 5: Validate Results | ✅ Complete | Jan 12, 2026 |
+| Phase 6: Fix Call Graph Queries | ✅ Complete | Jan 13, 2026 |
 
 ## Current State
 
@@ -219,6 +220,55 @@ pm2 restart hybrid-rag-api
 **Results:**
 - `keeper_for_msg`: ✅ Now returns Keeper for any Message (e.g., MsgCreateBatch → Keeper at x/ecocredit/base/keeper/keeper.go)
 - `msgs_for_keeper`: ✅ Now returns all 40 Messages handled by Keeper
+
+### Phase 6: Fix Call Graph Queries ✅ COMPLETE
+
+**Completed:** Jan 13, 2026
+
+**Problem:** Call graph queries (`find_callers`, `find_callees`, `find_call_graph`) were returning "Unknown" for entity names.
+
+**Root Causes Identified:**
+1. **Wrong graph**: API was querying `regen_graph` (1 CALLS edge) instead of `regen_graph_v2` (11,331 CALLS edges)
+2. **Nested return format**: Cypher queries returned `properties(caller) as caller` but MCP expected flat fields like `caller_name`
+
+**Fixes Applied:**
+
+1. **Switch to correct graph** (`koi-query-api.ts`):
+   ```bash
+   sed -i "s/cypher('regen_graph'/cypher('regen_graph_v2'/g" koi-query-api.ts
+   ```
+   Changed 18 hardcoded references.
+
+2. **Fix query return format** (`koi-query-api.ts`):
+   ```cypher
+   -- Before (nested):
+   RETURN properties(caller) as caller, properties(callee) as callee
+
+   -- After (flat):
+   RETURN caller.name as caller_name, caller.file_path as caller_file,
+          caller.line_number as caller_line, caller.entity_type as caller_type,
+          callee.name as callee_name, callee.file_path as callee_file,
+          callee.line_number as callee_line, callee.entity_type as callee_type
+   ```
+
+3. **Published MCP v1.5.8** with all query types in validation schema.
+
+**Results:**
+```
+# Before fix
+find_callers("CreateBatch") → 5 results with "Unknown" names
+
+# After fix
+find_callers("Batch") → 5 results with actual names:
+  - _Query_Batch_Handler (x/ecocredit/base/types/v1/query.pb.go)
+  - TestScenario (x/ecocredit/server/testsuite/suite.go)
+```
+
+**Verification:**
+- `find_callers`: ✅ Returns function names, file paths, entity types
+- `find_callees`: ✅ Working
+- `find_call_graph`: ✅ Working
+- 11,331 CALLS edges accessible
 
 ---
 
