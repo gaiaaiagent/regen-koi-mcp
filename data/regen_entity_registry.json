@@ -1,0 +1,492 @@
+{
+  "version": "1.0.0",
+  "generated": "2026-01-20T00:00:00Z",
+  "description": "Canonical entity registry for Regen Network credit classes and projects",
+
+  "credit_classes": {
+    "C01": {
+      "id": "C01",
+      "name": "CarbonPlus Grasslands",
+      "type": "CREDIT_CLASS",
+      "credit_type": "C",
+      "aliases": ["Grasslands", "CarbonPlus", "Grassland Credits"],
+      "admin": "regen123a7e9gvgm53zvswc6daq7c85xtzt8263lgasm",
+      "metadata_iri": "regen:13toVgkhsDeQTJA1DJ1diGYTb3Cmy1rZV24auNXxNPTcVTySoiFtiFq.rdf",
+      "description": "Grassland carbon sequestration credits"
+    },
+    "C02": {
+      "id": "C02",
+      "name": "City Forest Credits",
+      "type": "CREDIT_CLASS",
+      "credit_type": "C",
+      "aliases": ["Urban Forest Carbon", "CFC", "City Forest", "Urban Forest"],
+      "admin": "regen123a7e9gvgm53zvswc6daq7c85xtzt8263lgasm",
+      "metadata_iri": "regen:13toVgasFvVdGFg5VeijGetEbGHSJZwBc4jUVei2euKFgE6wqNp2Hgz.rdf",
+      "description": "Urban forest carbon credits from City Forest Credits methodology"
+    },
+    "C03": {
+      "id": "C03",
+      "name": "TCO2: Toucan Carbon Tokens",
+      "type": "CREDIT_CLASS",
+      "credit_type": "C",
+      "aliases": ["Toucan", "TCO2", "Toucan Carbon", "NCT"],
+      "admin": "regen1dlszg2sst9r69my4f84l3mj66zxcf3umcgujys30t84srg95dgvs8rn9rj",
+      "metadata_iri": "regen:13toVgLqqFAjByA2kZkDFq7PZB2HUyD3u8qFDiBidYjpdYBLeJvAzxB.rdf",
+      "description": "Toucan bridged carbon credits"
+    },
+    "C04": {
+      "id": "C04",
+      "name": "Ruuts Soil Carbon",
+      "type": "CREDIT_CLASS",
+      "credit_type": "C",
+      "aliases": ["Ruuts", "Soil Carbon", "Ruuts Carbon"],
+      "admin": "regen1c799jddmlz7segvg6jrw6w2k6svwafganjdznard3tc74n7td7rq39fqdp",
+      "metadata_iri": "regen:13toVgBisQqEmauHntQsW6mwpz71RSTwsjzhn9gxCQ16tdRjHPHTRoK.rdf",
+      "description": "Soil carbon credits from Ruuts methodology"
+    },
+    "C05": {
+      "id": "C05",
+      "name": "Biochar Carbon Credits",
+      "type": "CREDIT_CLASS",
+      "credit_type": "C",
+      "aliases": ["Biochar", "Kulshan Biochar", "Kulshan Carbon"],
+      "admin": "regen1v2ncquer9r2ytlkxh2djmmsq3e8we6rjc9snfn",
+      "metadata_iri": "regen:13toVhdQSiTZYzdGS41TfEZJ1L4STgYrkixNxPT5R5ZkSjkMUFT11DA.rdf",
+      "description": "Biochar carbon removal credits"
+    },
+    "C06": {
+      "id": "C06",
+      "name": "EcoMetric UK Peatland",
+      "type": "CREDIT_CLASS",
+      "credit_type": "C",
+      "aliases": ["UK Peatland", "Peatland", "EcoMetric Peatland"],
+      "admin": "regen1v2ncquer9r2ytlkxh2djmmsq3e8we6rjc9snfn",
+      "metadata_iri": "regen:13toVgBs6FCuyDebxKFWf5cJQZipWkrN6zZNhPeGBjfnqBFmhTbxj9u.rdf",
+      "description": "UK peatland restoration carbon credits administered by EcoMetric"
+    },
+    "C07": {
+      "id": "C07",
+      "name": "Australian Carbon",
+      "type": "CREDIT_CLASS",
+      "credit_type": "C",
+      "aliases": ["ACCU", "Australian Carbon Credit Units", "Australia Carbon"],
+      "admin": "regen123a7e9gvgm53zvswc6daq7c85xtzt8263lgasm",
+      "metadata_iri": "regen:13toVhUaK2XtanaM3JLYzfEoUUSA5QYcMmJygejwyeo5ENc6GAdMvQA.rdf",
+      "description": "Australian carbon credit units"
+    },
+    "C08": {
+      "id": "C08",
+      "name": "EcoMetric Biodiversity",
+      "type": "CREDIT_CLASS",
+      "credit_type": "C",
+      "aliases": ["Biodiversity Credits", "EcoMetric Bio"],
+      "admin": "regen1v2ncquer9r2ytlkxh2djmmsq3e8we6rjc9snfn",
+      "metadata_iri": "regen:13toVhba4hSPuPBosi445UcCUf6syZo7asNx7MPR3ZPxxkgg8mGgS43.rdf",
+      "description": "EcoMetric biodiversity credits"
+    },
+    "C09": {
+      "id": "C09",
+      "name": "EcoMetric Soil Health",
+      "type": "CREDIT_CLASS",
+      "credit_type": "C",
+      "aliases": ["Soil Health Credits", "EcoMetric Soil"],
+      "admin": "regen1v2ncquer9r2ytlkxh2djmmsq3e8we6rjc9snfn",
+      "metadata_iri": "regen:13toVgL2Ysv8awVocmEmAcVa7DpxqxuJqshjKf1KAFeQ4JcfQuxXrzy.rdf",
+      "description": "EcoMetric soil health credits"
+    },
+    "BT01": {
+      "id": "BT01",
+      "name": "BioTerra",
+      "type": "CREDIT_CLASS",
+      "credit_type": "BT",
+      "aliases": ["Terrasos Protocol", "Terrasos", "BioTerra Credits"],
+      "admin": "regen1v2ncquer9r2ytlkxh2djmmsq3e8we6rjc9snfn",
+      "metadata_iri": "regen:13toVhP28vRJKkkKCfiWod83aUUKQnvutB3U3v6wdLjnS6J2GF2HcoC.rdf",
+      "description": "Biodiversity credits from Terrasos methodology in Colombia"
+    },
+    "KSH01": {
+      "id": "KSH01",
+      "name": "Grazing Management",
+      "type": "CREDIT_CLASS",
+      "credit_type": "KSH",
+      "aliases": ["Kilo-Sheep-Hour", "KSH", "Grazing Credits", "Sheep Hour"],
+      "admin": "regen1v2ncquer9r2ytlkxh2djmmsq3e8we6rjc9snfn",
+      "metadata_iri": "regen:13toVh3S3R9HK4CcvnWDAQDbpwekWosPNQhVn8drrjziNznPnZdmCm9.rdf",
+      "description": "Grazing management credits measured in Kilo-Sheep-Hours"
+    },
+    "MBS01": {
+      "id": "MBS01",
+      "name": "Marine Biodiversity",
+      "type": "CREDIT_CLASS",
+      "credit_type": "MBS",
+      "aliases": ["Marine Bio Stewardship", "Marine Credits", "MBS"],
+      "admin": "regen1ueyj7zm9kjrm4uuwnh2dye02zekjgt8wfvd4wfc0ttlctwzajffqp0puwv",
+      "metadata_iri": "regen:13toVhmG8hxSeQseTQG51EwNpjoqLe6k9C1t3XY3PZohX6AttnuJjWZ.rdf",
+      "description": "Marine biodiversity stewardship credits"
+    },
+    "USS01": {
+      "id": "USS01",
+      "name": "Umbrella Species",
+      "type": "CREDIT_CLASS",
+      "credit_type": "USS",
+      "aliases": ["Umbrella Species Stewardship", "USS", "Species Credits"],
+      "admin": "regen1v2ncquer9r2ytlkxh2djmmsq3e8we6rjc9snfn",
+      "metadata_iri": "regen:13toVfzccLtKL9pDzRojtTAKU61JH2kDKMggg35LoCUCDHQfgAodUh2.rdf",
+      "description": "Umbrella species stewardship credits for wildlife habitat"
+    }
+  },
+
+  "projects": {
+    "BT01-001": {
+      "id": "BT01-001",
+      "name": "El Globo Nature Reserve",
+      "type": "PROJECT",
+      "class_id": "BT01",
+      "jurisdiction": "CO-ANT",
+      "location": "Antioquia, Colombia",
+      "aliases": ["El Globo", "Globo Reserve"],
+      "metadata_iri": "regen:13toVgmmn3f6dzVJZvHEJhstk7VHufJHLELMH2L3pyDgzmHyrqkscnR.rdf"
+    },
+    "BT01-002": {
+      "id": "BT01-002",
+      "name": "La Pedregoza Reserve",
+      "type": "PROJECT",
+      "class_id": "BT01",
+      "jurisdiction": "CO-CUN",
+      "location": "Cundinamarca, Colombia",
+      "aliases": ["La Pedregoza", "Pedregoza"],
+      "metadata_iri": "regen:13toVg3S5ECRejMZE924hidTPVJXnrRMy8HetqnDvNLbwEgWbzDKxgn.rdf"
+    },
+    "C01-001": {
+      "id": "C01-001",
+      "name": "Kasigau Wildlife Corridor",
+      "type": "PROJECT",
+      "class_id": "C01",
+      "jurisdiction": "CD-MN",
+      "location": "Democratic Republic of Congo",
+      "aliases": ["Kasigau", "Wildlife Corridor DRC"],
+      "reference_id": "VCS-934",
+      "metadata_iri": "regen:13toVgGCN3gvRbWFkvYxfZUHrsFsribCKiGfFxW4mchJWsjEYdFaYd4.rdf"
+    },
+    "C01-002": {
+      "id": "C01-002",
+      "name": "Kenya Grasslands",
+      "type": "PROJECT",
+      "class_id": "C01",
+      "jurisdiction": "KE",
+      "location": "Kenya",
+      "aliases": ["Kenya Grassland", "KE Grasslands"],
+      "reference_id": "VCS-612",
+      "metadata_iri": "regen:13toVgoZxism9hBjsmFGuAXxj6uv5WrXHPRUTR33G3Eewp9567K5PU7.rdf"
+    },
+    "C01-003": {
+      "id": "C01-003",
+      "name": "Peru Amazon Grasslands",
+      "type": "PROJECT",
+      "class_id": "C01",
+      "jurisdiction": "PE-MDD",
+      "location": "Madre de Dios, Peru",
+      "aliases": ["Peru Grasslands", "Amazon Grasslands"],
+      "reference_id": "VCS-1218",
+      "metadata_iri": "regen:13toVggnVfBxDbJ47V5ZUdwB3gWd6avSGVQGKk4rDx4o9kbjvKj6G13.rdf"
+    },
+    "C02-001": {
+      "id": "C02-001",
+      "name": "Seattle Urban Forest",
+      "type": "PROJECT",
+      "class_id": "C02",
+      "jurisdiction": "US-WA",
+      "location": "Washington, USA",
+      "aliases": ["Seattle Forest", "Washington Urban Forest"],
+      "reference_id": "CFC-1.2018",
+      "metadata_iri": "regen:13toVhmNbuUMgxxzAenxV1rkQHPrhXyuN3PyaQxsfCrxCn2i9G9niWM.rdf"
+    },
+    "C02-002": {
+      "id": "C02-002",
+      "name": "Ohio Urban Forest",
+      "type": "PROJECT",
+      "class_id": "C02",
+      "jurisdiction": "US-OH",
+      "location": "Ohio, USA",
+      "aliases": ["Ohio Forest", "OH Urban Forest"],
+      "reference_id": "CFC-18",
+      "metadata_iri": "regen:13toVgCCjzpdUF8ubQeodLJd9vkPQaxnC7XnV1Ztert2Lv9hxCUKUGW.rdf"
+    },
+    "C02-003": {
+      "id": "C02-003",
+      "name": "Buena Vista Heights",
+      "type": "PROJECT",
+      "class_id": "C02",
+      "jurisdiction": "US-PA",
+      "location": "Pennsylvania, USA",
+      "aliases": ["Buena Vista", "BVH", "Pennsylvania Forest"],
+      "reference_id": "CFC-9",
+      "metadata_iri": "regen:13toVg8V7ves71kfAsbqxwr4QV5pvj2WBvEiLyUy9XHKGGFRAYcchmC.rdf"
+    },
+    "C02-004": {
+      "id": "C02-004",
+      "name": "Issaquah Urban Forest",
+      "type": "PROJECT",
+      "class_id": "C02",
+      "jurisdiction": "US-WA 98029",
+      "location": "Issaquah, Washington, USA",
+      "aliases": ["Issaquah Forest", "Issaquah"],
+      "reference_id": "CFC-15",
+      "metadata_iri": "regen:13toVhpRRova7M4o54S9dq51sVFvnJCxKT79UMPopSQzReP2PuxNdAP.rdf"
+    },
+    "C02-005": {
+      "id": "C02-005",
+      "name": "Richmond Urban Forest",
+      "type": "PROJECT",
+      "class_id": "C02",
+      "jurisdiction": "US-VA 23223",
+      "location": "Richmond, Virginia, USA",
+      "aliases": ["Richmond Forest", "Virginia Urban Forest"],
+      "reference_id": "CFC-006",
+      "metadata_iri": "regen:13toVgRKSPwrP6Z7rx9sXXo51XYqDewrabDjaqoXQMudXuRYJqdEHxp.rdf"
+    },
+    "C02-006": {
+      "id": "C02-006",
+      "name": "Chattanooga Urban Forest",
+      "type": "PROJECT",
+      "class_id": "C02",
+      "jurisdiction": "US-TN 37409",
+      "location": "Chattanooga, Tennessee, USA",
+      "aliases": ["Chattanooga Forest", "Tennessee Forest"],
+      "reference_id": "CFC-012",
+      "metadata_iri": "regen:13toVh8FBw5G7FNPRkFuBM3GNXDB5MAAPBbeBdYQ5KuRodH7XBTgSak.rdf"
+    },
+    "C02-007": {
+      "id": "C02-007",
+      "name": "Iowa Urban Forest",
+      "type": "PROJECT",
+      "class_id": "C02",
+      "jurisdiction": "US-IA",
+      "location": "Iowa, USA",
+      "aliases": ["Iowa Forest", "IA Urban Forest"],
+      "reference_id": "CFC-016",
+      "metadata_iri": "regen:13toVgy9fFtUqxnH4hgganX1hhogtZdMhAw2GSyS4uERb9SHDVmBrJG.rdf"
+    },
+    "C02-008": {
+      "id": "C02-008",
+      "name": "Idaho Urban Forest",
+      "type": "PROJECT",
+      "class_id": "C02",
+      "jurisdiction": "US-ID",
+      "location": "Idaho, USA",
+      "aliases": ["Idaho Forest", "ID Urban Forest"],
+      "reference_id": "CFC-004",
+      "metadata_iri": "regen:13toVfzopvihH7CiyLBPpuaShz4rK2wBp2tGF5fqZDDjjFHdPY6JxJa.rdf"
+    },
+    "C02-009": {
+      "id": "C02-009",
+      "name": "Texas Urban Forest",
+      "type": "PROJECT",
+      "class_id": "C02",
+      "jurisdiction": "US-TX",
+      "location": "Texas, USA",
+      "aliases": ["Texas Forest", "TX Urban Forest"],
+      "reference_id": "CFC-014",
+      "metadata_iri": "regen:13toVgEjB6hA8PVYKUd464o1pepscD9TT8jcywWg9NehxkJog34apfa.rdf"
+    },
+    "C02-010": {
+      "id": "C02-010",
+      "name": "Washington State Forest",
+      "type": "PROJECT",
+      "class_id": "C02",
+      "jurisdiction": "US-WA",
+      "location": "Washington, USA",
+      "aliases": ["WA Forest", "Washington Forest"],
+      "reference_id": "CFC-003",
+      "metadata_iri": "regen:13toVhZbyKrWHLEo8k1SxiJPMMuXzP6sZ638nbXy6ov26mSXWFqHuDa.rdf"
+    },
+    "C02-011": {
+      "id": "C02-011",
+      "name": "Illinois Urban Forest",
+      "type": "PROJECT",
+      "class_id": "C02",
+      "jurisdiction": "US-IL",
+      "location": "Illinois, USA",
+      "aliases": ["Illinois Forest", "IL Urban Forest"],
+      "reference_id": "CFC-020",
+      "metadata_iri": "regen:13toVgM43QoZTfNkmoUjnUJnGpuxKMg1ZWqCFDZxMor9EwpeNLYsjaj.rdf"
+    },
+    "C02-012": {
+      "id": "C02-012",
+      "name": "Chicago Urban Forest",
+      "type": "PROJECT",
+      "class_id": "C02",
+      "jurisdiction": "US-IL",
+      "location": "Chicago, Illinois, USA",
+      "aliases": ["Chicago Forest", "IL Chicago Forest"],
+      "reference_id": "CFC-019",
+      "metadata_iri": "regen:13toVgiLscvDf33nQtjGVrWLJ9qwYfuzetXDxMfehWXUULJZxzS2waV.rdf"
+    },
+    "C05-001": {
+      "id": "C05-001",
+      "name": "Kulshan Biochar Project",
+      "type": "PROJECT",
+      "class_id": "C05",
+      "jurisdiction": "US-WA 98245",
+      "location": "Washington, USA",
+      "aliases": ["Kulshan", "Kulshan Biochar", "Washington Biochar"],
+      "metadata_iri": "regen:13toVhm2Vp1F3dy4Exp4FgzvaQciZ57Ssr1qtfrjBnbeD54mtb5rA5C.rdf"
+    },
+    "KSH01-001": {
+      "id": "KSH01-001",
+      "name": "California Grazing Project",
+      "type": "PROJECT",
+      "class_id": "KSH01",
+      "jurisdiction": "US-CA",
+      "location": "California, USA",
+      "aliases": ["CA Grazing", "California Grazing"],
+      "metadata_iri": "regen:13toVgEs67VyTgaLnLGk5ms9BwxGcjvZgiMcbGcgM2ttdWpfDhBHtZx.rdf"
+    },
+    "MBS01-001": {
+      "id": "MBS01-001",
+      "name": "Kenya Marine Conservation",
+      "type": "PROJECT",
+      "class_id": "MBS01",
+      "jurisdiction": "KE",
+      "location": "Kenya",
+      "aliases": ["Kenya Marine", "KE Marine Conservation"],
+      "metadata_iri": "regen:13toVhYTmnsD5ojHkZL9PZpmWi2Qrf3116ffMqc6diCsvc4d354VLCF.rdf"
+    },
+    "USS01-001": {
+      "id": "USS01-001",
+      "name": "Brazil Jaguar Corridor",
+      "type": "PROJECT",
+      "class_id": "USS01",
+      "jurisdiction": "BR-MS",
+      "location": "Mato Grosso do Sul, Brazil",
+      "aliases": ["Jaguar Corridor", "Brazil Wildlife"],
+      "metadata_iri": "regen:13toVhVHQP5ZSNujHJhtxY8PDqFMUPvLfH5GZFsRe4vByv7uV2CW3UR.rdf"
+    },
+    "USS01-002": {
+      "id": "USS01-002",
+      "name": "Ecuador Wildlife Corridor",
+      "type": "PROJECT",
+      "class_id": "USS01",
+      "jurisdiction": "EC-Y",
+      "location": "Ecuador",
+      "aliases": ["Ecuador Corridor", "EC Wildlife"],
+      "metadata_iri": "regen:13toVh88z5D4NhdytCKHuoNvJiBgYHkf6hQMoAaHxF9hvJusD7Uijo7.rdf"
+    }
+  },
+
+  "organizations": {
+    "city_forest_credits": {
+      "name": "City Forest Credits",
+      "type": "ORGANIZATION",
+      "aliases": ["CFC", "City Forest"],
+      "administered_classes": ["C02"],
+      "description": "Urban forestry carbon credit methodology developer"
+    },
+    "ecometric": {
+      "name": "EcoMetric",
+      "type": "ORGANIZATION",
+      "aliases": ["Ecometric", "EcoMetric Ltd"],
+      "administered_classes": ["C06", "C08", "C09"],
+      "description": "UK-based environmental credits administrator"
+    },
+    "terrasos": {
+      "name": "Terrasos",
+      "type": "ORGANIZATION",
+      "aliases": ["Terrasos Foundation", "BioTerra"],
+      "administered_classes": ["BT01"],
+      "description": "Colombian biodiversity credit developer"
+    },
+    "toucan": {
+      "name": "Toucan Protocol",
+      "type": "ORGANIZATION",
+      "aliases": ["Toucan", "Toucan Carbon"],
+      "administered_classes": ["C03"],
+      "description": "Carbon credit tokenization and bridging protocol"
+    },
+    "kulshan_carbon": {
+      "name": "Kulshan Carbon Trust",
+      "type": "ORGANIZATION",
+      "aliases": ["Kulshan", "Kulshan Biochar"],
+      "administered_classes": ["C05"],
+      "description": "Biochar carbon removal credit developer"
+    },
+    "ruuts": {
+      "name": "Ruuts",
+      "type": "ORGANIZATION",
+      "aliases": ["Ruuts Carbon", "Ruuts Soil"],
+      "administered_classes": ["C04"],
+      "description": "Soil carbon credit methodology developer"
+    },
+    "regen_network": {
+      "name": "Regen Network",
+      "type": "ORGANIZATION",
+      "aliases": ["Regen", "Regen Network Development"],
+      "administered_classes": ["C01", "C07", "KSH01", "MBS01", "USS01"],
+      "description": "Core development organization for Regen Network blockchain"
+    }
+  },
+
+  "indexes": {
+    "name_to_class": {
+      "carbonplus grasslands": "C01",
+      "grasslands": "C01",
+      "carbonplus": "C01",
+      "city forest credits": "C02",
+      "urban forest carbon": "C02",
+      "cfc": "C02",
+      "city forest": "C02",
+      "tco2": "C03",
+      "toucan carbon tokens": "C03",
+      "toucan": "C03",
+      "nct": "C03",
+      "ruuts soil carbon": "C04",
+      "ruuts": "C04",
+      "soil carbon": "C04",
+      "biochar carbon credits": "C05",
+      "biochar": "C05",
+      "kulshan biochar": "C05",
+      "kulshan": "C05",
+      "ecometric uk peatland": "C06",
+      "uk peatland": "C06",
+      "peatland": "C06",
+      "australian carbon": "C07",
+      "accu": "C07",
+      "ecometric biodiversity": "C08",
+      "ecometric soil health": "C09",
+      "bioterra": "BT01",
+      "terrasos": "BT01",
+      "grazing management": "KSH01",
+      "kilo-sheep-hour": "KSH01",
+      "ksh": "KSH01",
+      "marine biodiversity": "MBS01",
+      "marine bio stewardship": "MBS01",
+      "mbs": "MBS01",
+      "umbrella species": "USS01",
+      "umbrella species stewardship": "USS01",
+      "uss": "USS01"
+    },
+    "name_to_project": {
+      "buena vista heights": "C02-003",
+      "buena vista": "C02-003",
+      "bvh": "C02-003",
+      "kulshan biochar project": "C05-001",
+      "kulshan": "C05-001",
+      "seattle urban forest": "C02-001",
+      "el globo": "BT01-001",
+      "la pedregoza": "BT01-002",
+      "kasigau wildlife corridor": "C01-001",
+      "jaguar corridor": "USS01-001",
+      "kenya marine conservation": "MBS01-001"
+    },
+    "org_to_classes": {
+      "city forest credits": ["C02"],
+      "cfc": ["C02"],
+      "ecometric": ["C06", "C08", "C09"],
+      "terrasos": ["BT01"],
+      "toucan": ["C03"],
+      "kulshan": ["C05"],
+      "ruuts": ["C04"],
+      "regen network": ["C01", "C07", "KSH01", "MBS01", "USS01"]
+    }
+  }
+}

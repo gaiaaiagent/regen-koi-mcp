@@ -53,6 +53,7 @@ temp/
 
 # Data files
 data/
+!data/regen_entity_registry.json
 *.db
 
 # Service files

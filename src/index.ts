@@ -36,6 +36,8 @@ import { USER_EMAIL, getAccessToken, setAccessToken, clearAuthCache } from './au
 import { parseRID, isValidRID, extractSourceFromRID, normalizeRID, getRegisteredRIDTypes } from './rid-utils.js';
 // Auth store for file-based token persistence (ESM-compatible)
 import { loadAuthState, hasValidAccessToken } from './auth-store.js';
+// Entity registry for local pre-resolution of known Regen entities
+import { preResolveEntity, formatCanonicalResponse, loadRegistry } from './entity-registry.js';
 
 // Load environment variables
 dotenv.config();
@@ -2454,6 +2456,14 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
     const startTime = Date.now();
     console.error(`[${SERVER_NAME}] Tool=resolve_entity Label="${label}" TypeHint=${type_hint || 'none'}`);
 
+    // Pre-resolution: Check local entity registry first
+    const preResolved = preResolveEntity(label, type_hint);
+    if (preResolved.resolved && preResolved.confidence >= 0.9) {
+      const duration = Date.now() - startTime;
+      console.error(`[${SERVER_NAME}] Tool=resolve_entity PRE-RESOLVED from local registry, confidence=${preResolved.confidence}, match_type=${preResolved.match_type}, duration=${duration}ms`);
+      return formatCanonicalResponse(preResolved);
+    }
+
     try {
       const params: any = { label, limit };
       if (type_hint) params.type_hint = type_hint;
@@ -3610,6 +3620,10 @@ Your feedback helps improve KOI for everyone.${
 
 // Main execution
 async function main() {
+  // Initialize entity registry at startup
+  const registry = loadRegistry();
+  console.error(`[${SERVER_NAME}] Entity registry loaded: ${Object.keys(registry.credit_classes).length} credit classes, ${Object.keys(registry.projects).length} projects`);
+
   const server = new KOIServer();
   await server.run();
 }
