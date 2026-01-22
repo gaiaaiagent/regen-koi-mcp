@@ -65,7 +65,7 @@ export const GRAPH_TOOL: Tool = {
       query_type: {
         type: 'string',
         enum: [...GRAPH_QUERY_TYPES],
-        description: 'Type of graph query: find_by_type (get all Sensors, Handlers, etc.), search_entities (search by name), list_repos (show indexed repositories), list_entity_types (show all entity types with counts), get_entity_stats (comprehensive graph statistics), list_modules (show all modules), get_module (get specific module), keeper_for_msg (find Keeper handling a Msg), msgs_for_keeper (find Msgs handled by a Keeper), related_entities (find entities sharing docs), find_callers (find what calls an entity), find_callees (find what an entity calls), find_call_graph (full call graph for an entity)'
+        description: 'Type of graph query: find_by_type (get all Sensors, Handlers, etc.), search_entities (search by name), list_repos (show indexed repositories), list_entity_types (show all entity types with counts), get_entity_stats (comprehensive graph statistics), list_modules (show all modules), get_module (get specific module), keeper_for_msg (find Keeper handling a Msg), msgs_for_keeper (find Msgs handled by a Keeper), related_entities (find entities sharing docs), find_callers (find what calls an entity), find_callees (find what an entity calls), find_call_graph (full call graph for an entity), trace_call_chain (find path from from_entity to to_entity), find_orphaned_code (find code without callers)'
       },
       entity_name: {
         type: 'string',
@@ -99,6 +99,21 @@ export const GRAPH_TOOL: Tool = {
         description: 'Number of results to skip for pagination (default: 0)',
         minimum: 0,
         default: 0
+      },
+      from_entity: {
+        type: 'string',
+        description: 'Starting entity name for trace_call_chain query (e.g., "handleAuth")'
+      },
+      to_entity: {
+        type: 'string',
+        description: 'Target entity name for trace_call_chain query (e.g., "validateToken")'
+      },
+      max_depth: {
+        type: 'number',
+        description: 'Maximum depth for call chain tracing (1-8, default: 4)',
+        minimum: 1,
+        maximum: 8,
+        default: 4
       }
     },
     required: ['query_type']
@@ -596,16 +611,17 @@ export async function executeGraphTool(args: any) {
 
           results.forEach((r: any, i: number) => {
             const row = r.result || r;
-            // Extract entity details - prefer row.name (set by API based on query type)
+            // Extract entity details - handle both flat and nested response formats
             // For find_callers: we want caller info; for find_callees: we want callee info
-            // The API flattens this into row.name, row.file_path, row.line_start
-            const name = row.name || (isCallers ? row.caller_name : row.callee_name) || row.entity_name || 'Unknown';
-            const filePath = row.file_path || (isCallers ? row.caller_file : row.callee_file) || '';
-            const lineStart = row.line_start || row.line_number || (isCallers ? row.caller_line : row.callee_line) || '';
-            const entityType = row.entity_type || (isCallers ? row.caller_type : row.callee_type) || '';
-            const receiverType = row.receiver_type || (isCallers ? row.caller_receiver : row.callee_receiver) || '';
-            const githubUrl = row.github_url || '';
-            const repo = row.repo || row.repository || '';
+            // API may return nested caller/callee objects OR flat caller_name/callee_name fields
+            const entity = isCallers ? (row.caller || {}) : (row.callee || {});
+            const name = row.name || entity.name || (isCallers ? row.caller_name : row.callee_name) || row.entity_name || 'Unknown';
+            const filePath = row.file_path || entity.file_path || (isCallers ? row.caller_file : row.callee_file) || '';
+            const lineStart = row.line_start || entity.line_start || row.line_number || (isCallers ? row.caller_line : row.callee_line) || '';
+            const entityType = row.entity_type || entity.entity_type || (isCallers ? row.caller_type : row.callee_type) || '';
+            const receiverType = row.receiver_type || entity.receiver_type || (isCallers ? row.caller_receiver : row.callee_receiver) || '';
+            const githubUrl = row.github_url || entity.github_url || '';
+            const repo = row.repo || entity.repo || row.repository || '';
 
             // Format location string
             const location = filePath && lineStart ? `${filePath}:${lineStart}` : filePath || 'N/A';
@@ -631,6 +647,126 @@ export async function executeGraphTool(args: any) {
               provenance: githubUrl ? {
                 github_url: githubUrl,
               } : undefined,
+            });
+          });
+          break;
+        }
+
+        case 'trace_call_chain': {
+          const fromEntity = args.from_entity || entity_name;
+          const toEntity = args.to_entity;
+          const maxDepth = args.max_depth || 4;
+
+          markdownSummary = `# Call Chain: ${fromEntity} → ${toEntity || '?'}\n\n`;
+
+          if (!fromEntity || !toEntity) {
+            markdownSummary += `**Error:** Both \`from_entity\` and \`to_entity\` are required for trace_call_chain.\n\n`;
+            markdownSummary += `**Usage:** \`trace_call_chain(from_entity="handleAuth", to_entity="validateToken")\`\n`;
+            break;
+          }
+
+          if (total_results === 0) {
+            markdownSummary += `_No call path found from **${fromEntity}** to **${toEntity}** within ${maxDepth} hops._\n`;
+            break;
+          }
+
+          // Group results by path (each result is a step in a path)
+          const paths: any[] = [];
+          let currentPath: any[] = [];
+          let pathIndex = 1;
+
+          results.forEach((r: any) => {
+            const step = r.result || r;
+            const pathNum = step.path_number || step.path_id || 1;
+
+            // If this is a new path, save the previous one
+            if (pathNum !== pathIndex && currentPath.length > 0) {
+              paths.push([...currentPath]);
+              currentPath = [];
+              pathIndex = pathNum;
+            }
+
+            currentPath.push({
+              name: step.name || step.entity_name || 'Unknown',
+              file_path: step.file_path || '',
+              line_number: step.line_number || step.line_start || '',
+              depth: step.depth || step.hop || currentPath.length + 1,
+              github_url: step.github_url || '',
+            });
+          });
+
+          // Add the last path
+          if (currentPath.length > 0) {
+            paths.push(currentPath);
+          }
+
+          // If no paths were parsed, treat all results as a single path
+          if (paths.length === 0 && results.length > 0) {
+            paths.push(results.map((r: any, idx: number) => ({
+              name: r.name || r.entity_name || r.result?.name || 'Unknown',
+              file_path: r.file_path || r.result?.file_path || '',
+              line_number: r.line_number || r.result?.line_number || '',
+              depth: idx + 1,
+              github_url: r.github_url || r.result?.github_url || '',
+            })));
+          }
+
+          markdownSummary += `Found **${paths.length}** path(s) from **${fromEntity}** to **${toEntity}**:\n\n`;
+
+          paths.forEach((path, pIdx) => {
+            markdownSummary += `## Path ${pIdx + 1} (${path.length} hops)\n\n`;
+            path.forEach((step: any, sIdx: number) => {
+              const location = step.file_path && step.line_number
+                ? `\`${step.file_path}:${step.line_number}\``
+                : step.file_path ? `\`${step.file_path}\`` : '';
+              const link = step.github_url ? ` [GitHub](${step.github_url})` : '';
+              markdownSummary += `${sIdx + 1}. **${step.name}**${location ? ` (${location})` : ''}${link}\n`;
+
+              hits.push({
+                entity_type: 'CallChainStep',
+                entity_name: step.name,
+                file_path: step.file_path,
+                line_number: step.line_number,
+                provenance: step.github_url ? { github_url: step.github_url } : undefined,
+              });
+            });
+            markdownSummary += '\n';
+          });
+          break;
+        }
+
+        case 'find_orphaned_code': {
+          markdownSummary = `# Orphaned Code (No Callers)\n\n`;
+
+          if (total_results === 0) {
+            markdownSummary += `_No orphaned functions found._\n`;
+            break;
+          }
+
+          markdownSummary += `Found **${total_results}** function(s) with no callers:\n\n`;
+
+          results.forEach((r: any, i: number) => {
+            const entity = r.entity || r.result || r;
+            const name = entity.name || entity.entity_name || 'Unknown';
+            const filePath = entity.file_path || '';
+            const lineNumber = entity.line_number || entity.line_start || '';
+            const githubUrl = entity.github_url || '';
+            const repo = entity.repo || '';
+
+            const location = filePath && lineNumber ? `${filePath}:${lineNumber}` : filePath || 'N/A';
+
+            markdownSummary += `## ${i + 1}. ${name}\n`;
+            markdownSummary += `- **File:** \`${location}\`\n`;
+            if (repo) markdownSummary += `- **Repository:** ${repo}\n`;
+            if (githubUrl) markdownSummary += `- **Source:** [GitHub](${githubUrl})\n`;
+            markdownSummary += '\n';
+
+            hits.push({
+              entity_type: 'OrphanedFunction',
+              entity_name: name,
+              file_path: filePath,
+              line_number: typeof lineNumber === 'number' ? lineNumber : parseInt(lineNumber) || undefined,
+              provenance: githubUrl ? { github_url: githubUrl } : undefined,
             });
           });
           break;

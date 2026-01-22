@@ -211,6 +211,65 @@ NOT for live blockchain queries - use Ledger MCP for on-chain state.`,
     }
   },
   {
+    name: 'get_my_profile',
+    description: `Get your user profile for personalized responses based on your experience level.
+
+Returns your profile including:
+- **experience_level**: junior, mid, senior, staff, or principal
+- **role**: Your technical role (frontend, backend, full-stack, etc.)
+- **preferences**: Response customization (verbosity, explain_before_code, etc.)
+- **relationships**: Who you manage, projects you work on (from Jena graph)
+
+If you haven't set a profile, returns sensible defaults (mid-level with balanced verbosity).
+
+Use update_my_profile to change your settings.`,
+    inputSchema: {
+      type: 'object',
+      properties: {}
+    }
+  },
+  {
+    name: 'update_my_profile',
+    description: `Update your user profile to customize how responses are tailored to you.
+
+**Experience Levels** (affects response verbosity and detail):
+- **junior**: Detailed explanations, shows examples, explains before code
+- **mid**: Balanced explanations, includes examples
+- **senior**: Concise responses, minimal examples
+- **staff/principal**: Very concise, assumes deep expertise
+
+**Preferences** (optional, will use defaults based on experience_level):
+- explain_before_code: true/false - Whether to explain the approach before showing code
+- verbosity: "detailed" | "balanced" | "concise" - How verbose responses should be
+- show_examples: true/false - Whether to include code examples
+
+**Example:**
+update_my_profile(experience_level="senior", role="backend", preferences={"verbosity": "concise"})`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        experience_level: {
+          type: 'string',
+          enum: ['junior', 'mid', 'senior', 'staff', 'principal'],
+          description: 'Your experience level (affects response verbosity and detail)'
+        },
+        role: {
+          type: 'string',
+          description: 'Your technical role (e.g., frontend, backend, full-stack, devops, data)'
+        },
+        preferences: {
+          type: 'object',
+          description: 'Custom preferences (explain_before_code, verbosity, show_examples)',
+          additionalProperties: true
+        },
+        managed_by: {
+          type: 'string',
+          description: 'Email of your manager (stored in Jena for team queries)'
+        }
+      }
+    }
+  },
+  {
     name: 'resolve_entity',
     description: 'Resolve an ambiguous label to a canonical KOI entity. Returns ranked matches with URIs, types, and confidence scores. Use this when you have a label (like "ethereum" or "regen commons") and need to find the exact entity in the knowledge graph.',
     inputSchema: {

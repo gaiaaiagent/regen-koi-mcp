@@ -305,6 +305,12 @@ class KOIServer {
           case 'regen_koi_authenticate':
             result = await this.authenticateUser();
             break;
+          case 'get_my_profile':
+            result = await this.getMyProfile();
+            break;
+          case 'update_my_profile':
+            result = await this.updateMyProfile(args);
+            break;
           case 'resolve_entity':
             result = await this.resolveEntity(args);
             break;
@@ -2274,6 +2280,153 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
           text: `## Authentication Error\n\n${error instanceof Error ? error.message : 'Unknown error occurred'}\n\nPlease try again or contact support if the issue persists.`
         }]
       };
+    }
+  }
+
+  /**
+   * Get current user's profile for teaching mode personalization
+   */
+  private async getMyProfile() {
+    try {
+      // Check if user is authenticated
+      if (!isUserAuthenticated()) {
+        return {
+          content: [{
+            type: 'text',
+            text: `## Authentication Required\n\nYou need to authenticate first to access your profile.\n\nRun **regen_koi_authenticate** to sign in.`
+          }]
+        };
+      }
+
+      const response = await apiClient.get('/user/profile');
+      const profile = response.data as {
+        email: string;
+        experience_level: string;
+        role?: string;
+        preferences?: { explain_before_code?: boolean; verbosity?: string; show_examples?: boolean };
+        relationships?: { manages?: string[]; works_on?: string[]; learning?: string[] };
+        is_new?: boolean;
+      };
+
+      let output = `# Your Profile\n\n`;
+      output += `- **Email:** ${profile.email}\n`;
+      output += `- **Experience Level:** ${profile.experience_level}\n`;
+      output += `- **Role:** ${profile.role || 'Not set'}\n\n`;
+
+      output += `## Preferences\n\n`;
+      const prefs = profile.preferences || {};
+      output += `- **Explain before code:** ${prefs.explain_before_code ? 'Yes' : 'No'}\n`;
+      output += `- **Verbosity:** ${prefs.verbosity || 'balanced'}\n`;
+      output += `- **Show examples:** ${prefs.show_examples ? 'Yes' : 'No'}\n\n`;
+
+      if (profile.relationships) {
+        const rel = profile.relationships;
+        if (rel.manages && rel.manages.length > 0) {
+          output += `## Team (people you manage)\n\n`;
+          rel.manages.forEach((person: string) => {
+            output += `- ${person}\n`;
+          });
+          output += '\n';
+        }
+        if (rel.works_on && rel.works_on.length > 0) {
+          output += `## Projects\n\n`;
+          rel.works_on.forEach((project: string) => {
+            output += `- ${project}\n`;
+          });
+          output += '\n';
+        }
+      }
+
+      if (profile.is_new) {
+        output += `---\n\n*This is a default profile. Use **update_my_profile** to customize your settings.*\n`;
+      }
+
+      return {
+        content: [{
+          type: 'text',
+          text: output
+        }]
+      };
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        return {
+          content: [{
+            type: 'text',
+            text: `## Authentication Required\n\nYour session has expired. Please run **regen_koi_authenticate** to sign in again.`
+          }]
+        };
+      }
+      throw new Error(`Failed to get profile: ${error.message}`);
+    }
+  }
+
+  /**
+   * Update user's profile for teaching mode personalization
+   */
+  private async updateMyProfile(args: any) {
+    try {
+      // Check if user is authenticated
+      if (!isUserAuthenticated()) {
+        return {
+          content: [{
+            type: 'text',
+            text: `## Authentication Required\n\nYou need to authenticate first to update your profile.\n\nRun **regen_koi_authenticate** to sign in.`
+          }]
+        };
+      }
+
+      const { experience_level, role, preferences, managed_by } = args || {};
+
+      const response = await apiClient.put('/user/profile', {
+        experience_level,
+        role,
+        preferences,
+        managed_by
+      });
+
+      const profile = response.data as {
+        experience_level: string;
+        role?: string;
+        preferences?: { explain_before_code?: boolean; verbosity?: string; show_examples?: boolean };
+      };
+
+      let output = `# Profile Updated\n\n`;
+      output += `Your profile has been updated:\n\n`;
+      output += `- **Experience Level:** ${profile.experience_level}\n`;
+      output += `- **Role:** ${profile.role || 'Not set'}\n\n`;
+
+      output += `## Preferences\n\n`;
+      const prefs = profile.preferences || {};
+      output += `- **Explain before code:** ${prefs.explain_before_code ? 'Yes' : 'No'}\n`;
+      output += `- **Verbosity:** ${prefs.verbosity || 'balanced'}\n`;
+      output += `- **Show examples:** ${prefs.show_examples ? 'Yes' : 'No'}\n\n`;
+
+      output += `---\n\n*Your responses will now be tailored to your ${profile.experience_level} experience level.*\n`;
+
+      return {
+        content: [{
+          type: 'text',
+          text: output
+        }]
+      };
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        return {
+          content: [{
+            type: 'text',
+            text: `## Authentication Required\n\nYour session has expired. Please run **regen_koi_authenticate** to sign in again.`
+          }]
+        };
+      }
+      if (error.response?.status === 400) {
+        return {
+          content: [{
+            type: 'text',
+            text: `## Invalid Input\n\n${error.response.data?.error?.message || 'Please check your input and try again.'}`
+          }]
+        };
+      }
+      throw new Error(`Failed to update profile: ${error.message}`);
     }
   }
 

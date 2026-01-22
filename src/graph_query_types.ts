@@ -15,6 +15,8 @@ export const GRAPH_QUERY_TYPES = [
   'find_callers',
   'find_callees',
   'find_call_graph',
+  'trace_call_chain',  // Multi-hop: find path from entity A to entity B
+  'find_orphaned_code', // Find code without callers (dead code detection)
 
   // Module queries
   'list_modules',
