@@ -361,7 +361,7 @@ Once you've installed the MCP server, try these queries in Claude to explore wha
 ### Code Knowledge Graph
 | Tool | Description | Key Inputs |
 |------|-------------|-----------|
-| `query_code_graph` | Query relationships between Keepers, Messages, Events, and Documentation | `query_type` (enum: keeper_for_msg, msgs_for_keeper, docs_mentioning, entities_in_doc, related_entities, list_keepers, list_messages), `entity_name` (string), `doc_path` (string), `limit` (1-200, default 50), `offset` (pagination offset, default 0) |
+| `query_code_graph` | Query relationships between Keepers, Messages, Events, and Documentation | `query_type` (enum: keeper_for_msg, msgs_for_keeper, docs_mentioning, entities_in_doc, related_entities, list_keepers, list_messages, find_callers, find_callees, trace_call_chain, find_orphaned_code), `entity_name` (string), `doc_path` (string), `limit` (1-200, default 50), `offset` (pagination offset, default 0), `from_entity` (for trace_call_chain), `to_entity` (for trace_call_chain), `max_depth` (1-8, default 4) |
 
 ### SPARQL Power Tools (Advanced)
 | Tool | Description | Key Inputs |
@@ -379,6 +379,17 @@ Once you've installed the MCP server, try these queries in Claude to explore wha
 | Tool | Description | Key Inputs |
 |------|-------------|-----------|
 | `regen_koi_authenticate` | Authenticate with @regen.network email to access internal documentation | None (opens browser for OAuth login) |
+
+### User Profile & Personalization
+| Tool | Description | Key Inputs |
+|------|-------------|-----------|
+| `get_my_profile` | Get your profile for personalized responses based on experience level | None (requires auth) |
+| `update_my_profile` | Update experience level, role, and preferences to customize responses | `experience_level` (junior/mid/senior/staff/principal), `role` (string), `preferences` (object), `managed_by` (email) |
+
+**Experience Levels:**
+- **junior**: Detailed explanations, shows examples, explains approach before code
+- **mid**: Balanced explanations with examples (default)
+- **senior/staff/principal**: Concise responses, assumes expertise
 
 ### Feedback & Metrics
 | Tool | Description | Key Inputs |
@@ -409,6 +420,15 @@ This table helps you understand which tool to use for different tasks. Just ask 
 | Find what Messages a Keeper handles                      | "What messages does the ecocredit Keeper handle?"        | `msgs_for_keeper`        |
 | Find what documentation mentions an entity               | "What docs mention MsgRetire?"                           | `docs_mentioning`        |
 | Find entities in a file                                  | "What entities are in keeper.go?"                        | `entities_in_doc`        |
+| **Trace code paths**                                     |                                                          |                          |
+| Find what calls a function                               | "What functions call CreateBatch?"                       | `find_callers`           |
+| Find what a function calls                               | "What does NewKeeper call?"                              | `find_callees`           |
+| Trace call chain between functions                       | "How does handleMsgSend reach validateBalance?"          | `trace_call_chain`       |
+| Find dead code                                           | "Find orphaned code with no callers"                     | `find_orphaned_code`     |
+| **Personalize responses**                                |                                                          |                          |
+| Get your profile                                         | "Show my profile settings"                               | `get_my_profile`         |
+| Set experience level                                     | "Set my experience level to senior"                      | `update_my_profile`      |
+| Configure preferences                                    | "I'm a junior developer, give me detailed explanations"  | `update_my_profile`      |
 | **Navigate by modules**                                  |                                                          |                          |
 | List all modules                                         | "What modules exist in regen-ledger?"                    | `list_modules`           |
 | Get details about a module                               | "Tell me about the ecocredit module"                     | `get_module`             |
@@ -451,6 +471,12 @@ The `query_code_graph` tool supports these query types:
 - **`msgs_for_keeper`** - Find what Messages a Keeper handles (requires `entity_name` parameter)
 - **`docs_mentioning`** - Find documentation mentioning an entity (requires `entity_name` parameter)
 - **`entities_in_doc`** - Find entities defined in a document (requires `doc_path` parameter)
+
+#### Call Graph Queries
+- **`find_callers`** - Find what functions/methods call a given entity (requires `entity_name`)
+- **`find_callees`** - Find what a function/method calls (requires `entity_name`)
+- **`trace_call_chain`** - Find the call path between two entities (requires `from_entity`, `to_entity`, optional `max_depth` 1-8)
+- **`find_orphaned_code`** - Find code with no callers (dead code detection)
 
 #### Module Queries
 - **`get_module`** - Get details about a specific module (requires `module_name` parameter)
