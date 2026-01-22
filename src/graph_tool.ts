@@ -596,12 +596,14 @@ export async function executeGraphTool(args: any) {
 
           results.forEach((r: any, i: number) => {
             const row = r.result || r;
-            // Extract entity details - check various field names for compatibility
-            const name = row.caller_name || row.callee_name || row.name || row.entity_name || 'Unknown';
-            const filePath = row.file_path || row.caller_file || row.callee_file || '';
-            const lineStart = row.line_start || row.line_number || row.caller_line || row.callee_line || '';
-            const entityType = row.entity_type || row.caller_type || row.callee_type || '';
-            const receiverType = row.receiver_type || row.caller_receiver || row.callee_receiver || '';
+            // Extract entity details - prefer row.name (set by API based on query type)
+            // For find_callers: we want caller info; for find_callees: we want callee info
+            // The API flattens this into row.name, row.file_path, row.line_start
+            const name = row.name || (isCallers ? row.caller_name : row.callee_name) || row.entity_name || 'Unknown';
+            const filePath = row.file_path || (isCallers ? row.caller_file : row.callee_file) || '';
+            const lineStart = row.line_start || row.line_number || (isCallers ? row.caller_line : row.callee_line) || '';
+            const entityType = row.entity_type || (isCallers ? row.caller_type : row.callee_type) || '';
+            const receiverType = row.receiver_type || (isCallers ? row.caller_receiver : row.callee_receiver) || '';
             const githubUrl = row.github_url || '';
             const repo = row.repo || row.repository || '';
 
