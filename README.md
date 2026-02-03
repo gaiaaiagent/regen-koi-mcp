@@ -235,6 +235,41 @@ MCP: Found 23 results from multiple sources:
      ...
 ```
 
+### Claude Configuration Setup
+
+After authenticating, you can fetch the official Regen Network CLAUDE.md configuration:
+
+```
+User: "Set up my Claude config for Regen development"
+
+MCP: ## Regen Network CLAUDE.md Configuration
+
+     The following configuration was fetched from the HTTP Config endpoint.
+
+     **Your tier:** core
+     **Available:** contexts (5), skills (5), agents (4), playbooks (2)
+
+     **Installation options:**
+     1. **Project-specific**: Save to `./CLAUDE.md` in your project root
+     2. **Global**: Save to `~/.claude/CLAUDE.md` for all projects
+
+     ---
+     [Configuration content...]
+```
+
+**What the config includes (based on your access tier):**
+
+| Tier | Who Gets It | Content |
+|------|-------------|---------|
+| **Public** | Anyone | Basic CLAUDE.md, public MCP configs |
+| **Core** | @regen.network emails | + Full contexts (ecocredit, ledger, governance), skills, agent templates, playbooks |
+
+**How it works:**
+- Config served from `https://regen.gaiaai.xyz/api/koi/claude-config/`
+- Tiers determined by your authenticated email domain
+- Auto-syncs from GitHub repos via webhooks
+- Works in local, cloud, and browser Claude Code sessions
+
 ### Token Security
 
 Your authentication tokens are:
@@ -376,10 +411,11 @@ Once you've installed the MCP server, try these queries in Claude to explore wha
 | `get_repo_overview` | Get structured overview of a Regen repository | `repository` (enum: regen-ledger, regen-web, regen-data-standards, regenie-corpus) |
 | `get_tech_stack` | Get technical stack information for Regen repositories | `repository` (optional, omit to show all repos) |
 
-### Authentication (Team Members Only)
+### Authentication & Configuration (Team Members Only)
 | Tool | Description | Key Inputs |
 |------|-------------|-----------|
 | `regen_koi_authenticate` | Authenticate with @regen.network email to access internal documentation | None (opens browser for OAuth login) |
+| `setup_claude_config` | Fetch tier-appropriate CLAUDE.md configuration from HTTP Config endpoint | `show_available` (bool, default false - lists available resources without fetching) |
 
 ### User Profile & Personalization
 | Tool | Description | Key Inputs |
@@ -430,6 +466,9 @@ This table helps you understand which tool to use for different tasks. Just ask 
 | Get your profile                                         | "Show my profile settings"                               | `get_my_profile`         |
 | Set experience level                                     | "Set my experience level to senior"                      | `update_my_profile`      |
 | Configure preferences                                    | "I'm a junior developer, give me detailed explanations"  | `update_my_profile`      |
+| **Configure Claude Code**                                |                                                          |                          |
+| Fetch Regen CLAUDE.md config                             | "Set up my Claude config for Regen"                      | `setup_claude_config`    |
+| See available config resources                           | "What config is available for my tier?"                  | `setup_claude_config`    |
 | **Navigate by modules**                                  |                                                          |                          |
 | List all modules                                         | "What modules exist in regen-ledger?"                    | `list_modules`           |
 | Get details about a module                               | "Tell me about the ecocredit module"                     | `get_module`             |
