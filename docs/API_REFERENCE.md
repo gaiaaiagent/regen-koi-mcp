@@ -1,6 +1,6 @@
 # KOI MCP Server - API Reference
 
-**Version:** 1.6.0
+**Version:** 1.6.1
 **Last Updated:** 2026-02-03
 
 Complete reference for all MCP tools provided by the Regen KOI server.
@@ -20,6 +20,7 @@ Complete reference for all MCP tools provided by the Regen KOI server.
 9. [get_mcp_metrics](#get_mcp_metrics)
 10. [submit_feedback](#submit_feedback)
 11. [get_full_document](#get_full_document)
+12. [setup_claude_config](#setup_claude_config)
 
 ---
 
@@ -937,6 +938,85 @@ The tool retrieves content via three fallback strategies:
 
 ---
 
+## setup_claude_config
+
+Fetch and display Regen Network CLAUDE.md configuration from the HTTP Config endpoint. This tool retrieves the official configuration for working with Regen Network projects in Claude Code.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `show_available` | boolean | No | false | If true, shows what resources are available at your tier instead of fetching CLAUDE.md content |
+
+### Return Format
+
+#### When `show_available: false` (default)
+
+Returns the full CLAUDE.md content with installation instructions:
+
+```json
+{
+  "content": [{
+    "type": "text",
+    "text": "## Regen Network CLAUDE.md Configuration\n\nThe following configuration was fetched from the HTTP Config endpoint.\n\n**Installation options:**\n1. **Project-specific**: Save to `./CLAUDE.md` in your project root\n2. **Global**: Save to `~/.claude/CLAUDE.md` for all projects\n\n---\n\n# CLAUDE.md - Regen Network AI Assistant\n..."
+  }]
+}
+```
+
+#### When `show_available: true`
+
+Returns tier information and available resources:
+
+```json
+{
+  "content": [{
+    "type": "text",
+    "text": "## 🔒 Regen Claude Config - public tier\n\nNot authenticated (public tier)\n\n### Available Resources\n\n**CLAUDE.md**: ✅ Available\n**MCP Config**: ✅ Available\n\n**Contexts (0):**\n  (none available at this tier)\n\n**Skills (0):**\n  (none available at this tier)\n\n---\nTo fetch the full CLAUDE.md content, run this tool again without `show_available`.\n\n**Tip:** Use `regen_koi_authenticate` to access core tier with additional contexts and skills."
+  }]
+}
+```
+
+### Examples
+
+#### Example 1: Fetch configuration
+
+```json
+{}
+```
+
+**Returns:** Full CLAUDE.md content ready to save.
+
+#### Example 2: Check available resources
+
+```json
+{
+  "show_available": true
+}
+```
+
+**Returns:** Tier information showing what contexts and skills are available.
+
+### Access Tiers
+
+| Tier | Requirements | Resources |
+|------|--------------|-----------|
+| `public` | No auth required | Basic CLAUDE.md, MCP config |
+| `core` | `@regen.network` email via `regen_koi_authenticate` | Additional contexts, skills, playbooks |
+
+### Use Cases
+
+1. **New project setup**: "Set up my Claude config for Regen development"
+2. **Update configuration**: "Get the latest Regen Claude configuration"
+3. **Check access tier**: "What Regen config resources are available to me?"
+
+### Performance
+
+- **Cached on server side** (config files refresh via GitHub webhooks)
+- **Typical latency:** 50-200ms
+- **Best for:** Initial project setup or config updates
+
+---
+
 ## Error Handling
 
 All tools use consistent error format:
@@ -1016,6 +1096,12 @@ Different query types have different cache TTLs:
 ---
 
 ## Version History
+
+**1.6.1 (2026-02-03):**
+- Added `setup_claude_config` tool for fetching Regen Network Claude configuration
+- Integrates with HTTP Config endpoint for tiered access (public/core)
+- Shows available resources by tier with `show_available` parameter
+- Uses existing session token for authenticated core tier access
 
 **1.6.0 (2026-02-03):**
 - Added `get_full_document` tool for complete document retrieval by RID

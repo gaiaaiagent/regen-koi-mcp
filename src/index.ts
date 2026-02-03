@@ -354,6 +354,9 @@ class KOIServer {
           case 'get_full_document':
             result = await this.getFullDocument(args);
             break;
+          case 'setup_claude_config':
+            result = await this.setupClaudeConfig(args as { show_available?: boolean });
+            break;
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
@@ -3835,6 +3838,137 @@ Your feedback helps improve KOI for everyone.${
         content: [{
           type: 'text',
           text: `Thank you for your feedback. (Note: There was an issue storing it - ${errorMessage}. Consider posting in Slack if urgent.)`
+        }]
+      };
+    }
+  }
+
+  /**
+   * Fetch and display Regen Network CLAUDE.md configuration from HTTP Config endpoint.
+   * Uses the session token for authenticated access to higher tiers.
+   */
+  private async setupClaudeConfig(args: { show_available?: boolean }): Promise<{ content: Array<{ type: string; text: string }> }> {
+    const startTime = Date.now();
+    const configEndpoint = `${KOI_API_ENDPOINT}/claude-config`;
+
+    try {
+      // Ensure we have the latest token
+      const token = ensureTokenSynced();
+
+      // Build headers - include auth token if available
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      if (args.show_available) {
+        // Show available resources at user's tier
+        const response = await axios.get<{
+          tier: string;
+          user_email?: string;
+          available?: {
+            claude_md?: boolean;
+            mcp?: boolean;
+            contexts?: string[];
+            skills?: string[];
+          };
+        }>(`${configEndpoint}/`, { headers });
+        const data = response.data;
+
+        const tierEmoji = data.tier === 'core' ? '🔓' : '🔒';
+        const authStatus = data.user_email
+          ? `Authenticated as: ${data.user_email}`
+          : 'Not authenticated (public tier)';
+
+        // Format available contexts and skills
+        const contexts = data.available?.contexts || [];
+        const skills = data.available?.skills || [];
+        const contextsCount = contexts.length;
+        const skillsCount = skills.length;
+        const contextsList = contextsCount > 0
+          ? contexts.map((c: string) => `  - ${c}`).join('\n')
+          : '  (none available at this tier)';
+        const skillsList = skillsCount > 0
+          ? skills.map((s: string) => `  - ${s}`).join('\n')
+          : '  (none available at this tier)';
+
+        const output = `## ${tierEmoji} Regen Claude Config - ${data.tier} tier
+
+${authStatus}
+
+### Available Resources
+
+**CLAUDE.md**: ${data.available?.claude_md ? '✅ Available' : '❌ Not available'}
+**MCP Config**: ${data.available?.mcp ? '✅ Available' : '❌ Not available'}
+
+**Contexts (${contextsCount}):**
+${contextsList}
+
+**Skills (${skillsCount}):**
+${skillsList}
+
+---
+To fetch the full CLAUDE.md content, run this tool again without \`show_available\`.
+${data.tier === 'public' ? '\n**Tip:** Use `regen_koi_authenticate` to access core tier with additional contexts and skills.' : ''}`;
+
+        recordQuery('setup_claude_config', Date.now() - startTime, true);
+        return { content: [{ type: 'text', text: output }] };
+      }
+
+      // Fetch CLAUDE.md content
+      const response = await axios.get(`${configEndpoint}/files/CLAUDE.md`, {
+        headers,
+        responseType: 'text'
+      });
+      const claudeMd = response.data as string;
+
+      const output = `## Regen Network CLAUDE.md Configuration
+
+The following configuration was fetched from the HTTP Config endpoint.
+
+**Installation options:**
+1. **Project-specific**: Save to \`./CLAUDE.md\` in your project root
+2. **Global**: Save to \`~/.claude/CLAUDE.md\` for all projects
+3. **Both**: Project config overrides global
+
+---
+
+${claudeMd}
+
+---
+
+**Next steps:**
+- Copy the content above to your preferred location
+- The configuration will be automatically loaded by Claude Code
+- Use \`regen_koi_authenticate\` if you haven't already to access private Regen documentation`;
+
+      recordQuery('setup_claude_config', Date.now() - startTime, true);
+      return { content: [{ type: 'text', text: output }] };
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      const errorMessage = error.message || 'Unknown error';
+      const statusCode = error.response?.status;
+
+      recordQuery('setup_claude_config', duration, false, errorMessage);
+      logger.error({
+        action: 'setup_claude_config_error',
+        error: errorMessage,
+        status: statusCode
+      }, 'Failed to fetch Claude config');
+
+      let helpText = '';
+      if (statusCode === 401) {
+        helpText = '\n\nTry authenticating first with `regen_koi_authenticate`.';
+      } else if (statusCode === 404) {
+        helpText = '\n\nThe config endpoint may not be available. Check that the KOI API is running.';
+      }
+
+      return {
+        content: [{
+          type: 'text',
+          text: `Error fetching Claude config: ${errorMessage}${helpText}`
         }]
       };
     }

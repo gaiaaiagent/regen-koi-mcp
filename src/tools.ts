@@ -606,5 +606,34 @@ Example usage:
       },
       required: ['rating', 'category', 'notes']
     }
+  },
+  {
+    name: 'setup_claude_config',
+    description: `Fetch and display Regen Network CLAUDE.md configuration from the HTTP Config endpoint.
+
+This tool retrieves the official Regen Network Claude Code configuration. The configuration includes:
+- Project context and conventions
+- MCP server setup instructions
+- Domain-specific knowledge (ecocredits, governance, etc.)
+- Available skills and contexts based on your access tier
+
+Use this when:
+- Setting up a new Regen project
+- Updating to the latest configuration
+- Checking what configuration is available for your access tier
+
+The tool will show you the configuration content. To install it, save the output to your project's CLAUDE.md or ~/.claude/CLAUDE.md.
+
+**Tip:** Authenticate first with \`regen_koi_authenticate\` to access core tier configuration with additional contexts and skills.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        show_available: {
+          type: 'boolean',
+          description: 'If true, show what resources are available at your tier instead of fetching CLAUDE.md content',
+          default: false
+        }
+      }
+    }
   }
 ];

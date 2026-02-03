@@ -8,7 +8,7 @@ The Regen KOI MCP Server provides AI agents (like Claude) access to Regen Networ
 
 ## Current System State (Feb 3, 2026)
 
-- **12 MCP Tools**: Search, graph queries, weekly digests, auth, metrics, feedback, full document retrieval
+- **23 MCP Tools**: Search, graph queries, weekly digests, auth, metrics, feedback, full document retrieval, Claude config setup
 - **48,000+ Documents**: From GitHub, Discourse, Medium, Telegram, Discord, podcasts, Notion
 - **26,768 Code Entities**: Functions, structs, interfaces from 5 repositories
 - **Private Data Access**: OAuth-gated access to internal Regen Notion workspace
@@ -106,7 +106,7 @@ The server supports filtering which tools are exposed, useful for personal deplo
               ▼
 ┌─────────────────────────────────────────┐
 │  KOI MCP Server (index.ts)              │
-│  - 10 tools                             │
+│  - 23 tools                             │
 │  - Session token storage (src/auth.ts)  │
 │  - Authorization: Bearer <session_tok>  │
 └─────────────┬───────────────────────────┘
