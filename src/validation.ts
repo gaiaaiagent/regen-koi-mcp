@@ -212,6 +212,17 @@ export const SubmitFeedbackSchema = z.object({
 });
 
 /**
+ * Schema for get_full_document tool
+ */
+export const GetFullDocumentSchema = z.object({
+  rid: z.string()
+    .min(1, 'RID cannot be empty')
+    .max(500, 'RID too long (max 500 characters)'),
+  output_path: SafePath.optional(),
+  include_metadata_header: z.boolean().optional().default(true)
+});
+
+/**
  * Schema for sparql_query tool
  * Note: We don't over-restrict the query string to allow valid SPARQL syntax
  */
@@ -346,7 +357,8 @@ export const ToolSchemas: Record<string, z.ZodSchema<any>> = {
   get_stats: GetStatsSchema,
   generate_weekly_digest: GenerateWeeklyDigestSchema,
   sparql_query: SparqlQuerySchema,
-  submit_feedback: SubmitFeedbackSchema
+  submit_feedback: SubmitFeedbackSchema,
+  get_full_document: GetFullDocumentSchema
 };
 
 /**
@@ -412,5 +424,6 @@ export default {
   GetStatsSchema,
   GenerateWeeklyDigestSchema,
   SparqlQuerySchema,
-  SubmitFeedbackSchema
+  SubmitFeedbackSchema,
+  GetFullDocumentSchema
 };

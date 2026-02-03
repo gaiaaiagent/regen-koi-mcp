@@ -159,8 +159,8 @@ apiClient.interceptors.request.use((config) => {
     config.headers['Authorization'] = `Bearer ${token}`;
   }
 
-  // Add internal API key for metadata resolution endpoints only (server-to-server)
-  if (config.url?.includes('/metadata/') && KOI_INTERNAL_API_KEY && config.headers) {
+  // Add internal API key for MCP-only endpoints (server-to-server)
+  if ((config.url?.includes('/metadata/') || config.url?.includes('/document/')) && KOI_INTERNAL_API_KEY && config.headers) {
     config.headers['X-Internal-API-Key'] = KOI_INTERNAL_API_KEY;
   }
 
@@ -248,7 +248,7 @@ class KOIServer {
 
       try {
         // Input validation for applicable tools
-        const validationRequired = ['search', 'search_github_docs', 'get_repo_overview', 'get_tech_stack', 'generate_weekly_digest', 'sparql_query', 'submit_feedback'];
+        const validationRequired = ['search', 'search_github_docs', 'get_repo_overview', 'get_tech_stack', 'generate_weekly_digest', 'sparql_query', 'submit_feedback', 'get_full_document'];
         if (validationRequired.includes(name)) {
           const validation = validateToolInput(name, args);
           if (!validation.success) {
@@ -350,6 +350,9 @@ class KOIServer {
               notes: string;
               include_session_context?: boolean;
             });
+            break;
+          case 'get_full_document':
+            result = await this.getFullDocument(args);
             break;
           default:
             throw new Error(`Unknown tool: ${name}`);
@@ -1667,6 +1670,153 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
       }
 
       throw new Error(`Failed to fetch NotebookLM export: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Retrieve full document content by RID and save to local file
+   * Uses the /document/full endpoint which requires internal API key
+   */
+  private async getFullDocument(args: any) {
+    const { rid, output_path, include_metadata_header = true } = args || {};
+
+    try {
+      console.error(`[${SERVER_NAME}] Fetching full document for RID: ${rid}`);
+
+      // Call the API endpoint with query params for proper URL encoding
+      const response = await apiClient.get('/document/full', {
+        params: { rid },
+        timeout: 60000  // 1 minute timeout for large documents
+      });
+      const data = response.data as any;
+
+      // data is already unwrapped by the response interceptor
+      const document = data.document;
+      const content = data.content;
+      const charCount = data.char_count || content?.length || 0;
+      const wordCount = data.word_count || content?.split(/\s+/).length || 0;
+      const warnings = data.warnings || [];
+
+      console.error(`[${SERVER_NAME}] Retrieved document: ${wordCount} words, source: ${document.content_source}`);
+
+      // Build content with optional metadata header
+      let fileContent = '';
+      if (include_metadata_header) {
+        fileContent += '---\n';
+        fileContent += `rid: "${document.rid}"\n`;
+        if (document.title) fileContent += `title: "${document.title.replace(/"/g, '\\"')}"\n`;
+        if (document.url) fileContent += `url: "${document.url}"\n`;
+        if (document.source) fileContent += `source: "${document.source}"\n`;
+        if (document.published_at) fileContent += `published_at: "${document.published_at}"\n`;
+        fileContent += `content_source: "${document.content_source}"\n`;
+        fileContent += '---\n\n';
+      }
+      fileContent += content;
+
+      // Save to file
+      const fs = await import('fs');
+      const path = await import('path');
+      const crypto = await import('crypto');
+
+      // Generate filename from RID hash if not provided
+      let filePath = output_path;
+      if (!filePath) {
+        const ridHash = crypto.createHash('sha256').update(rid).digest('hex').slice(0, 12);
+        filePath = `document_${ridHash}.md`;
+      }
+      const absolutePath = path.resolve(filePath);
+
+      fs.writeFileSync(absolutePath, fileContent, 'utf-8');
+      console.error(`[${SERVER_NAME}] Saved document to ${absolutePath}`);
+
+      // Build concise summary (no full content - just file reference)
+      let summaryText = `## Document Retrieved Successfully\n\n`;
+      summaryText += `**File:** \`${absolutePath}\`\n`;
+      summaryText += `**Size:** ${(charCount / 1024).toFixed(1)} KB\n`;
+      summaryText += `**Word Count:** ${wordCount.toLocaleString()} words\n`;
+      if (document.title) summaryText += `**Title:** ${document.title}\n`;
+      if (document.source) summaryText += `**Source:** ${document.source}\n`;
+      summaryText += `**Content Source:** ${document.content_source}\n`;
+      if (document.url) summaryText += `**URL:** ${document.url}\n`;
+
+      // Add warnings if present
+      if (warnings.length > 0) {
+        summaryText += `\n**Warnings:**\n`;
+        for (const w of warnings) {
+          if (w === 'fallback_used') {
+            summaryText += `- Used chunk reassembly (direct text not available)\n`;
+          } else if (w === 'partial_results') {
+            const missing = data.missing_chunk_indices;
+            summaryText += `- Some chunks missing: indices ${missing?.join(', ') || 'unknown'}\n`;
+          } else {
+            summaryText += `- ${w}\n`;
+          }
+        }
+      }
+
+      summaryText += `\nThe full document has been saved to the file above. `;
+      summaryText += `You can read it using the Read tool or process it further.`;
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: summaryText
+          }
+        ]
+      };
+
+    } catch (error) {
+      console.error(`[${SERVER_NAME}] Error fetching full document:`, error);
+
+      const status = (error as any).response?.status;
+      const errorData = (error as any).response?.data;
+
+      if (status === 401) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `## Authentication Required\n\nThe document endpoint requires internal API key authentication. Please ensure KOI_INTERNAL_API_KEY is configured.`
+            }
+          ]
+        };
+      }
+
+      if (status === 403) {
+        const code = errorData?.error?.code;
+        if (code === 'ACCESS_DENIED') {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `## Access Denied\n\nThis is a private document. Please authenticate using \`regen_koi_authenticate\` first.`
+              }
+            ]
+          };
+        }
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `## Forbidden\n\nAccess to this document is forbidden. ${errorData?.error?.message || ''}`
+            }
+          ]
+        };
+      }
+
+      if (status === 404) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `## Document Not Found\n\nNo document found for RID: \`${rid}\`\n\nThis could mean:\n- The RID is incorrect\n- The document has been deleted or superseded\n- The document is private and you don't have access`
+            }
+          ]
+        };
+      }
+
+      throw new Error(`Failed to fetch document: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

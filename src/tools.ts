@@ -528,6 +528,41 @@ update_my_profile(experience_level="senior", role="backend", preferences={"verbo
   // Feedback Tool (User Experience Feedback Collection)
   // =============================================================================
   {
+    name: 'get_full_document',
+    description: `Retrieve the complete content of a document by its RID and save it to a local file.
+
+**Use cases:**
+- Get full text of a Notion page, Discourse post, or GitHub doc found via search
+- Works with both base document RIDs and chunk RIDs (auto-resolves to parent)
+- Saves to local file to avoid bloating LLM context window
+
+**Returns:**
+- File path where document was saved
+- Summary: word count, source, title
+- Does NOT return content directly (it's in the file)
+
+**Note:** Requires internal API access. Private documents require authentication.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        rid: {
+          type: 'string',
+          description: 'Document RID to retrieve. Can be a base document RID or a chunk RID (e.g., "orn:notion.page:regen/abc123" or "orn:notion.page:regen/abc123#chunk0")'
+        },
+        output_path: {
+          type: 'string',
+          description: 'Optional custom file path for saving. Defaults to document_<rid_hash>.md in current directory.'
+        },
+        include_metadata_header: {
+          type: 'boolean',
+          description: 'Include YAML frontmatter with rid, title, url, source, published_at. Default: true',
+          default: true
+        }
+      },
+      required: ['rid']
+    }
+  },
+  {
     name: 'submit_feedback',
     description: `Submit feedback about your experience using KOI MCP tools.
 
