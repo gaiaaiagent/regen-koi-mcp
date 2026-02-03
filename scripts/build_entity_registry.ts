@@ -66,7 +66,7 @@ interface ResolvedMetadata {
 interface AliasCandidate {
   alias: string;
   confidence: number;
-  source: 'metadata' | 'acronym' | 'word_pattern' | 'class_name';
+  source: 'metadata' | 'acronym' | 'class_name';  // Removed 'word_pattern' - not authoritative
 }
 
 interface Override {
@@ -217,38 +217,13 @@ function generateAcronym(name: string): string | null {
 }
 
 /**
- * Generate word pattern aliases from a name
- * "EcoMetric UK Peatland" → ["UK Peatland", "Peatland"]
- */
-function generateWordPatterns(name: string): string[] {
-  if (!name) return [];
-
-  const words = name.split(/\s+/).filter(w => w.length > 0);
-  if (words.length < 2) return [];
-
-  const aliases: string[] = [];
-
-  // Drop first word (often org name)
-  if (words.length >= 2) {
-    aliases.push(words.slice(1).join(' '));
-  }
-
-  // Drop common suffixes like "Credits", "Carbon", "Protocol"
-  const suffixes = ['Credits', 'Carbon', 'Protocol', 'Tokens', 'Units'];
-  if (words.length >= 2 && suffixes.includes(words[words.length - 1])) {
-    aliases.push(words.slice(0, -1).join(' '));
-  }
-
-  // Just the last significant word (if it's not a common suffix)
-  if (words.length >= 2 && !suffixes.includes(words[words.length - 1])) {
-    aliases.push(words[words.length - 1]);
-  }
-
-  return aliases.filter(a => a.length >= 3);
-}
-
-/**
- * Generate all alias candidates for an entity
+ * Generate all alias candidates for an entity - AUTHORITATIVE SOURCES ONLY
+ *
+ * Only includes:
+ * - Metadata alternate names (from schema:alternateName) - highest confidence
+ * - Acronyms (reasonably safe for multi-word names)
+ *
+ * REMOVED: Word patterns (not authoritative, caused false matches)
  */
 function generateAliases(name: string, metadataAliases: string[] = []): AliasCandidate[] {
   const candidates: AliasCandidate[] = [];
@@ -262,21 +237,19 @@ function generateAliases(name: string, metadataAliases: string[] = []): AliasCan
     }
   };
 
-  // Metadata alternate names (highest confidence)
+  // Metadata alternate names (authoritative - highest confidence)
   for (const alias of metadataAliases) {
     addCandidate(alias, 1.0, 'metadata');
   }
 
-  // Acronym
+  // Acronym (reasonably safe)
   const acronym = generateAcronym(name);
   if (acronym) {
     addCandidate(acronym, 0.9, 'acronym');
   }
 
-  // Word patterns
-  for (const pattern of generateWordPatterns(name)) {
-    addCandidate(pattern, 0.8, 'word_pattern');
-  }
+  // REMOVED: Word patterns (not authoritative, caused false matches like
+  // "City Forest Credits" → "Forest Credits" which doesn't exist in ledger data)
 
   return candidates;
 }

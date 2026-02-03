@@ -1,7 +1,7 @@
 # KOI MCP Server - API Reference
 
-**Version:** 1.5.6
-**Last Updated:** 2026-01-13
+**Version:** 1.6.0
+**Last Updated:** 2026-02-03
 
 Complete reference for all MCP tools provided by the Regen KOI server.
 
@@ -19,6 +19,7 @@ Complete reference for all MCP tools provided by the Regen KOI server.
 8. [generate_weekly_digest](#generate_weekly_digest)
 9. [get_mcp_metrics](#get_mcp_metrics)
 10. [submit_feedback](#submit_feedback)
+11. [get_full_document](#get_full_document)
 
 ---
 
@@ -846,6 +847,96 @@ This helps debug issues without requiring manual log collection.
 
 ---
 
+## get_full_document
+
+Retrieve the complete content of a document by its RID and save it to a local file. Useful for getting full text of documents found via search without bloating the LLM context window.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `rid` | string | **Yes** | - | Document RID to retrieve. Can be base doc or chunk RID |
+| `output_path` | string | No | `document_<hash>.md` | Custom file path for saving |
+| `include_metadata_header` | boolean | No | true | Include YAML frontmatter with rid, title, url, source |
+
+### Return Format
+
+```json
+{
+  "content": [{
+    "type": "text",
+    "text": "## Document Retrieved Successfully\n\n**File:** `/path/to/document_abc123.md`\n**Size:** 3.9 KB\n**Word Count:** 581 words\n**Source:** notion\n**Content Source:** legacy_chunks\n**URL:** https://notion.so/..."
+  }]
+}
+```
+
+### Examples
+
+#### Example 1: Basic retrieval
+
+```json
+{
+  "rid": "orn:notion.page:regen/2f725b77-eda1-807d-a63e-c43e6145f7f1"
+}
+```
+
+**Returns:** File path and summary. Document saved to `document_<hash>.md`.
+
+#### Example 2: Custom output path
+
+```json
+{
+  "rid": "orn:notion.page:regen/abc123",
+  "output_path": "/tmp/meeting-notes.md",
+  "include_metadata_header": true
+}
+```
+
+**Returns:** File path pointing to `/tmp/meeting-notes.md` with YAML frontmatter.
+
+#### Example 3: Chunk RID (auto-resolves to parent)
+
+```json
+{
+  "rid": "orn:notion.page:regen/abc123#chunk5"
+}
+```
+
+**Returns:** Full parent document (not just the chunk).
+
+### Content Sources
+
+The tool retrieves content via three fallback strategies:
+
+| Source | When Used |
+|--------|-----------|
+| `direct` | Document has full text in `koi_memories.content->>'text'` |
+| `chunks` | Direct text missing; reassembled from `koi_memory_chunks` |
+| `legacy_chunks` | Older docs with chunks stored as separate `koi_memories` rows |
+
+### Warnings
+
+| Warning | Meaning |
+|---------|---------|
+| `fallback_used` | Used chunk reassembly instead of direct text |
+| `partial_results` | Some chunks missing (gaps in chunk indices) |
+
+### Errors
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| 401 UNAUTHORIZED | Missing internal API key | Check KOI_INTERNAL_API_KEY env var |
+| 403 ACCESS_DENIED | Private doc without auth | Use `regen_koi_authenticate` first |
+| 404 DOCUMENT_NOT_FOUND | RID doesn't exist or is private | Verify RID is correct |
+
+### Performance
+
+- **Not cached** (retrieves fresh content each time)
+- **Typical latency:** 200-500ms
+- **Best for:** Getting full document content after finding via search
+
+---
+
 ## Error Handling
 
 All tools use consistent error format:
@@ -925,6 +1016,12 @@ Different query types have different cache TTLs:
 ---
 
 ## Version History
+
+**1.6.0 (2026-02-03):**
+- Added `get_full_document` tool for complete document retrieval by RID
+- Saves to local file to avoid context bloat
+- Supports chunk RID resolution, privacy filtering, and chunk reassembly fallback
+- Server endpoint: `GET /api/koi/document/full`
 
 **1.5.6 (2026-01-13):**
 - Added `submit_feedback` tool for in-session feedback collection
