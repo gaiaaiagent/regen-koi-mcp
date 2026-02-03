@@ -354,6 +354,7 @@ Once you've installed the MCP server, try these queries in Claude to explore wha
 | Tool | Description | Key Inputs |
 |------|-------------|-----------|
 | `search` | Hybrid search (vectors + graph with RRF) | `query` (string), `intent` (enum: general, person_activity, person_bio, technical_howto - use `person_activity` for "what is X working on" queries), `source` (filter by source: notion, github, discourse, etc.), `sort_by` (relevance, date_desc, date_asc), `limit` (1–50, default 10), `published_from` (YYYY‑MM‑DD), `published_to` (YYYY‑MM‑DD), `include_undated` (bool, default false) |
+| `get_full_document` | Retrieve complete document content by RID and save to local file | `rid` (string, document or chunk RID), `output_path` (string, where to save), `include_metadata_header` (bool, default true) |
 | `get_stats` | Knowledge base statistics | `detailed` (boolean) |
 | `generate_weekly_digest` | Generate weekly digest SUMMARY of Regen Network activity | `start_date` (YYYY-MM-DD, default: 7 days ago), `end_date` (YYYY-MM-DD, default: today), `save_to_file` (bool, default false), `output_path` (string), `format` ('markdown' or 'json', default: 'markdown') |
 | `get_notebooklm_export` | Get FULL NotebookLM export with complete forum posts, Notion pages, and source material | `save_to_file` (bool, default false), `output_path` (string) |
@@ -443,6 +444,9 @@ This table helps you understand which tool to use for different tasks. Just ask 
 | Advanced filtering by date                               | "Find discussions about tokens from last week"           | `search`                 |
 | Filter by source                                         | "Get the latest 5 Notion documents"                      | `search`                 |
 | Sort by date                                             | "Show newest Discourse posts"                            | `search`                 |
+| **Retrieve full documents**                              |                                                          |                          |
+| Get complete document after search                       | "Get me the full document for that first result"         | `get_full_document`      |
+| Save document to local file                              | "Save the full text of that Notion page to my desktop"   | `get_full_document`      |
 | **Get activity summaries**                               |                                                          |                          |
 | Generate weekly digest summary                           | "Create a weekly digest of Regen activity"               | `generate_weekly_digest` |
 | Get full content for NotebookLM                          | "Get the full NotebookLM export with all forum posts"    | `get_notebooklm_export`  |
