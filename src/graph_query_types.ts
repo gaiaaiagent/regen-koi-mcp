@@ -27,8 +27,9 @@ export const GRAPH_QUERY_TYPES = [
   'module_for_entity',
 
   // Cross-file relationship queries
-  'find_importers',
-  'find_implementations',
+  // TODO: implement in backend (commented out to fix contract test)
+  // 'find_importers',
+  // 'find_implementations',
 
   // Concept queries (available but may return empty results)
   'list_concepts',
