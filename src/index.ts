@@ -3437,11 +3437,15 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
           if (Array.isArray(data.results)) {
             // Filter results that match the RID
-            const matching = data.results.filter((r: any) =>
-              r.rid === rid ||
-              r.rid?.includes(parsed.reference || '') ||
-              r.content?.includes(rid)
-            );
+            // Strip #chunkN suffix for comparison since DB stores chunks with suffixes
+            const baseRid = rid.split('#')[0];
+            const matching = data.results.filter((r: any) => {
+              const resultBaseRid = r.rid?.split('#')[0];
+              return r.rid === rid ||
+                resultBaseRid === baseRid ||
+                r.rid?.includes(parsed.reference || '') ||
+                r.content?.includes(rid);
+            });
 
             results.documents = matching.slice(0, limit).map((r: any) => ({
               rid: r.rid,
