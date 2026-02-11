@@ -22,6 +22,7 @@ import sys
 import logging
 from datetime import datetime, timedelta
 import uvicorn
+import httpx
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -108,6 +109,11 @@ class SearchResult(BaseModel):
     url: Optional[str]
     score: float
     published_at: Optional[str]
+
+class ChatRequest(BaseModel):
+    query: str
+    client: Optional[str] = None  # Optional client context (e.g. "landbanking", "renew")
+    limit: int = 5
 
 # API Endpoints
 
@@ -446,6 +452,115 @@ async def generate_weekly_digest(
     except Exception as e:
         logger.error(f"Weekly digest error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+CLIENT_CONTEXTS = {
+    "landbanking": "The user is asking about Landbanking Group, a Munich-based natural capital fintech creating 'Nature Equity Assets' — multi-dimensional nature outcomes (carbon, biodiversity, soil, water, social) as investable assets. They are exploring Regen Network registry infrastructure for verification and governance. Their key asset is West African cocoa agroforestry (2,400 ha). Carbon maps directly to C01-C09 credit classes. Biodiversity partially aligns with BT01 (BioTerra). Soil, water, and social have no existing credit classes.",
+    "renew": "The user is asking about Renew/RePlanet, a UK-based biodiversity credit proponent using the Wallacea Trust v2.1 five-taxa methodology (3D Forest Structure, Invertebrates, Breeding Birds, Bat Fauna, Higher Plants). They want to stack biodiversity credits on their existing Verra carbon credits using Regen Registry. BT01 (BioTerra) is the primary credit class match. They need data anchoring and third-party verification pathways.",
+}
+
+CHAT_SYSTEM_PROMPT = """You are an expert on Regen Network's ecological credit registry infrastructure. You answer questions using ONLY the provided knowledge base excerpts as evidence.
+
+Rules:
+- Cite sources by number [1], [2], etc. corresponding to the provided excerpts
+- If the excerpts don't contain relevant information, say so honestly
+- Be concise (2-4 paragraphs max)
+- Focus on practical, actionable information
+- Never make up registry details — only cite what's in the evidence
+
+{client_context}"""
+
+
+@app.post("/api/koi/chat")
+async def chat(request: ChatRequest):
+    """
+    Single-turn RAG chat: searches KOI for context, then generates an answer with citations.
+    """
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    if not openai_api_key:
+        raise HTTPException(status_code=503, detail="OPENAI_API_KEY not configured")
+
+    try:
+        # Step 1: Search KOI for relevant context
+        search_request = SearchRequest(query=request.query, limit=request.limit)
+        search_response = await search(search_request)
+        koi_results = search_response.get("results", [])
+
+        if not koi_results:
+            return {
+                "answer": "I couldn't find relevant information in the knowledge base for that question. Try rephrasing or asking about Regen Network credit classes, governance, or methodology review.",
+                "sources": [],
+                "model": "none",
+            }
+
+        # Step 2: Build context string with numbered citations
+        context_parts = []
+        sources = []
+        for i, result in enumerate(koi_results, 1):
+            content = result.get("content", "")[:600]
+            source_name = result.get("source", "Unknown")
+            url = result.get("url", "")
+            rid = result.get("rid", "")
+            context_parts.append(f"[{i}] ({source_name}) {content}")
+            sources.append({
+                "rid": rid,
+                "title": content[:80] + ("..." if len(content) > 80 else ""),
+                "excerpt": content[:200],
+                "score": result.get("score", 0),
+                "source": source_name,
+                "url": url,
+            })
+
+        context_str = "\n\n".join(context_parts)
+
+        # Step 3: Build system prompt with optional client context
+        client_context = ""
+        if request.client and request.client in CLIENT_CONTEXTS:
+            client_context = f"\nClient context: {CLIENT_CONTEXTS[request.client]}"
+
+        system_prompt = CHAT_SYSTEM_PROMPT.format(client_context=client_context)
+
+        user_message = f"""Knowledge base excerpts:
+
+{context_str}
+
+Question: {request.query}"""
+
+        # Step 4: Call OpenAI API
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {openai_api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "gpt-4o-mini",
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_message},
+                    ],
+                    "temperature": 0.3,
+                    "max_tokens": 800,
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        answer = data["choices"][0]["message"]["content"]
+
+        return {
+            "answer": answer,
+            "sources": sources,
+            "model": "gpt-4o-mini",
+        }
+
+    except httpx.HTTPStatusError as e:
+        logger.error(f"OpenAI API error: {e.response.status_code} {e.response.text}")
+        raise HTTPException(status_code=502, detail="AI generation failed")
+    except Exception as e:
+        logger.error(f"Chat error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     port = int(os.getenv("KOI_API_PORT", "8301"))
