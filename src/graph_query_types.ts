@@ -35,6 +35,22 @@ export const GRAPH_QUERY_TYPES = [
   'list_concepts',
   'explain_concept',
   'find_concept_for_query',
+
+  // Impact analysis (BFS traversal, groups by depth)
+  'code_impact',
+
+  // Community detection results (Leiden clustering)
+  'list_communities',
+  'community_members',
+  'community_for_entity',
+
+  // Execution flow detection (entry point → terminal traces)
+  'list_flows',
+  'flow_steps',
+  'flows_for_entity',
+
+  // Staleness check
+  'check_staleness',
 ] as const;
 
 export type GraphQueryType = (typeof GRAPH_QUERY_TYPES)[number];

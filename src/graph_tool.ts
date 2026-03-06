@@ -772,6 +772,165 @@ export async function executeGraphTool(args: any) {
           break;
         }
 
+        case 'code_impact': {
+          const target = apiResult.target || {};
+          const direction = apiResult.direction || 'upstream';
+          const risk = apiResult.risk || 'UNKNOWN';
+          const summary = apiResult.summary || {};
+          const byDepth = apiResult.byDepth || {};
+
+          const riskBadge: Record<string, string> = {
+            LOW: 'LOW',
+            MEDIUM: 'MEDIUM',
+            HIGH: 'HIGH',
+            CRITICAL: 'CRITICAL',
+          };
+
+          const depthLabels: Record<string, string> = {
+            '1': 'WILL BREAK',
+            '2': 'LIKELY AFFECTED',
+            '3': 'MAY NEED TESTING',
+          };
+
+          markdownSummary = `# Impact Analysis: ${target.name || entity_name}\n\n`;
+          markdownSummary += `- **Direction:** ${direction}\n`;
+          markdownSummary += `- **Risk:** ${riskBadge[risk] || risk}\n`;
+          markdownSummary += `- **Direct dependencies:** ${summary.direct || 0}\n`;
+          markdownSummary += `- **Total affected:** ${summary.total || 0}\n`;
+          markdownSummary += `- **Modules affected:** ${summary.modules || 0}\n\n`;
+
+          for (const [depth, entities] of Object.entries(byDepth)) {
+            const label = depthLabels[depth] || `DEPTH ${depth}`;
+            const depthEntities = entities as any[];
+            markdownSummary += `## Depth ${depth}: ${label} (${depthEntities.length})\n\n`;
+            depthEntities.forEach((e: any) => {
+              const loc = e.file_path && e.line_start ? `${e.file_path}:${e.line_start}` : e.file_path || '';
+              markdownSummary += `- **${e.name}** (${e.entity_type || 'Function'}) \`${loc}\`\n`;
+              hits.push({
+                entity_type: e.entity_type || 'Function',
+                entity_name: e.name,
+                file_path: e.file_path,
+                line_number: e.line_start,
+              });
+            });
+            markdownSummary += '\n';
+          }
+
+          if (total_results === 0) {
+            markdownSummary += `_No ${direction} dependencies found for **${target.name || entity_name}**._\n`;
+          }
+          break;
+        }
+
+        case 'list_communities': {
+          markdownSummary = `# Code Communities\n\nFound **${total_results}** communities:\n\n`;
+          results.forEach((r: any, i: number) => {
+            const comm = r.community || r.result || r;
+            const name = comm.name || comm.community_id || 'unknown';
+            const count = comm.symbol_count || 0;
+            const cohesion = typeof comm.cohesion === 'number' ? comm.cohesion.toFixed(2) : 'N/A';
+            const repo = comm.repo || '';
+            markdownSummary += `## ${i + 1}. ${name}\n`;
+            markdownSummary += `- **Members:** ${count}\n`;
+            markdownSummary += `- **Cohesion:** ${cohesion}\n`;
+            if (repo) markdownSummary += `- **Repository:** ${repo}\n`;
+            markdownSummary += '\n';
+            hits.push({ entity_type: 'Community', entity_name: name });
+          });
+          break;
+        }
+
+        case 'community_members': {
+          const commInfo = results[0]?.community || {};
+          markdownSummary = `# Community: ${commInfo.name || 'Unknown'}\n\n`;
+          markdownSummary += `Members (**${total_results}**):\n\n`;
+          results.forEach((r: any, i: number) => {
+            const entity = r.entity || r;
+            const name = entity.name || 'unknown';
+            const filePath = entity.file_path || '';
+            const lineStart = entity.line_start || '';
+            const loc = filePath && lineStart ? `${filePath}:${lineStart}` : filePath;
+            markdownSummary += `${i + 1}. **${name}** (${entity.entity_type || 'Function'}) \`${loc}\`\n`;
+            hits.push({ entity_type: entity.entity_type || 'Function', entity_name: name, file_path: filePath });
+          });
+          break;
+        }
+
+        case 'community_for_entity': {
+          markdownSummary = `# Community for: ${entity_name}\n\n`;
+          if (total_results === 0) {
+            markdownSummary += `_No community found for **${entity_name}**._\n`;
+          } else {
+            results.forEach((r: any) => {
+              const comm = r.community || {};
+              markdownSummary += `- **Community:** ${comm.name || comm.community_id || 'unknown'}\n`;
+              markdownSummary += `- **Members:** ${comm.symbol_count || 0}\n`;
+              markdownSummary += `- **Cohesion:** ${typeof comm.cohesion === 'number' ? comm.cohesion.toFixed(2) : 'N/A'}\n`;
+              hits.push({ entity_type: 'Community', entity_name: comm.name || 'unknown' });
+            });
+          }
+          break;
+        }
+
+        case 'list_flows': {
+          markdownSummary = `# Execution Flows\n\nFound **${total_results}** flows:\n\n`;
+          results.forEach((r: any, i: number) => {
+            const proc = r.process || r.result || r;
+            const name = proc.name || proc.process_id || 'unknown';
+            markdownSummary += `## ${i + 1}. ${name}\n`;
+            markdownSummary += `- **Steps:** ${proc.step_count || 0}\n`;
+            markdownSummary += `- **Type:** ${proc.process_type || 'unknown'}\n`;
+            if (proc.repo) markdownSummary += `- **Repository:** ${proc.repo}\n`;
+            markdownSummary += '\n';
+            hits.push({ entity_type: 'Process', entity_name: name });
+          });
+          break;
+        }
+
+        case 'flow_steps': {
+          const procInfo = results[0]?.process || {};
+          markdownSummary = `# Flow: ${procInfo.name || 'Unknown'}\n\n`;
+          markdownSummary += `Steps (**${total_results}**):\n\n`;
+          results.forEach((r: any) => {
+            const entity = r.entity || r;
+            const step = r.step || '?';
+            const name = entity.name || 'unknown';
+            const filePath = entity.file_path || '';
+            const lineStart = entity.line_start || '';
+            const loc = filePath && lineStart ? `${filePath}:${lineStart}` : filePath;
+            markdownSummary += `${step}. **${name}** (${entity.entity_type || 'Function'}) \`${loc}\`\n`;
+            hits.push({ entity_type: entity.entity_type || 'Function', entity_name: name, file_path: filePath });
+          });
+          break;
+        }
+
+        case 'flows_for_entity': {
+          markdownSummary = `# Flows involving: ${entity_name}\n\n`;
+          if (total_results === 0) {
+            markdownSummary += `_No execution flows found for **${entity_name}**._\n`;
+          } else {
+            results.forEach((r: any, i: number) => {
+              const proc = r.process || {};
+              markdownSummary += `${i + 1}. **${proc.name || 'unknown'}** (step ${r.step || '?'}, ${proc.step_count || 0} total steps, ${proc.process_type || 'unknown'})\n`;
+              hits.push({ entity_type: 'Process', entity_name: proc.name || 'unknown' });
+            });
+          }
+          break;
+        }
+
+        case 'check_staleness': {
+          markdownSummary = `# Graph Staleness Check\n\n`;
+          markdownSummary += `| Repository | Run ID | Entities |\n|---|---|---|\n`;
+          results.forEach((r: any) => {
+            const repo = r.repo || 'unknown';
+            const runId = r.run_id || 'N/A';
+            const count = r.entity_count || 0;
+            markdownSummary += `| ${repo} | ${runId} | ${count} |\n`;
+            hits.push({ entity_type: 'RepoStatus', entity_name: repo });
+          });
+          break;
+        }
+
         default:
           // Generic formatting for other query types
           markdownSummary = `# ${query_type} Results\n\nFound **${total_results}** results:\n\n`;
