@@ -51,15 +51,9 @@ const SafePath = z.string()
 const QueryTypeEnum = z.enum(GRAPH_QUERY_TYPES);
 
 /**
- * Repository enum
+ * Repository filter — accepts any string (repos are dynamically indexed by the GitHub sensor)
  */
-const RepositoryEnum = z.enum([
-  'regen-ledger',
-  'regen-web',
-  'regen-data-standards',
-  'regenie-corpus',
-  'koi-sensors'
-]);
+const RepositoryFilter = z.string().min(1, 'Repository name cannot be empty');
 
 /**
  * Schema for query_code_graph tool
@@ -155,7 +149,7 @@ export const SearchGithubDocsSchema = z.object({
   query: z.string()
     .min(1, 'Query cannot be empty')
     .max(300, 'Query too long (max 300 characters)'),
-  repository: RepositoryEnum.optional(),
+  repository: RepositoryFilter.optional(),
   limit: z.number()
     .int()
     .min(1, 'Limit must be at least 1')
@@ -168,14 +162,14 @@ export const SearchGithubDocsSchema = z.object({
  * Schema for get_repo_overview tool
  */
 export const GetRepoOverviewSchema = z.object({
-  repository: RepositoryEnum
+  repository: RepositoryFilter
 });
 
 /**
  * Schema for get_tech_stack tool
  */
 export const GetTechStackSchema = z.object({
-  repository: RepositoryEnum.optional()
+  repository: RepositoryFilter.optional()
 });
 
 /**

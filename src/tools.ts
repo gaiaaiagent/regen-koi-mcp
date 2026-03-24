@@ -141,18 +141,17 @@ NOT for live blockchain queries - use Ledger MCP for on-chain state.`,
   },
   {
     name: 'search_github_docs',
-    description: 'Search Regen Network GitHub repositories for documentation, README files, configuration files, and technical content. Searches regen-ledger (blockchain), regen-web (frontend), regen-data-standards (schemas), and regenie-corpus (docs). Searches docs only - use Ledger MCP for on-chain data.',
+    description: 'Search all indexed GitHub repositories for documentation, code, configuration files, and technical content. Searches 23+ repos including regen-ledger, regen-web, regen-data-standards, regen-demos, koi-processor, regen-koi-mcp, protocol-politicians, and more. Use Ledger MCP for on-chain data.',
     inputSchema: {
       type: 'object',
       properties: {
         query: {
           type: 'string',
-          description: 'Search query (e.g., "ecocredit module", "validator setup", "governance voting")'
+          description: 'Search query (e.g., "ecocredit module", "berkshire-sweet-gold demo", "claims engine")'
         },
         repository: {
           type: 'string',
-          description: 'Optional: Filter by specific repo. Omit to search all 4 repositories.',
-          enum: ['regen-ledger', 'regen-web', 'regen-data-standards', 'regenie-corpus']
+          description: 'Optional: Filter by specific repo name (e.g., "regen-demos", "koi-processor"). Omit to search all indexed repositories.'
         },
         limit: {
           type: 'number',
@@ -167,14 +166,13 @@ NOT for live blockchain queries - use Ledger MCP for on-chain state.`,
   },
   {
     name: 'get_repo_overview',
-    description: 'Get a structured overview of a specific Regen Network repository including description, key files (README, CONTRIBUTING, etc.), and links to documentation.',
+    description: 'Get a structured overview of a specific repository including description, key files (README, CONTRIBUTING, etc.), and links to documentation.',
     inputSchema: {
       type: 'object',
       properties: {
         repository: {
           type: 'string',
-          description: 'Repository to get overview for',
-          enum: ['regen-ledger', 'regen-web', 'regen-data-standards', 'regenie-corpus']
+          description: 'Repository to get overview for (e.g., "regen-ledger", "regen-demos", "koi-processor")'
         }
       },
       required: ['repository']
@@ -182,14 +180,13 @@ NOT for live blockchain queries - use Ledger MCP for on-chain state.`,
   },
   {
     name: 'get_tech_stack',
-    description: 'Get technical stack information for Regen Network repositories including languages, frameworks, dependencies, build tools, and infrastructure. Can show all repos or filter to a specific one.',
+    description: 'Get technical stack information for indexed repositories including languages, frameworks, dependencies, build tools, and infrastructure. Can show all repos or filter to a specific one.',
     inputSchema: {
       type: 'object',
       properties: {
         repository: {
           type: 'string',
-          description: 'Optional: Filter to specific repo. Omit to show all repositories.',
-          enum: ['regen-ledger', 'regen-web', 'regen-data-standards', 'regenie-corpus']
+          description: 'Optional: Filter to specific repo (e.g., "regen-demos"). Omit to show all repositories.'
         }
       }
     }
