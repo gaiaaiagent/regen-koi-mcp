@@ -395,7 +395,7 @@ update_my_profile(experience_level="senior", role="backend", preferences={"verbo
   // =============================================================================
   {
     name: 'resolve_metadata_iri',
-    description: 'Resolve a Regen metadata IRI via the allowlisted resolver (api.regen.network). Caches results for efficient repeated lookups. Returns resolution details including content hash for integrity verification. Use this to verify metadata exists before deriving metrics.',
+    description: 'Resolve a Regen metadata IRI via the allowlisted resolver (api.regen.network). Caches results for efficient repeated lookups. Returns resolution details including content hash for integrity verification. Use this to verify metadata exists before deriving metrics. Requires authentication via regen_koi_authenticate.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -414,7 +414,7 @@ update_my_profile(experience_level="senior", role="backend", preferences={"verbo
   },
   {
     name: 'derive_offchain_hectares',
-    description: 'Derive project hectares from a Regen metadata IRI with full citation and derivation provenance. Enforces "no citation, no metric" policy - returns blocked=true if derivation is not possible. Only returns hectares when a valid citation can be constructed. Use this for accurate, citeable project size metrics.',
+    description: 'Derive project hectares from a Regen metadata IRI with full citation and derivation provenance. Enforces "no citation, no metric" policy - returns blocked=true if derivation is not possible. Only returns hectares when a valid citation can be constructed. Use this for accurate, citeable project size metrics. Requires authentication via regen_koi_authenticate.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -538,7 +538,7 @@ update_my_profile(experience_level="senior", role="backend", preferences={"verbo
 - Summary: word count, source, title
 - Does NOT return content directly (it's in the file)
 
-**Note:** Requires internal API access. Private documents require authentication.`,
+**Note:** Requires authentication via regen_koi_authenticate. Private documents additionally require OAuth session auth.`,
     inputSchema: {
       type: 'object',
       properties: {

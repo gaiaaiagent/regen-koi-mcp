@@ -45,7 +45,7 @@ dotenv.config();
 // Configuration
 const KOI_API_ENDPOINT = process.env.KOI_API_ENDPOINT || 'https://regen.gaiaai.xyz/api/koi';
 const KOI_API_KEY = process.env.KOI_API_KEY || '';
-const KOI_INTERNAL_API_KEY = process.env.KOI_INTERNAL_API_KEY || ''; // For MCP-only metadata endpoints
+// KOI_INTERNAL_API_KEY removed — metadata/document endpoints now accept OAuth session tokens
 const SERVER_NAME = process.env.MCP_SERVER_NAME || 'regen-koi';
 const SERVER_VERSION = process.env.MCP_SERVER_VERSION || '1.4.1';
 
@@ -157,11 +157,6 @@ apiClient.interceptors.request.use((config) => {
   const token = ensureTokenSynced();
   if (token && config.headers) {
     config.headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  // Add internal API key for MCP-only endpoints (server-to-server)
-  if ((config.url?.includes('/metadata/') || config.url?.includes('/document/')) && KOI_INTERNAL_API_KEY && config.headers) {
-    config.headers['X-Internal-API-Key'] = KOI_INTERNAL_API_KEY;
   }
 
   return config;
@@ -1780,7 +1775,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
           content: [
             {
               type: 'text',
-              text: `## Authentication Required\n\nThe document endpoint requires internal API key authentication. Please ensure KOI_INTERNAL_API_KEY is configured.`
+              text: `## Authentication Required\n\nThis tool requires authentication. Use \`regen_koi_authenticate\` to sign in.`
             }
           ]
         };
@@ -2823,6 +2818,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
           if (c.aliases?.length) md += `- **Aliases:** ${c.aliases.join(', ')}\n`;
           if (c.occurrence_count != null) md += `- **Occurrences:** ${c.occurrence_count}\n`;
           if (c.relationship_count != null) md += `- **Relationships:** ${c.relationship_count}\n`;
+          if (c.canonical_source_url) md += `- **Canonical Source:** ${c.canonical_source_url}\n`;
           if (c.description) md += `- **Description:** ${c.description.substring(0, 200)}${c.description.length > 200 ? '...' : ''}\n`;
           md += `\n`;
         });
@@ -3169,6 +3165,17 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
       const duration = Date.now() - startTime;
       console.error(`[${SERVER_NAME}] Tool=resolve_metadata_iri Error:`, error);
 
+      const status = error.response?.status;
+
+      if (status === 401) {
+        return {
+          content: [{
+            type: 'text',
+            text: `## Authentication Required\n\nThis tool requires authentication. Use \`regen_koi_authenticate\` to sign in.`
+          }]
+        };
+      }
+
       // Check if this is a blocked resolution (no citation, no metric)
       const errorData = error.response?.data;
       const isBlocked = errorData?.blocked === true;
@@ -3263,6 +3270,17 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
     } catch (error: any) {
       const duration = Date.now() - startTime;
       console.error(`[${SERVER_NAME}] Tool=derive_offchain_hectares Error:`, error);
+
+      const status = error.response?.status;
+
+      if (status === 401) {
+        return {
+          content: [{
+            type: 'text',
+            text: `## Authentication Required\n\nThis tool requires authentication. Use \`regen_koi_authenticate\` to sign in.`
+          }]
+        };
+      }
 
       // Check if this is a blocked derivation (no citation, no metric)
       const errorData = error.response?.data;
@@ -3387,7 +3405,19 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
    * This is a KB convenience tool, NOT KOI-net dereference.
    */
   private async kbRidLookup(args: any) {
-    const { rid, include = ['documents'], limit = 10 } = args || {};
+    const { rid, limit = 10 } = args || {};
+    // Handle include as string or array
+    let include = args?.include || ['documents'];
+    if (typeof include === 'string') {
+      try {
+        include = JSON.parse(include);
+      } catch {
+        include = [include];
+      }
+    }
+    if (!Array.isArray(include)) {
+      include = ['documents'];
+    }
 
     if (!rid) {
       return {
@@ -3425,46 +3455,40 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
     const errors: string[] = [];
 
     try {
-      // Query for documents by RID via /query endpoint
+      // Query for documents by RID via dedicated /rid-lookup endpoint
       if (include.includes('documents') || include.includes('chunks')) {
         try {
-          const response = await apiClient.post('/query', {
-            question: rid,
-            limit: limit,
-            filters: {}
+          const includeChunks = include.includes('chunks');
+          const response = await apiClient.get(`/rid-lookup/${encodeURIComponent(rid)}`, {
+            params: { include_chunks: includeChunks, limit }
           });
           const data = response.data as any;
 
-          if (Array.isArray(data.results)) {
-            // Filter results that match the RID
-            // Strip #chunkN suffix for comparison since DB stores chunks with suffixes
-            const baseRid = rid.split('#')[0];
-            const matching = data.results.filter((r: any) => {
-              const resultBaseRid = r.rid?.split('#')[0];
-              return r.rid === rid ||
-                resultBaseRid === baseRid ||
-                r.rid?.includes(parsed.reference || '') ||
-                r.content?.includes(rid);
-            });
-
-            results.documents = matching.slice(0, limit).map((r: any) => ({
-              rid: r.rid,
-              title: r.title || null,
-              source: r.source || extractSourceFromRID(r.rid) || null,
-              url: r.url || r.metadata?.url || null,
-              published_at: r.published_at || r.metadata?.published_at || null,
-              indexed_at: r.indexed_at || r.metadata?.indexed_at || null,
-              content_preview: r.content?.substring(0, 500) || null,
-              score: r.score
-            }));
+          if (data.found && Array.isArray(data.documents)) {
+            results.documents = data.documents
+              .filter((d: any) => !d.is_chunk || d.chunk_index === null)
+              .slice(0, limit)
+              .map((d: any) => ({
+                rid: d.rid,
+                title: d.title || null,
+                source: d.source || extractSourceFromRID(d.rid) || null,
+                url: d.url || null,
+                published_at: null,
+                indexed_at: d.indexed_at || null,
+                content_preview: d.content?.substring(0, 500) || null,
+                score: null
+              }));
 
             if (include.includes('chunks')) {
-              results.chunks = matching.slice(0, limit).map((r: any, i: number) => ({
-                chunk_id: r.id || `chunk-${i}`,
-                chunk_index: r.chunk_index || i,
-                content: r.content || '',
-                has_embedding: true
-              }));
+              results.chunks = data.documents
+                .filter((d: any) => d.is_chunk || d.chunk_index !== null)
+                .slice(0, limit)
+                .map((d: any) => ({
+                  chunk_id: d.rid,
+                  chunk_index: d.chunk_index,
+                  content: d.content || '',
+                  has_embedding: true
+                }));
             }
           }
         } catch (err) {
@@ -3610,70 +3634,26 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
     console.error(`[${SERVER_NAME}] Tool=kb_list_rids Context=${context || 'all'} Source=${source || 'all'} Limit=${limit} Offset=${offset}`);
 
     try {
-      // Build query to get RIDs from the KB
-      // Use search API with wildcard to get documents
-      const filters: any = {};
+      // Build query params for the /rids endpoint
+      const params: any = { limit, offset };
+      if (source) params.source = source;
+      if (context) params.context = context;
+      if (indexed_after) params.indexed_after = indexed_after;
+      if (indexed_before) params.indexed_before = indexed_before;
 
-      if (source) {
-        filters.source = source;
-      }
-      if (indexed_after) {
-        filters.published_from = indexed_after;
-      }
-      if (indexed_before) {
-        filters.published_to = indexed_before;
-      }
-
-      const response = await apiClient.post('/query', {
-        question: context || '*',
-        limit: Math.min(limit + offset, 200), // Fetch enough for pagination
-        filters
-      });
+      // Call the dedicated /rids endpoint which queries koi_memories directly
+      const response = await apiClient.get('/rids', { params });
       const data = response.data as any;
 
-      const allResults = Array.isArray(data.results) ? data.results : [];
-
-      // Filter by context if specified
-      let filteredResults = allResults;
-      if (context) {
-        filteredResults = allResults.filter((r: any) => {
-          const parsed = parseRID(r.rid || '');
-          return parsed.context?.includes(context) || r.rid?.includes(context);
-        });
-      }
-
-      // Apply pagination
-      const paginatedResults = filteredResults.slice(offset, offset + limit);
-
-      // Build RID list
-      const rids = paginatedResults.map((r: any) => {
-        const parsed = parseRID(r.rid || '');
-        return {
-          rid: r.rid,
-          context: parsed.context || null,
-          rid_type: parsed.rid_type || null,
-          source: r.source || extractSourceFromRID(r.rid) || null,
-          title: r.title || null,
-          indexed_at: r.indexed_at || r.metadata?.indexed_at || null
-        };
-      });
-
-      // Calculate aggregations
-      const byContext: Record<string, number> = {};
-      const bySource: Record<string, number> = {};
-
-      filteredResults.forEach((r: any) => {
-        const parsed = parseRID(r.rid || '');
-        const ctx = parsed.context || 'unknown';
-        const src = r.source || extractSourceFromRID(r.rid) || 'unknown';
-
-        byContext[ctx] = (byContext[ctx] || 0) + 1;
-        bySource[src] = (bySource[src] || 0) + 1;
-      });
+      // Extract data from the new API response format
+      const rids = Array.isArray(data.rids) ? data.rids : [];
+      const byContext: Record<string, number> = data.by_context || {};
+      const bySource: Record<string, number> = data.by_source || {};
+      const pagination = data.pagination || { total: rids.length, has_more: false };
 
       const duration = Date.now() - startTime;
-      const total = filteredResults.length;
-      const hasMore = offset + limit < total;
+      const total = pagination.total || rids.length;
+      const hasMore = pagination.has_more || false;
 
       console.error(`[${SERVER_NAME}] Tool=kb_list_rids Total=${total} Returned=${rids.length} Duration=${duration}ms`);
 

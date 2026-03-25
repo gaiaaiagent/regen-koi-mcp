@@ -84,6 +84,7 @@ export interface PreResolutionResult {
     admin_address?: string;
     jurisdiction?: string;
     source?: string;
+    canonical_source_url?: string;
   };
   source: 'registry' | 'api';
   match_type?: 'exact_id' | 'exact_name' | 'alias' | 'fuzzy' | 'ledger_id' | 'normalized_text';
@@ -108,6 +109,7 @@ interface APIEntityResolveResponse {
     jurisdiction: string | null;
     class_id: string | null;
     source: string | null;
+    canonical_source_url: string | null;
     score: number;
     score_breakdown: string;
   } | null;
@@ -191,7 +193,8 @@ export async function resolveEntityViaAPI(
         metadata_iri: winner.metadata_iri || undefined,
         admin_address: winner.admin_address || undefined,
         jurisdiction: winner.jurisdiction || undefined,
-        source: winner.source || undefined
+        source: winner.source || undefined,
+        canonical_source_url: winner.canonical_source_url || undefined
       },
       source: 'api',
       match_type: matchType
@@ -638,6 +641,9 @@ export function formatCanonicalResponse(result: PreResolutionResult): {
   }
   if (entity.source) {
     md += `- **Data Source:** ${entity.source}\n`;
+  }
+  if (entity.canonical_source_url) {
+    md += `- **Canonical Source:** ${entity.canonical_source_url}\n`;
   }
 
   md += `\n---\n`;

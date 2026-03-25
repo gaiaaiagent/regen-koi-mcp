@@ -926,7 +926,7 @@ The tool retrieves content via three fallback strategies:
 
 | Error | Cause | Solution |
 |-------|-------|----------|
-| 401 UNAUTHORIZED | Missing internal API key | Check KOI_INTERNAL_API_KEY env var |
+| 401 UNAUTHORIZED | Not authenticated | Use `regen_koi_authenticate` to sign in |
 | 403 ACCESS_DENIED | Private doc without auth | Use `regen_koi_authenticate` first |
 | 404 DOCUMENT_NOT_FOUND | RID doesn't exist or is private | Verify RID is correct |
 
