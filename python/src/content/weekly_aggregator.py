@@ -34,6 +34,56 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+# Regen Ledger REST endpoints — archive-providers-first to avoid pruning incidents
+# (closes #6). Mirrors the pattern in scripts/seatrees_bloom_export.py: ecostake +
+# cosmos.directory are archive nodes that don't prune mid-window, with public
+# providers as fallback. RND-maintained REST endpoints (api.regen.network,
+# rest.regen.network) don't exist today — verified 2026-05-06. Override via
+# REGEN_REST_ENDPOINTS env var (comma-separated).
+REGEN_REST_ENDPOINTS = [
+    ep.strip() for ep in os.environ.get(
+        "REGEN_REST_ENDPOINTS",
+        "https://rest-regen.ecostake.com,"
+        "https://rest.cosmos.directory/regen,"
+        "https://regen-rest.publicnode.com,"
+        "https://regen-api.polkachu.com"
+    ).split(",")
+    if ep.strip()
+]
+
+
+async def _try_endpoints(
+    session: aiohttp.ClientSession,
+    path: str,
+    params: Optional[Dict[str, Any]] = None,
+    timeout: float = 10.0,
+) -> Optional[Dict[str, Any]]:
+    """Try each REGEN_REST_ENDPOINTS host until one returns 200; return parsed JSON.
+
+    Skips endpoints that fail (DNS, timeout, non-200) and moves to next. Returns
+    None if all endpoints fail. Logs each failure at debug, final failure at
+    warning. Closes #6 — replaces single hardcoded endpoint with archive-first
+    fallback chain matching the seatrees_bloom_export.py pattern.
+    """
+    last_err: Optional[Exception] = None
+    for host in REGEN_REST_ENDPOINTS:
+        url = f"{host.rstrip('/')}{path}"
+        try:
+            async with session.get(
+                url, params=params,
+                timeout=aiohttp.ClientTimeout(total=timeout)
+            ) as response:
+                if response.status == 200:
+                    return await response.json()
+                logger.debug(f"{host} returned {response.status} for {path}")
+        except Exception as e:
+            last_err = e
+            logger.debug(f"{host} failed for {path}: {e}")
+            continue
+    logger.warning(f"All {len(REGEN_REST_ENDPOINTS)} endpoints failed for {path}: {last_err}")
+    return None
+
 @dataclass
 class ContentItem:
     """Represents a piece of content from the knowledge base"""
@@ -485,10 +535,10 @@ class WeeklyAggregator:
 
     async def fetch_ledger_summaries(self, days_back: int = 7) -> List[ContentItem]:
         """
-        Fetch ledger summaries directly from Regen blockchain REST API.
+        Fetch ledger summaries from Regen blockchain REST API via REGEN_REST_ENDPOINTS
+        fallback chain (archive-providers-first; see _try_endpoints docstring).
         Returns governance proposals and ecocredit activity as ContentItems.
         """
-        rest_endpoint = "https://regen-rest.publicnode.com"
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_back)
         ledger_items = []
 
@@ -496,115 +546,111 @@ class WeeklyAggregator:
             async with aiohttp.ClientSession() as session:
                 # Fetch governance proposals
                 try:
-                    async with session.get(
-                        f"{rest_endpoint}/cosmos/gov/v1/proposals",
+                    data = await _try_endpoints(
+                        session,
+                        "/cosmos/gov/v1/proposals",
                         params={"pagination.limit": "100", "pagination.reverse": "true"},
-                        timeout=aiohttp.ClientTimeout(total=10)
-                    ) as response:
-                        if response.status == 200:
-                            data = await response.json()
-                            if data and "proposals" in data:
-                                for proposal in data["proposals"]:
-                                    # Check if proposal is within time window
-                                    submit_time = proposal.get("submit_time", "")
-                                    voting_end_time = proposal.get("voting_end_time", "")
+                    )
+                    if data and "proposals" in data:
+                        for proposal in data["proposals"]:
+                            # Check if proposal is within time window
+                            submit_time = proposal.get("submit_time", "")
+                            voting_end_time = proposal.get("voting_end_time", "")
 
-                                    relevant = False
-                                    pub_date = None
+                            relevant = False
+                            pub_date = None
 
-                                    if voting_end_time:
-                                        voting_end_dt = datetime.fromisoformat(voting_end_time.replace('Z', '+00:00'))
-                                        if voting_end_dt >= cutoff_date:
-                                            relevant = True
-                                            pub_date = voting_end_dt
+                            if voting_end_time:
+                                voting_end_dt = datetime.fromisoformat(voting_end_time.replace('Z', '+00:00'))
+                                if voting_end_dt >= cutoff_date:
+                                    relevant = True
+                                    pub_date = voting_end_dt
 
-                                    if submit_time and not relevant:
-                                        submit_dt = datetime.fromisoformat(submit_time.replace('Z', '+00:00'))
-                                        if submit_dt >= cutoff_date:
-                                            relevant = True
-                                            pub_date = submit_dt
+                            if submit_time and not relevant:
+                                submit_dt = datetime.fromisoformat(submit_time.replace('Z', '+00:00'))
+                                if submit_dt >= cutoff_date:
+                                    relevant = True
+                                    pub_date = submit_dt
 
-                                    if relevant and pub_date:
-                                        # Format proposal content
-                                        proposal_id = proposal.get("id", "")
-                                        title = proposal.get("title", f"Proposal #{proposal_id}")
-                                        status = proposal.get("status", "").replace("PROPOSAL_STATUS_", "")
-                                        summary = proposal.get("summary", "No summary provided")
+                            if relevant and pub_date:
+                                # Format proposal content
+                                proposal_id = proposal.get("id", "")
+                                title = proposal.get("title", f"Proposal #{proposal_id}")
+                                status = proposal.get("status", "").replace("PROPOSAL_STATUS_", "")
+                                summary = proposal.get("summary", "No summary provided")
 
-                                        # Build full content
-                                        content_parts = [
-                                            f"# {title}\n",
-                                            f"**Proposal ID:** {proposal_id}",
-                                            f"**Status:** {status}",
-                                            f"**Submitted:** {submit_time}",
-                                            f"**Voting Ends:** {voting_end_time}\n",
-                                            f"## Summary\n{summary}"
-                                        ]
+                                # Build full content
+                                content_parts = [
+                                    f"# {title}\n",
+                                    f"**Proposal ID:** {proposal_id}",
+                                    f"**Status:** {status}",
+                                    f"**Submitted:** {submit_time}",
+                                    f"**Voting Ends:** {voting_end_time}\n",
+                                    f"## Summary\n{summary}"
+                                ]
 
-                                        # Add messages if available
-                                        messages = proposal.get("messages", [])
-                                        if messages:
-                                            content_parts.append("\n## Proposal Messages")
-                                            for msg in messages[:3]:  # Limit to first 3 messages
-                                                msg_type = msg.get("@type", "").split(".")[-1]
-                                                content_parts.append(f"- Type: {msg_type}")
+                                # Add messages if available
+                                messages = proposal.get("messages", [])
+                                if messages:
+                                    content_parts.append("\n## Proposal Messages")
+                                    for msg in messages[:3]:  # Limit to first 3 messages
+                                        msg_type = msg.get("@type", "").split(".")[-1]
+                                        content_parts.append(f"- Type: {msg_type}")
 
-                                        ledger_items.append(ContentItem(
-                                            id=f"regen.proposal:{proposal_id}",
-                                            content="\n".join(content_parts),
-                                            title=f"Governance: {title}",
-                                            source="regen-ledger",
-                                            url=f"https://wallet.keplr.app/chains/regen/proposals/{proposal_id}",
-                                            publication_date=pub_date,
-                                            confidence=1.0,
-                                            tags=["governance", "proposal", status.lower()],
-                                            metadata={"proposal_id": proposal_id, "status": status}
-                                        ))
+                                ledger_items.append(ContentItem(
+                                    id=f"regen.proposal:{proposal_id}",
+                                    content="\n".join(content_parts),
+                                    title=f"Governance: {title}",
+                                    source="regen-ledger",
+                                    url=f"https://wallet.keplr.app/chains/regen/proposals/{proposal_id}",
+                                    publication_date=pub_date,
+                                    confidence=1.0,
+                                    tags=["governance", "proposal", status.lower()],
+                                    metadata={"proposal_id": proposal_id, "status": status}
+                                ))
                 except Exception as e:
                     logger.warning(f"Failed to fetch governance proposals: {e}")
 
                 # Fetch recent ecocredit batches
                 try:
-                    async with session.get(
-                        f"{rest_endpoint}/regen/ecocredit/v1/batches",
+                    data = await _try_endpoints(
+                        session,
+                        "/regen/ecocredit/v1/batches",
                         params={"pagination.limit": "50"},
-                        timeout=aiohttp.ClientTimeout(total=10)
-                    ) as response:
-                        if response.status == 200:
-                            data = await response.json()
-                            if data and "batches" in data:
-                                for batch in data["batches"]:
-                                    # Check start/end date
-                                    start_date = batch.get("start_date")
-                                    if start_date:
-                                        try:
-                                            batch_date = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
-                                            if batch_date >= cutoff_date:
-                                                denom = batch.get("denom", "")
-                                                project_id = batch.get("project_id", "")
-                                                issuer = batch.get("issuer", "")
+                    )
+                    if data and "batches" in data:
+                        for batch in data["batches"]:
+                            # Check start/end date
+                            start_date = batch.get("start_date")
+                            if start_date:
+                                try:
+                                    batch_date = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+                                    if batch_date >= cutoff_date:
+                                        denom = batch.get("denom", "")
+                                        project_id = batch.get("project_id", "")
+                                        issuer = batch.get("issuer", "")
 
-                                                content_parts = [
-                                                    f"# Ecocredit Batch: {denom}\n",
-                                                    f"**Project ID:** {project_id}",
-                                                    f"**Issuer:** {issuer}",
-                                                    f"**Start Date:** {start_date}",
-                                                    f"**End Date:** {batch.get('end_date', 'N/A')}",
-                                                ]
+                                        content_parts = [
+                                            f"# Ecocredit Batch: {denom}\n",
+                                            f"**Project ID:** {project_id}",
+                                            f"**Issuer:** {issuer}",
+                                            f"**Start Date:** {start_date}",
+                                            f"**End Date:** {batch.get('end_date', 'N/A')}",
+                                        ]
 
-                                                ledger_items.append(ContentItem(
-                                                    id=f"regen.ecocredit.batch:{denom}",
-                                                    content="\n".join(content_parts),
-                                                    title=f"Ecocredit Batch: {denom}",
-                                                    source="regen-ledger",
-                                                    url=f"https://app.regen.network/projects/{project_id}",
-                                                    publication_date=batch_date,
-                                                    confidence=1.0,
-                                                    tags=["ecocredit", "batch"],
-                                                    metadata={"batch_denom": denom, "project_id": project_id}
-                                                ))
-                                        except:
-                                            pass
+                                        ledger_items.append(ContentItem(
+                                            id=f"regen.ecocredit.batch:{denom}",
+                                            content="\n".join(content_parts),
+                                            title=f"Ecocredit Batch: {denom}",
+                                            source="regen-ledger",
+                                            url=f"https://app.regen.network/projects/{project_id}",
+                                            publication_date=batch_date,
+                                            confidence=1.0,
+                                            tags=["ecocredit", "batch"],
+                                            metadata={"batch_denom": denom, "project_id": project_id}
+                                        ))
+                                except:
+                                    pass
                 except Exception as e:
                     logger.warning(f"Failed to fetch ecocredit batches: {e}")
 
@@ -620,76 +666,65 @@ class WeeklyAggregator:
         Returns formatted markdown string for NotebookLM export.
         """
         try:
-            # Try multiple API endpoints
-            api_endpoints = [
-                f"https://regen-api.polkachu.com/cosmos/gov/v1beta1/proposals/{proposal_id}",
-                f"https://regen-rest.publicnode.com/cosmos/gov/v1beta1/proposals/{proposal_id}",
-                f"https://regen.api.m.stavr.tech/cosmos/gov/v1beta1/proposals/{proposal_id}",
-                f"https://rest.regen.aneka.io/cosmos/gov/v1beta1/proposals/{proposal_id}"
-            ]
-
+            # Use REGEN_REST_ENDPOINTS fallback chain (closes #6).
             async with aiohttp.ClientSession() as session:
-                for api_url in api_endpoints:
-                    try:
-                        async with session.get(api_url, timeout=aiohttp.ClientTimeout(total=10)) as response:
-                            if response.status == 200:
-                                data = await response.json()
-                                proposal = data.get('proposal', {})
+                data = await _try_endpoints(
+                    session,
+                    f"/cosmos/gov/v1beta1/proposals/{proposal_id}",
+                )
+            if data is None:
+                return f"### Governance Proposal #{proposal_id}\n\n*[Full proposal details not available - all API endpoints unreachable]*\n\n"
 
-                                # Format proposal content
-                                content = f"### Full Governance Proposal #{proposal_id}\n\n"
-                                content += f"**Status**: {proposal.get('status', 'UNKNOWN')}\n\n"
+            proposal = data.get('proposal', {})
 
-                                # Get content details
-                                prop_content = proposal.get('content', {})
-                                content += f"**Type**: {prop_content.get('@type', 'N/A')}\n\n"
+            # Format proposal content
+            content = f"### Full Governance Proposal #{proposal_id}\n\n"
+            content += f"**Status**: {proposal.get('status', 'UNKNOWN')}\n\n"
 
-                                # For community pool spend, show details
-                                if 'CommunityPoolSpend' in prop_content.get('@type', ''):
-                                    content += f"**Recipient**: {prop_content.get('recipient', 'N/A')}\n"
-                                    amounts = prop_content.get('amount', [])
-                                    if amounts:
-                                        for amt in amounts:
-                                            denom = amt.get('denom', 'uregen')
-                                            amount = int(amt.get('amount', 0)) / 1_000_000 if amt.get('amount') else 0
-                                            content += f"**Amount Requested**: {amount:,.0f} REGEN\n"
-                                    content += "\n"
+            # Get content details
+            prop_content = proposal.get('content', {})
+            content += f"**Type**: {prop_content.get('@type', 'N/A')}\n\n"
 
-                                # Add title and description if available
-                                if 'title' in prop_content:
-                                    content += f"**Title**: {prop_content['title']}\n\n"
-                                if 'description' in prop_content:
-                                    content += f"**Description**:\n{prop_content['description']}\n\n"
+            # For community pool spend, show details
+            if 'CommunityPoolSpend' in prop_content.get('@type', ''):
+                content += f"**Recipient**: {prop_content.get('recipient', 'N/A')}\n"
+                amounts = prop_content.get('amount', [])
+                if amounts:
+                    for amt in amounts:
+                        denom = amt.get('denom', 'uregen')
+                        amount = int(amt.get('amount', 0)) / 1_000_000 if amt.get('amount') else 0
+                        content += f"**Amount Requested**: {amount:,.0f} REGEN\n"
+                content += "\n"
 
-                                # Add voting details
-                                final_tally = proposal.get('final_tally_result', {})
-                                if final_tally:
-                                    content += f"**Voting Results**:\n"
-                                    # Convert from uregen to REGEN
-                                    yes_amt = int(final_tally.get('yes', '0')) / 1_000_000 if final_tally.get('yes') else 0
-                                    no_amt = int(final_tally.get('no', '0')) / 1_000_000 if final_tally.get('no') else 0
-                                    abstain_amt = int(final_tally.get('abstain', '0')) / 1_000_000 if final_tally.get('abstain') else 0
-                                    no_veto_amt = int(final_tally.get('no_with_veto', '0')) / 1_000_000 if final_tally.get('no_with_veto') else 0
+            # Add title and description if available
+            if 'title' in prop_content:
+                content += f"**Title**: {prop_content['title']}\n\n"
+            if 'description' in prop_content:
+                content += f"**Description**:\n{prop_content['description']}\n\n"
 
-                                    content += f"- Yes: {yes_amt:,.0f} REGEN\n"
-                                    content += f"- No: {no_amt:,.0f} REGEN\n"
-                                    content += f"- Abstain: {abstain_amt:,.0f} REGEN\n"
-                                    content += f"- No With Veto: {no_veto_amt:,.0f} REGEN\n\n"
+            # Add voting details
+            final_tally = proposal.get('final_tally_result', {})
+            if final_tally:
+                content += f"**Voting Results**:\n"
+                # Convert from uregen to REGEN
+                yes_amt = int(final_tally.get('yes', '0')) / 1_000_000 if final_tally.get('yes') else 0
+                no_amt = int(final_tally.get('no', '0')) / 1_000_000 if final_tally.get('no') else 0
+                abstain_amt = int(final_tally.get('abstain', '0')) / 1_000_000 if final_tally.get('abstain') else 0
+                no_veto_amt = int(final_tally.get('no_with_veto', '0')) / 1_000_000 if final_tally.get('no_with_veto') else 0
 
-                                # Add timing
-                                content += f"**Timeline**:\n"
-                                content += f"- Submit Time: {proposal.get('submit_time', 'N/A')}\n"
-                                content += f"- Deposit End: {proposal.get('deposit_end_time', 'N/A')}\n"
-                                content += f"- Voting Start: {proposal.get('voting_start_time', 'N/A')}\n"
-                                content += f"- Voting End: {proposal.get('voting_end_time', 'N/A')}\n\n"
+                content += f"- Yes: {yes_amt:,.0f} REGEN\n"
+                content += f"- No: {no_amt:,.0f} REGEN\n"
+                content += f"- Abstain: {abstain_amt:,.0f} REGEN\n"
+                content += f"- No With Veto: {no_veto_amt:,.0f} REGEN\n\n"
 
-                                return content
-                    except Exception as e:
-                        logger.debug(f"API endpoint {api_url} failed: {e}")
-                        continue
+            # Add timing
+            content += f"**Timeline**:\n"
+            content += f"- Submit Time: {proposal.get('submit_time', 'N/A')}\n"
+            content += f"- Deposit End: {proposal.get('deposit_end_time', 'N/A')}\n"
+            content += f"- Voting Start: {proposal.get('voting_start_time', 'N/A')}\n"
+            content += f"- Voting End: {proposal.get('voting_end_time', 'N/A')}\n\n"
 
-            # If all endpoints fail
-            return f"### Governance Proposal #{proposal_id}\n\n*[Full proposal details not available - all API endpoints unreachable]*\n\n"
+            return content
 
         except Exception as e:
             logger.error(f"Error fetching proposal {proposal_id}: {e}")
