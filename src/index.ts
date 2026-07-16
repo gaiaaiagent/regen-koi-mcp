@@ -47,7 +47,7 @@ const KOI_API_ENDPOINT = process.env.KOI_API_ENDPOINT || 'https://regen.gaiaai.x
 const KOI_API_KEY = process.env.KOI_API_KEY || '';
 // KOI_INTERNAL_API_KEY removed — metadata/document endpoints now accept OAuth session tokens
 const SERVER_NAME = process.env.MCP_SERVER_NAME || 'regen-koi';
-const SERVER_VERSION = process.env.MCP_SERVER_VERSION || '1.6.5';
+const SERVER_VERSION = process.env.MCP_SERVER_VERSION || '1.6.6';
 
 // Tool filtering configuration
 // Use KOI_ENABLED_TOOLS for whitelist mode (only specified tools available)
