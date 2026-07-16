@@ -261,8 +261,8 @@ MCP: ## Regen Network CLAUDE.md Configuration
 
 | Tier | Who Gets It | Content |
 |------|-------------|---------|
-| **Public** | Anyone | Basic CLAUDE.md, public MCP configs |
-| **Core** | @regen.network emails | + Full contexts (ecocredit, ledger, governance), skills, agent templates, playbooks |
+| **Public** | Anyone (no sign-in) | Basic CLAUDE.md, public MCP configs; all public documents incl. full text via `get_full_document` |
+| **Core** | @regen.network emails (only domain accepted by `regen_koi_authenticate`) | + Full contexts (ecocredit, ledger, governance), skills, agent templates, playbooks, private documents |
 
 **How it works:**
 - Config served from `https://regen.gaiaai.xyz/api/koi/claude-config/`

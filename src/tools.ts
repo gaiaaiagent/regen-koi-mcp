@@ -538,7 +538,7 @@ update_my_profile(experience_level="senior", role="backend", preferences={"verbo
 - Summary: word count, source, title
 - Does NOT return content directly (it's in the file)
 
-**Note:** Requires authentication via regen_koi_authenticate. Private documents additionally require OAuth session auth.`,
+**Note:** Public documents (GitHub docs, forum posts, articles) require no authentication. Private documents require signing in via regen_koi_authenticate (currently restricted to @regen.network Google accounts) and return "not found" otherwise.`,
     inputSchema: {
       type: 'object',
       properties: {

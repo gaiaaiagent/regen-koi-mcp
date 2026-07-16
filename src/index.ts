@@ -47,7 +47,7 @@ const KOI_API_ENDPOINT = process.env.KOI_API_ENDPOINT || 'https://regen.gaiaai.x
 const KOI_API_KEY = process.env.KOI_API_KEY || '';
 // KOI_INTERNAL_API_KEY removed — metadata/document endpoints now accept OAuth session tokens
 const SERVER_NAME = process.env.MCP_SERVER_NAME || 'regen-koi';
-const SERVER_VERSION = process.env.MCP_SERVER_VERSION || '1.4.1';
+const SERVER_VERSION = process.env.MCP_SERVER_VERSION || '1.6.5';
 
 // Tool filtering configuration
 // Use KOI_ENABLED_TOOLS for whitelist mode (only specified tools available)
@@ -1775,7 +1775,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
           content: [
             {
               type: 'text',
-              text: `## Authentication Required\n\nThis tool requires authentication. Use \`regen_koi_authenticate\` to sign in.`
+              text: `## Authentication Problem\n\nThe server rejected the request's credentials (missing or expired session). Public documents don't require sign-in, so this is unexpected — try \`regen_koi_authenticate\` to refresh your session, or retry without stale credentials.`
             }
           ]
         };
@@ -1788,7 +1788,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
             content: [
               {
                 type: 'text',
-                text: `## Access Denied\n\nThis is a private document. Please authenticate using \`regen_koi_authenticate\` first.`
+                text: `## Access Denied\n\nThis is a private document. Please authenticate using \`regen_koi_authenticate\` first (currently restricted to @regen.network accounts).`
               }
             ]
           };

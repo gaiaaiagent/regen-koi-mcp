@@ -93,7 +93,16 @@ KOI supports two tiers of data:
 - Podcast transcripts
 - Regentokenomics Notion workspace (public tokenomics documentation)
 
+This applies to every retrieval tool, including `get_full_document` — public
+documents are fully retrievable without signing in (fixed 2026-07-16; earlier
+versions incorrectly required auth for all full-document fetches).
+
 ### Private Data (Requires @regen.network OAuth)
+
+Authentication is currently restricted to **@regen.network Google accounts** —
+`regen_koi_authenticate` will reject other email domains. External users can
+access all public-tier content without signing in; private documents return
+"not found" to unauthenticated callers.
 - Main Regen Notion workspace
   - Strategy documents
   - AI specifications
